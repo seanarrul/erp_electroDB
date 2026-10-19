@@ -4,7 +4,7 @@ InfoMan1 Project
 
 **ScrumMaster** - DE LEON, Sean Arrul
 
-**DB Admin**- DELA CRUZ, Veil
+**DB Admin**- DELA CRUZ, Veil/present
 
 **Tester**- ECHAGUE, Arielle
 
