@@ -13,3 +13,5 @@ InfoMan1 Project
 **UI Designer** CASING, Christian
 
 **Dev**- Ildefonso, Jeptah Ashley
+
+ALL MEMBERS PLEASE CHECK "Roll_Call" and FOLLOW INSTRUCTIONS
