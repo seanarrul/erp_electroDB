@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Plus, LogOut, X } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
 import { navigationItems, type NavigationItem } from '@/lib/labels';
 import { BRAND } from '@/lib/brand';
 import type { UserRole } from '@/lib/types';
@@ -78,18 +78,6 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
-
-        {/* Primary Action Button: + New Sale */}
-        <div className="pt-0.5">
-          <Link
-            href="/sales/new"
-            onClick={closeMobileSidebar}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-lg bg-[#166B52] hover:bg-[#11523E] active:bg-[#0E4232] text-white text-[13px] font-medium shadow-xs transition-colors cursor-pointer select-none"
-          >
-            <Plus className="w-4 h-4 stroke-[2.2]" />
-            <span>+ New Sale</span>
-          </Link>
         </div>
 
         {/* Grouped Navigation */}
