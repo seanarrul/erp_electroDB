@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Home,
   Receipt,
   CreditCard,
   Package,
   Users,
-  Search,
   CheckCircle2,
   Lock,
   PanelLeftClose,
@@ -28,9 +27,7 @@ interface SidebarProps {
 
 export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso' }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { isMobileOpen, closeMobileSidebar } = useSidebar();
-  const [sidebarSearch, setSidebarSearch] = useState('');
 
   const navLinks = [
     {
@@ -59,14 +56,6 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
       ],
     },
   ];
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (sidebarSearch.trim()) {
-      router.push(`/customers?q=${encodeURIComponent(sidebarSearch.trim())}`);
-      closeMobileSidebar();
-    }
-  };
 
   const sidebarContent = (
     <div className="flex h-full flex-col justify-between p-4 sm:p-5 overflow-y-auto font-sans">
@@ -101,21 +90,6 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
             <X className="w-4 h-4 lg:hidden" />
           </button>
         </div>
-
-        {/* Quick Search Bar matching Stitch */}
-        <form onSubmit={handleSearchSubmit} className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 pointer-events-none" />
-          <input
-            type="text"
-            value={sidebarSearch}
-            onChange={(e) => setSidebarSearch(e.target.value)}
-            placeholder="Search..."
-            className="w-full h-8 pl-8 pr-8 text-xs bg-black/3 hover:bg-black/5 focus:bg-white text-[#041a24] placeholder:text-[#41555f]/60 rounded-[3px] border border-black/10 focus:border-[#041a24] focus:outline-none transition-all"
-          />
-          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[9px] text-black/40 border border-black/10 px-1 py-0.2 rounded-[2px] bg-white pointer-events-none select-none">
-            ⌘K
-          </kbd>
-        </form>
 
         {/* Grouped Navigation */}
         <nav className="space-y-4 pt-1" aria-label="Main Navigation">
