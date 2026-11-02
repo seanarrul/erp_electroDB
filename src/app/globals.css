@@ -2,40 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --bg: #F8FAFC;
-    --bg-raised: #FFFFFF;
-    --bg-hover: #F9FAFB;
-    --bg-subtle: #F1F5F9;
+:root {
+  /* Surface Layers */
+  --bg: #F4F4F0;              /* Warm parchment background */
+  --bg-raised: #FFFFFF;       /* Pure white raised cards and dialogs */
+  --bg-hover: #EAEAE4;        /* Subtle hover surface */
+  --bg-subtle: #DFDFD7;       /* Soft inset borders & dividers */
 
-    --fg: #111827;
-    --fg-muted: #4B5563;
-    --fg-subtle: #6B7280;
+  /* Foreground Ink Tones */
+  --fg: #041a24;              /* Deep brand midnight cyan (Primary Ink) */
+  --fg-muted: #1c313b;        /* Secondary reading text (high legibility) */
+  --fg-subtle: #41555f;       /* Metadata, timestamps, captions */
 
-    --border: #E5E7EB;
-    --border-strong: #D1D5DB;
+  /* Brand & Accents */
+  --accent: #041a24;          /* Core architectural brand tone */
+  --accent-dim: rgba(4, 26, 36, 0.05);
 
-    /* ERD Module Noticeable Color Coding */
-    --module-employees: #DBEAFE;
-    --module-products: #DCFCE7;
-    --module-customers: #FEF08A;
-    --module-sales: #FEE2E2;
-  }
+  /* Hairlines & Borders */
+  --border: rgba(4, 26, 36, 0.16);
+  --border-strong: #041a24;
+  --border-hover: #041a24;
 
-  body {
-    background-color: var(--bg);
-    color: var(--fg);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    min-height: 100vh;
-  }
+  /* ERD Module Noticeable Color Coding */
+  --module-employees: #BFDBFE;
+  --module-products: #BBF7D0;
+  --module-customers: #FEF08A;
+  --module-sales: #FECACA;
+}
 
-  ::selection {
-    background-color: #E8F3EE;
-    color: #166B52;
-  }
+* {
+  border-color: var(--border);
+}
+
+html {
+  background-color: var(--bg);
+  color: var(--fg);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+::selection {
+  background-color: var(--fg);
+  color: var(--bg-raised);
 }
 
 /* Numeric alignment utility for currencies and quantities */
@@ -44,20 +62,38 @@
   font-feature-settings: 'tnum' 1;
 }
 
-/* Minimalist Scrollbar Physics */
+/* Custom Minimalist Scrollbar Physics (4px hairline) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
-  border-radius: 9999px;
+  background: rgba(4, 26, 36, 0.25);
+  border-radius: 1px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+  background: rgba(4, 26, 36, 0.5);
+}
+
+/* Editorial Monochromatic Typography Utility */
+.font-editorial {
+  font-family: var(--font-editorial), Newsreader, Georgia, serif;
+}
+
+.hairline-border {
+  border: 1px solid var(--border);
+}
+
+/* Broadsheet Column Dividers */
+.broadsheet-rule {
+  border-top: 2px solid var(--fg);
+}
+
+.broadsheet-rule-thin {
+  border-top: 1px solid var(--border);
 }
 
 /* Print Styles for Invoices and Official Receipts */

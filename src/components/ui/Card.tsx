@@ -5,7 +5,7 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   return (
     <div
       className={cn(
-        'rounded-xl border border-gray-200 bg-white text-gray-900 shadow-2xs',
+        'rounded-[4px] border border-black/10 bg-white text-[#041a24] shadow-2xs',
         className
       )}
       {...props}
@@ -14,14 +14,14 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex flex-col space-y-1.5 p-5 sm:p-6', className)} {...props} />;
+  return <div className={cn('flex flex-col space-y-1.5 p-4 sm:p-5', className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
       className={cn(
-        'font-sans text-base sm:text-lg font-bold tracking-tight text-gray-900',
+        'font-editorial text-base sm:text-lg font-normal tracking-tight text-[#041a24]',
         className
       )}
       {...props}
@@ -31,19 +31,19 @@ export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHead
 
 export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn('text-xs text-gray-500 leading-relaxed', className)} {...props} />
+    <p className={cn('font-sans text-xs text-[#41555f] leading-relaxed', className)} {...props} />
   );
 }
 
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('p-5 sm:p-6 pt-0', className)} {...props} />;
+  return <div className={cn('p-4 sm:p-5 pt-0', className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'flex items-center p-5 sm:p-6 pt-0 border-t border-gray-100 mt-4',
+        'flex items-center p-4 sm:p-5 pt-0 border-t border-black/10 mt-3',
         className
       )}
       {...props}

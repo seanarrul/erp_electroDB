@@ -31,7 +31,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   const counts = data?.counts || {};
 
   return (
-    <div className="space-y-8 sm:space-y-9 max-w-[1240px] mx-auto pb-16 font-sans">
+    <div className="space-y-6 sm:space-y-8 max-w-[1240px] mx-auto pb-12 font-sans">
       {/* 1. Dashboard Header */}
       <DashboardHeader
         fullName={user.fullName || 'Admin'}
@@ -52,18 +52,18 @@ export default async function HomePage({ searchParams }: PageProps) {
         </section>
       )}
 
-      {/* 3. Database Overview & Interactive Canonical ERD Section (Standalone Card) */}
+      {/* 4. Database Overview & Interactive Canonical ERD Section (Standalone Card) */}
       <section id="erd" aria-label="Relational Database Architecture">
-        <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 shadow-2xs space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-4">
+        <div className="bg-white rounded-[4px] border border-black/10 p-5 sm:p-6 shadow-2xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/10 pb-3">
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+              <h2 className="font-editorial text-lg sm:text-xl font-normal text-[#041a24] tracking-tight flex items-center gap-2.5">
                 <span>Relational Database Architecture</span>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#E8F3EE] text-[#166B52]">
-                  10 Tables · 9 Foreign Keys
+                <span className="font-mono text-[10px] font-medium px-2 py-0.5 rounded-[2px] bg-[#041a24] text-white">
+                  10 Tables &bull; 9 Foreign Keys
                 </span>
               </h2>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              <p className="text-xs text-[#41555f] mt-0.5">
                 Canonical ERD schema mapping departments, jobs, employees, customers, products, sales, and payments.
               </p>
             </div>
@@ -76,16 +76,16 @@ export default async function HomePage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* 4. Explore System Modules (Standalone Section with clean transition & breathing room) */}
-      <section id="modules" aria-label="Explore System Modules" className="pt-2">
+      {/* 5. Explore System Modules (Standalone Section) */}
+      <section id="modules" aria-label="Explore System Modules">
         <ExploreGrid
           counts={counts}
           userRole={user.role}
         />
       </section>
 
-      {/* 5. KPI Metric Cards (Very bottom) */}
-      <section aria-label="Key Performance Indicators" className="pt-2">
+      {/* 6. KPI Metric Cards */}
+      <section aria-label="Key Performance Indicators">
         {data?.kpis && <DashboardKpis kpis={data.kpis} />}
       </section>
     </div>

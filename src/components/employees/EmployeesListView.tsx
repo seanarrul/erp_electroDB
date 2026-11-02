@@ -263,18 +263,18 @@ export function EmployeesListView({
   return (
     <div className="space-y-6">
       {/* 1. Header (Section 7.1) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#DDE3DE] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-black/10 pb-4">
         <div>
-          <nav className="flex items-center text-xs text-[#52615B] mb-1 font-mono uppercase tracking-[0.12em]">
+          <nav className="flex items-center text-[10px] text-[#41555f] mb-1 font-mono uppercase tracking-[0.12em]">
             <span>ElectronDB G4 HopeERD</span>
-            <span className="mx-1.5">·</span>
-            <span className="text-[#17231F] font-semibold">Employees</span>
+            <span className="mx-1.5">&bull;</span>
+            <span className="text-[#041a24] font-semibold">Employees</span>
           </nav>
-          <h1 className="text-2xl sm:text-[28px] font-semibold text-[#17231F] tracking-tight">
-            Employees
+          <h1 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] tracking-tight">
+            Employees &amp; Staff
           </h1>
-          <p className="text-xs sm:text-sm text-[#52615B] mt-0.5">
-            Employee records, job history and department assignments.
+          <p className="text-xs text-[#41555f] mt-0.5 font-sans">
+            Employee personnel records, job history, and department assignments.
           </p>
         </div>
 

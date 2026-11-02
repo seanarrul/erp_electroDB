@@ -91,7 +91,7 @@ export function GlobalSearchBar() {
   return (
     <div ref={containerRef} className="relative w-72 sm:w-80 md:w-96 lg:w-[440px] font-sans">
       <div className="relative flex items-center">
-        <Search className="absolute left-3.5 h-4 w-4 text-gray-400 pointer-events-none" />
+        <Search className="absolute left-3 h-3.5 w-3.5 text-black/40 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -104,60 +104,68 @@ export function GlobalSearchBar() {
             if (query.trim() || results.length > 0) setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search customers, sales, products, or anything..."
-          className="w-full h-10 pl-10 pr-9 text-xs sm:text-sm bg-white hover:bg-gray-50/50 focus:bg-white text-gray-900 placeholder-gray-400 rounded-lg border border-gray-200 focus:border-[#166B52] focus:ring-2 focus:ring-[#166B52]/15 transition-all outline-none shadow-2xs"
+          placeholder="Search records, customers, sales..."
+          className="w-full h-8 pl-8 pr-16 text-xs bg-white text-[#041a24] placeholder:text-[#41555f]/60 rounded-[2px] border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 transition-all outline-none"
         />
-        {isLoading ? (
-          <Loader2 className="absolute right-3 h-4 w-4 text-gray-400 animate-spin" />
-        ) : query ? (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery('');
-              setResults([]);
-              setIsOpen(false);
-            }}
-            className="absolute right-2.5 p-1 text-gray-400 hover:text-gray-600 rounded"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        ) : null}
+
+        {/* Keyboard cue pill */}
+        <div className="absolute right-2.5 flex items-center gap-1 pointer-events-none select-none">
+          {isLoading ? (
+            <Loader2 className="h-3.5 w-3.5 text-black/40 animate-spin" />
+          ) : query ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setResults([]);
+                setIsOpen(false);
+              }}
+              className="p-0.5 text-black/40 hover:text-[#041a24] rounded pointer-events-auto"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          ) : (
+            <kbd className="hidden sm:inline-block font-mono text-[9px] text-[#41555f] border border-black/15 bg-[#F4F4F0] px-1.5 py-0.5 rounded-[2px]">
+              Ctrl+K
+            </kbd>
+          )}
+        </div>
       </div>
 
       {/* Dropdown Results */}
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 mt-2 w-full min-w-[320px] bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-1.5 w-full min-w-[320px] bg-white rounded-[4px] border border-black/10 shadow-md overflow-hidden z-50 max-h-96 overflow-y-auto">
           {isLoading && results.length === 0 ? (
-            <div className="py-8 text-center text-xs text-gray-500">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-[#166B52]" />
-              Searching records...
+            <div className="py-6 text-center font-mono text-xs text-[#41555f]">
+              <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-[#041a24]" />
+              Searching archive...
             </div>
           ) : results.length === 0 ? (
-            <div className="py-8 px-4 text-center text-xs text-gray-500">
-              No records found matching &ldquo;{query}&rdquo;
+            <div className="py-6 px-4 text-center font-mono text-xs text-[#41555f]">
+              No archive records matching &ldquo;{query}&rdquo;
             </div>
           ) : (
-            <div className="divide-y divide-gray-100 p-1.5">
+            <div className="divide-y divide-black/5 p-1">
               {/* Customers Group */}
               {customers.length > 0 && (
-                <div className="p-1.5">
-                  <div className="px-2.5 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-[#166B52]" /> Customers
+                <div className="p-1">
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
+                    <Users className="h-3 w-3 text-[#041a24]" /> Customers
                   </div>
                   {customers.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-[#166B52] truncate">
+                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
                           {item.title}
                         </div>
-                        <div className="text-[11px] text-gray-500 truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -165,24 +173,24 @@ export function GlobalSearchBar() {
 
               {/* Official Receipts Group */}
               {receipts.length > 0 && (
-                <div className="p-1.5">
-                  <div className="px-2.5 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-[#166B52]" /> Official Receipts
+                <div className="p-1">
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
+                    <Receipt className="h-3 w-3 text-[#041a24]" /> Official Receipts
                   </div>
                   {receipts.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-[#166B52] truncate">
+                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
                           {item.title}
                         </div>
-                        <div className="text-[11px] text-gray-500 truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -190,24 +198,24 @@ export function GlobalSearchBar() {
 
               {/* Sales Transactions Group */}
               {sales.length > 0 && (
-                <div className="p-1.5">
-                  <div className="px-2.5 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <ShoppingCart className="h-3.5 w-3.5 text-[#166B52]" /> Sales Transactions
+                <div className="p-1">
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingCart className="h-3 w-3 text-[#041a24]" /> Sales Transactions
                   </div>
                   {sales.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-[#166B52] truncate">
+                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
                           {item.title}
                         </div>
-                        <div className="text-[11px] text-gray-500 truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -215,24 +223,24 @@ export function GlobalSearchBar() {
 
               {/* Products Group */}
               {products.length > 0 && (
-                <div className="p-1.5">
-                  <div className="px-2.5 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Package className="h-3.5 w-3.5 text-[#166B52]" /> Products
+                <div className="p-1">
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
+                    <Package className="h-3 w-3 text-[#041a24]" /> Products
                   </div>
                   {products.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-[#166B52] truncate">
+                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
                           {item.title}
                         </div>
-                        <div className="text-[11px] text-gray-500 truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>

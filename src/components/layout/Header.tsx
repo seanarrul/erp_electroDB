@@ -61,37 +61,37 @@ export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) 
   const roleLabel = roleLabels[userRole] || 'Staff Member';
 
   return (
-    <header className="h-16 bg-white border-b border-[#E2E8F0] px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 shrink-0 select-none relative z-30">
+    <header className="h-14 bg-white/95 backdrop-blur-xs border-b border-black/10 px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 shrink-0 select-none relative z-30 font-sans">
       {/* Left Area: Mobile Menu Toggle + Global Search Bar */}
-      <div className="flex items-center gap-2 flex-1 max-w-xl">
+      <div className="flex items-center gap-2.5 flex-1 max-w-xl">
         <button
           type="button"
           onClick={toggleMobileSidebar}
           aria-label="Open navigation menu"
-          className="lg:hidden p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer shrink-0"
+          className="lg:hidden p-1.5 text-[#041a24] hover:bg-black/5 rounded-[2px] transition-colors cursor-pointer shrink-0"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-4 h-4" />
         </button>
 
         <GlobalSearchBar />
       </div>
 
       {/* Right Controls: Notification, Date, User Avatar Menu */}
-      <div className="flex items-center gap-3 sm:gap-6 shrink-0 font-sans">
+      <div className="flex items-center gap-3 sm:gap-5 shrink-0">
         {/* Notification Bell */}
         <button
           type="button"
           title="Notifications"
           aria-label="Notifications"
-          className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+          className="relative p-1.5 text-black/60 hover:text-[#041a24] hover:bg-black/5 rounded-[2px] transition-colors cursor-pointer"
         >
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+          <Bell className="w-4 h-4" />
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#041a24] rounded-full ring-1 ring-white" />
         </button>
 
-        {/* Date Display */}
-        <div className="hidden md:flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-600">
-          <Calendar className="w-4 h-4 text-gray-400" />
+        {/* Date Display (Monospace Provenance) */}
+        <div className="hidden md:flex items-center gap-1.5 font-mono text-[11px] text-[#41555f]">
+          <Calendar className="w-3.5 h-3.5 text-black/40" />
           <span>{dateString}</span>
         </div>
 
@@ -102,33 +102,33 @@ export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) 
             onClick={() => setIsMenuOpen((prev) => !prev)}
             aria-expanded={isMenuOpen}
             aria-haspopup="true"
-            className="flex items-center gap-2 pl-3 border-l border-gray-200 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
+            className="flex items-center gap-2 pl-3 border-l border-black/10 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
           >
-            <div className="w-8 h-8 rounded-full bg-[#166B52] text-white flex items-center justify-center font-semibold text-xs shadow-2xs">
+            <div className="w-7 h-7 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs ring-1 ring-black/10">
               {userName.charAt(0).toUpperCase()}
             </div>
-            <span className="hidden sm:inline text-sm font-medium text-gray-800 group-hover:text-gray-900">
+            <span className="hidden sm:inline text-xs font-semibold text-[#041a24] group-hover:text-black">
               {userName}
             </span>
             <ChevronDown
-              className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform duration-200 ${
-                isMenuOpen ? 'rotate-180 text-gray-700' : ''
+              className={`w-3.5 h-3.5 text-black/40 group-hover:text-[#041a24] transition-transform duration-200 ${
+                isMenuOpen ? 'rotate-180 text-[#041a24]' : ''
               }`}
             />
           </button>
 
           {/* Interactive Dropdown Menu */}
           {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-[#E2E8F0] py-2 z-50 animate-in fade-in-50 slide-in-from-top-2 duration-150 font-sans text-xs">
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-[4px] shadow-sm border border-black/10 py-2 z-50 animate-in fade-in-50 duration-150 font-sans text-xs">
               {/* User Header Info */}
-              <div className="px-4 py-3 border-b border-[#F1F5F9]">
+              <div className="px-4 py-3 border-b border-black/10">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#166B52] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 ring-1 ring-black/10">
                     {userName.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-sm text-[#1F2937] truncate">{userName}</p>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#166B52] bg-[#E8F3EE] px-2 py-0.5 rounded-full mt-1">
+                    <p className="font-semibold text-xs text-[#041a24] truncate">{userName}</p>
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] text-white bg-[#041a24] px-1.5 py-0.5 rounded-[2px] mt-1">
                       <ShieldCheck className="w-3 h-3" />
                       {roleLabel}
                     </span>
@@ -137,13 +137,13 @@ export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) 
               </div>
 
               {/* Actions Section */}
-              <div className="p-1.5">
+              <div className="p-1">
                 <form action={logoutAction}>
                   <button
                     type="submit"
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50/70 rounded-[2px] transition-colors cursor-pointer"
                   >
-                    <LogOut className="w-4 h-4 text-red-500" />
+                    <LogOut className="w-3.5 h-3.5 text-red-500" />
                     <span>Sign Out</span>
                   </button>
                 </form>

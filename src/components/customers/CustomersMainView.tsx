@@ -132,15 +132,15 @@ export function CustomersMainView({
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-[#DDE3DE] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-black/10 pb-4">
         <div>
-          <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-[#52615B] block">
-            ElectronDB G4 HopeERD · Customers &amp; Payments
+          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#41555f] block">
+            ElectronDB G4 HopeERD &bull; Customers &amp; Payments
           </span>
-          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-[#17231F] mt-1">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-normal tracking-tight text-[#041a24] mt-0.5">
             Customers &amp; Payments
           </h1>
-          <p className="text-xs sm:text-sm text-[#52615B] mt-1">
+          <p className="text-xs text-[#41555f] mt-0.5 font-sans">
             Customer directory, payment terms, and official receipts ledger.
           </p>
         </div>

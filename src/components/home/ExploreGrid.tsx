@@ -20,7 +20,7 @@ import {
   Layers,
   ShoppingCart,
   Database,
-  ArrowRight,
+  ArrowUpRight,
   Lock,
 } from 'lucide-react';
 import { ERD_MODULES } from '@/lib/erd';
@@ -32,7 +32,7 @@ interface ExploreGridProps {
 }
 
 export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
-  // Module configuration with clean Black / White / Emerald Theme
+  // Module configuration with JeptahzRepo Editorial Style
   const moduleConfigs: Record<
     string,
     {
@@ -71,53 +71,53 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
       ],
     },
     products: {
-      subtitle: 'Manage product catalog, pricing and historical price adjustments.',
+      subtitle: 'Monitor stock levels, product descriptions, and historical price adjustments.',
       Icon: Package,
-      badgeText: `${counts.PRODUCT ?? 57} products`,
-      badgeIcon: Package,
+      badgeText: `${counts.PRODUCT ?? 10} products`,
+      badgeIcon: Tag,
       stats: [
         {
           label: 'PRODUCT',
-          value: counts.PRODUCT ?? 57,
+          value: counts.PRODUCT ?? 10,
           icon: Package,
         },
         {
           label: 'PRICEHIST',
-          value: counts.PRICEHIST ?? 79,
-          icon: Tag,
+          value: counts.PRICEHIST ?? 16,
+          icon: TrendingUp,
         },
         {
-          label: 'PRICE RECORDS',
-          value: counts.PRICEHIST ?? 79,
-          icon: TrendingUp,
+          label: 'IN STOCK',
+          value: counts.PRODUCT ?? 10,
+          icon: Boxes,
         },
       ],
     },
     customers: {
-      subtitle: 'Manage customer records and payment transactions.',
+      subtitle: 'Customer ledger, account receivables, and official payment receipts.',
       Icon: UserCheck,
-      badgeText: `${counts.CUSTOMER ?? 82} customers`,
-      badgeIcon: Users,
+      badgeText: `${counts.CUSTOMER ?? 10} accounts`,
+      badgeIcon: User,
       stats: [
         {
           label: 'CUSTOMER',
-          value: counts.CUSTOMER ?? 82,
-          icon: User,
+          value: counts.CUSTOMER ?? 10,
+          icon: UserCheck,
         },
         {
-          label: 'PAYMENT',
-          value: counts.PAYMENT ?? 165,
+          label: 'PAYMENTS',
+          value: counts.PAYMENTS ?? 118,
           icon: CreditCard,
         },
         {
-          label: 'PAYMENT RECORDS',
-          value: counts.PAYMENT ?? 165,
+          label: 'RECEIPTS',
+          value: counts.PAYMENTS ?? 118,
           icon: Receipt,
         },
       ],
     },
     sales: {
-      subtitle: 'Track sales transactions, items, and computed totals.',
+      subtitle: 'Track sales transactions, line items, and computed order totals.',
       Icon: BarChart3,
       badgeText: `${counts.SALES ?? 124} transactions`,
       badgeIcon: TrendingUp,
@@ -142,24 +142,30 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-4 font-sans">
       {/* Section Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#E8F3EE] flex items-center justify-center text-[#166B52] shrink-0 border border-emerald-100 shadow-2xs">
-          <Boxes className="w-5 h-5 stroke-[2]" />
+      <div className="flex items-center justify-between pb-2 border-b border-black/10">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-[2px] bg-[#041a24] flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Boxes className="w-4 h-4 stroke-[2]" />
+          </div>
+          <div>
+            <h3 className="font-editorial text-lg sm:text-xl font-normal text-[#041a24] tracking-tight">
+              Explore System Modules
+            </h3>
+            <p className="text-xs text-[#41555f]">
+              Interconnected business domains and 3NF database partitions.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-base sm:text-lg font-bold tracking-tight text-gray-900">
-            Explore System Modules
-          </h3>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Explore the four core business modules and their interconnected database tables.
-          </p>
-        </div>
+
+        <span className="hidden sm:inline-block font-mono text-[11px] text-[#41555f]">
+          4 Core Business Domains
+        </span>
       </div>
 
       {/* Grid: 2 columns on desktop, 1 on mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {ERD_MODULES.map((mod) => {
           const config = moduleConfigs[mod.id] || moduleConfigs.sales;
           const canAccess = mod.roles.includes(userRole);
@@ -169,20 +175,20 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
           return (
             <div
               key={mod.id}
-              className="relative bg-white rounded-xl border border-gray-200 border-l-[4px] border-l-[#166B52] p-5 sm:p-5.5 flex flex-col justify-between gap-4 shadow-2xs hover:shadow-xs transition-all overflow-hidden"
+              className="relative bg-white rounded-[4px] border border-black/10 hover:border-[#041a24] p-5 flex flex-col justify-between gap-4 shadow-2xs hover:shadow-xs transition-all overflow-hidden"
             >
               <div className="space-y-4">
-                {/* 1. Header: Module Icon + Title & Subtitle + Top Right Badge (Monochrome & Emerald Theme) */}
+                {/* 1. Header: Module Icon + Title & Subtitle + Top Right Badge */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-[#E8F3EE] text-[#166B52]">
-                      <Icon className="w-5 h-5 stroke-[2]" />
+                    <div className="w-9 h-9 rounded-[2px] flex items-center justify-center shrink-0 bg-[#F4F4F0] text-[#041a24] border border-black/10">
+                      <Icon className="w-4 h-4 stroke-[2]" />
                     </div>
                     <div>
-                      <h4 className="text-base sm:text-[17px] font-bold text-gray-900 tracking-tight">
+                      <h4 className="font-editorial text-base sm:text-lg font-normal text-[#041a24] tracking-tight">
                         {mod.name}
                       </h4>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-snug">
+                      <p className="text-xs text-[#41555f] mt-0.5 leading-snug">
                         {config.subtitle}
                       </p>
                     </div>
@@ -191,36 +197,36 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
                   {/* Top Right Pill Badge */}
                   <div className="shrink-0">
                     {!canAccess ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 text-[10px] font-semibold uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-black/5 text-[#41555f] border border-black/10 font-mono text-[10px] font-semibold uppercase tracking-wider">
                         <Lock className="w-3 h-3 stroke-[2]" />
                         <span>Admin only</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-emerald-100 bg-[#E8F3EE] text-[#166B52] text-xs font-medium">
-                        <BadgeIcon className="w-3.5 h-3.5 stroke-[2]" />
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#041a24] text-white font-mono text-[10px] font-medium tracking-wide">
+                        <BadgeIcon className="w-3 h-3 stroke-[2]" />
                         <span>{config.badgeText}</span>
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* 2. Middle: 3 Stat Cards (Clean Black & White / Neutral Style) */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                {/* 2. Middle: 3 Stat Boxes (JeptahzRepo Parchment Style) */}
+                <div className="grid grid-cols-3 gap-2">
                   {config.stats.map((stat, idx) => {
                     const StatIcon = stat.icon;
                     return (
                       <div
                         key={idx}
-                        className="bg-[#F8FAFC] rounded-lg p-2 sm:py-2.5 sm:px-3 border border-gray-100 flex items-center gap-2 min-w-0"
+                        className="bg-[#F4F4F0]/70 rounded-[2px] p-2 sm:py-2.5 sm:px-3 border border-black/10 flex items-center gap-2 min-w-0"
                       >
-                        <div className="w-6 h-6 rounded flex items-center justify-center shrink-0 bg-gray-100 text-gray-700">
-                          <StatIcon className="w-3.5 h-3.5 stroke-[2]" />
+                        <div className="w-6 h-6 rounded-[2px] flex items-center justify-center shrink-0 bg-white text-[#041a24] border border-black/10">
+                          <StatIcon className="w-3 h-3 stroke-[2]" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="block text-[9px] font-bold uppercase tracking-wider text-gray-400 truncate">
+                          <span className="block font-mono text-[9px] font-bold uppercase tracking-wider text-[#41555f] truncate">
                             {stat.label}
                           </span>
-                          <span className="block text-xs sm:text-sm font-bold text-gray-900 tabular-nums">
+                          <span className="block font-mono text-xs sm:text-sm font-bold text-[#041a24] tabular-nums">
                             {stat.value}
                           </span>
                         </div>
@@ -230,12 +236,12 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
                 </div>
               </div>
 
-              {/* 3. Bottom: Straightforward Records & Details on left, Solid Emerald Button on right */}
-              <div className="pt-3.5 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* 3. Bottom: Records & Details on left, Button on right */}
+              <div className="pt-3 border-t border-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs min-w-0">
-                  <Database className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span className="font-semibold text-gray-700 shrink-0">Records &amp; Details:</span>
-                  <span className="font-medium text-gray-900 truncate">{mod.detail}</span>
+                  <Database className="w-3.5 h-3.5 text-black/40 shrink-0" />
+                  <span className="font-mono text-[10px] text-[#41555f] shrink-0">Records:</span>
+                  <span className="font-mono text-[11px] text-[#041a24] font-medium truncate">{mod.detail}</span>
                 </div>
 
                 {/* Action Button */}
@@ -243,19 +249,19 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
                   {canAccess ? (
                     <Link
                       href={mod.href}
-                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#166B52] hover:bg-[#11523E] text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer w-full sm:w-auto"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[2px] bg-[#041a24] hover:bg-[#1c313b] text-white font-mono text-xs font-medium shadow-2xs transition-colors cursor-pointer w-full sm:w-auto"
                     >
                       <span>Open {mod.name}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowUpRight className="w-3.5 h-3.5" />
                     </Link>
                   ) : (
                     <button
                       type="button"
                       disabled
-                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gray-100 text-gray-400 text-xs font-semibold cursor-not-allowed w-full sm:w-auto"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[2px] bg-black/5 text-black/40 font-mono text-xs cursor-not-allowed w-full sm:w-auto border border-black/10"
                     >
                       <span>Open {mod.name}</span>
-                      <Lock className="w-3.5 h-3.5 text-gray-400" />
+                      <Lock className="w-3 h-3 text-black/30" />
                     </button>
                   )}
                 </div>
