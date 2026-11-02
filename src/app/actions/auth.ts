@@ -4,15 +4,17 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { UserRole, UserSession } from '@/lib/types';
-
-const DEMO_USERS: Record<string, { role: UserRole; name: string; password: string }> = {
-  'admin@hope.demo': { role: 'admin', name: 'Maria Santos (Admin)', password: 'demo' },
-  'sales@hope.demo': { role: 'sales', name: 'Juan Reyes (Sales Rep)', password: 'demo' },
-  'cashier@hope.demo': { role: 'cashier', name: 'Carlos Dizon (Cashier)', password: 'demo' },
-};
+import {
+  ensureAuthDb,
+  findAccountByEmail,
+  emailExists,
+  insertAccount,
+  hashPassword,
+  verifyPassword,
+} from '@/lib/auth-db';
 
 /**
- * Retrieves the current session (from Supabase Auth or session cookie).
+ * Retrieves the current session (from session cookie or Supabase Auth).
  */
 export async function getCurrentUser(): Promise<UserSession | null> {
   const cookieStore = await cookies();
@@ -21,19 +23,22 @@ export async function getCurrentUser(): Promise<UserSession | null> {
   const demoName = cookieStore.get('hope_demo_name')?.value;
 
   if (demoRole && demoEmail) {
-    const info = DEMO_USERS[demoEmail];
+    const account = findAccountByEmail(demoEmail);
     return {
-      id: 'demo-user-id',
+      id: account ? `staff-${account.id}` : 'demo-user-id',
       email: demoEmail,
-      role: demoRole,
-      fullName: demoName || (info ? info.name : 'Staff Member'),
+      role: account ? account.role : demoRole,
+      fullName: account ? account.fullName : demoName || 'Staff Member',
     };
   }
 
-  // Fallback to Supabase Auth
+  // Fallback to Supabase Auth if session cookies are absent
   try {
     const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
     if (error || !user) return null;
 
@@ -52,7 +57,7 @@ export async function getCurrentUser(): Promise<UserSession | null> {
 }
 
 /**
- * Handles regular email/password login.
+ * Handles regular email/password login with secure bcrypt hash verification.
  */
 export async function loginAction(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase();
@@ -62,16 +67,43 @@ export async function loginAction(formData: FormData) {
     return { error: 'Please enter both email and password.' };
   }
 
-  // Check demo presets first for seamless testing without email verification
-  if (DEMO_USERS[email]) {
+  ensureAuthDb();
+
+  // 1. Look up account in local secure auth.db
+  const account = findAccountByEmail(email);
+
+  if (account) {
+    // 2. Verify password against bcrypt hash
+    const isValid = await verifyPassword(password, account.passwordHash);
+    if (!isValid) {
+      return { error: 'Invalid email or password.' };
+    }
+
+    // 3. Establish authenticated session cookie
     const cookieStore = await cookies();
-    cookieStore.set('hope_demo_role', DEMO_USERS[email].role, { path: '/', httpOnly: true, maxAge: 86400 });
-    cookieStore.set('hope_demo_email', email, { path: '/', httpOnly: true, maxAge: 86400 });
-    cookieStore.set('hope_demo_name', DEMO_USERS[email].name, { path: '/', httpOnly: true, maxAge: 86400 });
+    cookieStore.set('hope_demo_role', account.role, {
+      path: '/',
+      httpOnly: true,
+      maxAge: 86400 * 7, // 7 days session
+      sameSite: 'lax',
+    });
+    cookieStore.set('hope_demo_email', account.email, {
+      path: '/',
+      httpOnly: true,
+      maxAge: 86400 * 7,
+      sameSite: 'lax',
+    });
+    cookieStore.set('hope_demo_name', account.fullName, {
+      path: '/',
+      httpOnly: true,
+      maxAge: 86400 * 7,
+      sameSite: 'lax',
+    });
+
     redirect('/');
   }
 
-  // Attempt Supabase Auth
+  // 4. Fallback to Supabase Auth if account not in local auth.db
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -80,13 +112,7 @@ export async function loginAction(formData: FormData) {
     });
 
     if (error) {
-      // Fallback: If user entered valid credentials for a locally registered account
-      const cookieStore = await cookies();
-      const existingEmail = cookieStore.get('hope_demo_email')?.value;
-      if (existingEmail && existingEmail.toLowerCase() === email) {
-        redirect('/');
-      }
-      return { error: error.message };
+      return { error: 'Invalid email or password.' };
     }
 
     if (data.user) {
@@ -94,16 +120,17 @@ export async function loginAction(formData: FormData) {
       cookieStore.delete('hope_demo_role');
       cookieStore.delete('hope_demo_email');
       cookieStore.delete('hope_demo_name');
+      redirect('/');
     }
-  } catch (err: any) {
-    return { error: err?.message || 'Authentication failed. Please check your credentials.' };
+  } catch {
+    return { error: 'Invalid email or password.' };
   }
 
   redirect('/');
 }
 
 /**
- * Handles new staff account registration.
+ * Handles new staff account registration with bcrypt password hashing and auth.db persistence.
  */
 export async function registerAction(formData: FormData) {
   const fullName = (formData.get('fullName') as string)?.trim();
@@ -115,14 +142,36 @@ export async function registerAction(formData: FormData) {
     return { error: 'Please provide full name, email address, and password.' };
   }
 
+  const validRoles: UserRole[] = ['admin', 'sales', 'cashier'];
+  if (!validRoles.includes(role)) {
+    return { error: 'Please select a valid staff role.' };
+  }
+
   if (password.length < 6) {
     return { error: 'Password must be at least 6 characters.' };
   }
 
-  // Attempt Supabase Auth Sign Up
+  ensureAuthDb();
+
+  // 1. Prevent duplicate registrations
+  if (emailExists(email)) {
+    return { error: 'An account with this email address already exists. Please sign in.' };
+  }
+
+  // 2. Hash password with bcrypt salt (unhackable, non-reversible)
+  const passwordHash = await hashPassword(password);
+
+  // 3. Persist new account to auth.db
+  try {
+    insertAccount(email, passwordHash, fullName, role);
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to save account to database.' };
+  }
+
+  // 4. Optional Supabase Auth sign-up in background
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.auth.signUp({
+    await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -132,19 +181,30 @@ export async function registerAction(formData: FormData) {
         },
       },
     });
-
-    if (error) {
-      console.warn('Supabase signUp notice:', error.message);
-    }
-  } catch (err) {
-    // Supabase offline/unconfigured fallback
+  } catch {
+    // Supabase offline fallback
   }
 
-  // Establish authenticated session immediately
+  // 5. Establish authenticated session immediately
   const cookieStore = await cookies();
-  cookieStore.set('hope_demo_role', role, { path: '/', httpOnly: true, maxAge: 86400 });
-  cookieStore.set('hope_demo_email', email, { path: '/', httpOnly: true, maxAge: 86400 });
-  cookieStore.set('hope_demo_name', fullName, { path: '/', httpOnly: true, maxAge: 86400 });
+  cookieStore.set('hope_demo_role', role, {
+    path: '/',
+    httpOnly: true,
+    maxAge: 86400 * 7,
+    sameSite: 'lax',
+  });
+  cookieStore.set('hope_demo_email', email, {
+    path: '/',
+    httpOnly: true,
+    maxAge: 86400 * 7,
+    sameSite: 'lax',
+  });
+  cookieStore.set('hope_demo_name', fullName, {
+    path: '/',
+    httpOnly: true,
+    maxAge: 86400 * 7,
+    sameSite: 'lax',
+  });
 
   redirect('/');
 }
@@ -154,16 +214,16 @@ export async function registerAction(formData: FormData) {
  */
 export async function demoLoginAction(role: UserRole) {
   const cookieStore = await cookies();
-  const emailMap: Record<UserRole, string> = {
-    admin: 'admin@hope.demo',
-    sales: 'sales@hope.demo',
-    cashier: 'cashier@hope.demo',
+  const emailMap: Record<UserRole, { email: string; name: string }> = {
+    admin: { email: 'admin@hope.demo', name: 'Maria Santos (Admin)' },
+    sales: { email: 'sales@hope.demo', name: 'Juan Reyes (Sales Rep)' },
+    cashier: { email: 'cashier@hope.demo', name: 'Carlos Dizon (Cashier)' },
   };
 
-  const email = emailMap[role];
-  cookieStore.set('hope_demo_role', role, { path: '/', httpOnly: true, maxAge: 86400 });
-  cookieStore.set('hope_demo_email', email, { path: '/', httpOnly: true, maxAge: 86400 });
-  cookieStore.set('hope_demo_name', DEMO_USERS[email]?.name || 'Demo User', { path: '/', httpOnly: true, maxAge: 86400 });
+  const info = emailMap[role];
+  cookieStore.set('hope_demo_role', role, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
+  cookieStore.set('hope_demo_email', info.email, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
+  cookieStore.set('hope_demo_name', info.name, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
 
   redirect('/');
 }

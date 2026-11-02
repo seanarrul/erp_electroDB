@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import type { RecentTransactionItem } from '@/lib/data/home';
 
 interface RecentTransactionsCardProps {
@@ -11,26 +11,31 @@ interface RecentTransactionsCardProps {
 
 export function RecentTransactionsCard({ transactions }: RecentTransactionsCardProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 shadow-2xs space-y-4">
+    <div className="rounded-[4px] border border-black/10 bg-white p-5 sm:p-6 shadow-2xs space-y-4 font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
-          Recent Sales Transactions
-        </h2>
+      <div className="flex items-center justify-between pb-3 border-b border-black/10">
+        <div>
+          <h2 className="font-editorial text-lg sm:text-xl font-normal text-[#041a24] tracking-tight">
+            Recent Sales Transactions
+          </h2>
+          <p className="text-xs text-[#41555f] mt-0.5">
+            Operational ledger entries recorded across sales counters.
+          </p>
+        </div>
         <Link
           href="/sales"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
+          className="inline-flex items-center gap-1 font-mono text-xs text-[#041a24] hover:opacity-80 transition-opacity"
         >
-          <span>View All</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <span>View Archive</span>
+          <ArrowUpRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto -mx-5 sm:-mx-6">
-        <table className="w-full text-left border-collapse text-xs sm:text-sm">
+        <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-y border-gray-100 bg-[#FAFAFA]/70 text-gray-400 font-medium text-[11px] uppercase tracking-wider">
+            <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
               <th className="py-2.5 px-5 sm:px-6">Transaction No.</th>
               <th className="py-2.5 px-4">Date</th>
               <th className="py-2.5 px-4">Customer</th>
@@ -39,36 +44,36 @@ export function RecentTransactionsCard({ transactions }: RecentTransactionsCardP
               <th className="py-2.5 px-5 sm:px-6">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-black/5">
             {transactions.map((tx) => (
               <tr
                 key={tx.transNo}
-                className="hover:bg-gray-50/60 transition-colors group cursor-pointer"
+                className="hover:bg-[#F4F4F0]/60 transition-colors group cursor-pointer"
               >
-                <td className="py-3 px-5 sm:px-6 font-medium text-gray-900 whitespace-nowrap">
+                <td className="py-3 px-5 sm:px-6 font-mono font-semibold text-[#041a24] whitespace-nowrap">
                   <Link href={`/sales/${tx.transNo}`} className="hover:underline">
                     {tx.transNo}
                   </Link>
                 </td>
-                <td className="py-3 px-4 text-gray-500 whitespace-nowrap">
+                <td className="py-3 px-4 font-mono text-xs text-[#41555f] whitespace-nowrap">
                   {tx.date}
                 </td>
-                <td className="py-3 px-4 font-medium text-gray-800 whitespace-nowrap">
+                <td className="py-3 px-4 font-medium text-[#041a24] whitespace-nowrap">
                   {tx.customer}
                 </td>
-                <td className="py-3 px-4 text-gray-600 whitespace-nowrap">
+                <td className="py-3 px-4 text-[#41555f] whitespace-nowrap">
                   {tx.employee}
                 </td>
-                <td className="py-3 px-4 font-bold text-gray-900 tabular-nums whitespace-nowrap">
+                <td className="py-3 px-4 font-mono font-bold text-[#041a24] tabular-nums whitespace-nowrap">
                   {tx.amountFormatted}
                 </td>
                 <td className="py-3 px-5 sm:px-6 whitespace-nowrap">
                   {tx.status === 'Completed' ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#E8F3EE] text-[#166B52]">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-[10px] font-medium bg-[#041a24] text-white">
                       Completed
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FEF3C7] text-[#92400E]">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-[10px] font-medium bg-[#FEF08A]/80 text-[#713F12] border border-yellow-400/50">
                       Pending
                     </span>
                   )}

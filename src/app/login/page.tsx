@@ -49,19 +49,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-between bg-[#F7F8F5] text-[#202923] selection:bg-[#285B48]/15 selection:text-[#202923] overflow-x-hidden font-sans">
+    <div className="relative min-h-screen flex flex-col justify-between bg-[#F4F4F0] text-[#041a24] selection:bg-[#041a24] selection:text-white overflow-x-hidden font-sans">
       {/* Matte Light Topographic Background */}
       <TopographicCanvas />
 
-      {/* Brand Header — Centered and prominently sized */}
+      {/* Brand Header */}
       <header className="relative z-10 w-full max-w-5xl mx-auto px-6 pt-8 pb-4 sm:pt-12 sm:pb-6 flex items-center justify-center text-center">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4.5 text-center sm:text-left">
-          <HopeLogo size={54} className="shrink-0 drop-shadow-sm" />
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-center sm:text-left">
+          <HopeLogo size={48} className="shrink-0 drop-shadow-sm" />
           <div className="flex flex-col items-center sm:items-start">
-            <h1 className="text-2xl sm:text-[32px] font-extrabold text-gray-900 leading-tight tracking-tight">
+            <h1 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] leading-tight tracking-tight">
               {BRAND.name}
             </h1>
-            <p className="text-sm sm:text-[16px] font-semibold text-[#166B52] leading-snug mt-1">
+            <p className="font-mono text-xs sm:text-sm text-[#41555f] leading-snug mt-1">
               {BRAND.systemName}
             </p>
           </div>
@@ -69,16 +69,16 @@ export default function LoginPage() {
       </header>
 
       {/* Main Authentication Section */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12 w-full max-w-md mx-auto">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-10 w-full max-w-md mx-auto">
         {/* Pure White Architectural Authentication Card */}
-        <div className="w-full bg-white border border-gray-200 rounded-2xl shadow-xl p-7 sm:p-8 space-y-6">
+        <div className="w-full bg-white border border-black/10 rounded-[4px] shadow-xs p-6 sm:p-8 space-y-5">
           {/* Left-Aligned Card Heading & Supporting Text */}
           <div className="text-left">
-            <h1 className="text-[25px] font-semibold text-[#202923] tracking-tight leading-tight">
+            <h2 className="font-editorial text-2xl font-normal text-[#041a24] tracking-tight leading-tight">
               {mode === 'signin' ? 'Sign In' : 'Create Staff Account'}
-            </h1>
-            <p className="text-[14px] font-normal text-[#626C65] mt-1">
-              {mode === 'signin' ? 'Access your staff account.' : 'Register a staff member.'}
+            </h2>
+            <p className="text-xs text-[#41555f] mt-1 font-sans">
+              {mode === 'signin' ? 'Access your authorized staff account.' : 'Register a new authenticated staff member.'}
             </p>
           </div>
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
           <div
             role="tablist"
             aria-label="Authentication modes"
-            className="grid grid-cols-2 p-1 rounded-[4px] bg-[#F0F2EE] border border-[#E0E5E0] text-[13px] font-medium"
+            className="grid grid-cols-2 p-1 rounded-[2px] bg-[#F4F4F0] border border-black/10 text-xs font-mono"
           >
             <button
               type="button"
@@ -96,10 +96,10 @@ export default function LoginPage() {
                 setMode('signin');
                 setError(null);
               }}
-              className={`py-2 text-center transition-all rounded-[3px] font-medium ${
+              className={`py-1.5 text-center transition-all rounded-[2px] font-medium cursor-pointer ${
                 mode === 'signin'
-                  ? 'bg-white text-[#24352D] font-semibold shadow-xs'
-                  : 'text-[#626C65] hover:text-[#202923]'
+                  ? 'bg-[#041a24] text-white shadow-2xs'
+                  : 'text-[#41555f] hover:text-[#041a24]'
               }`}
             >
               Sign In
@@ -112,10 +112,10 @@ export default function LoginPage() {
                 setMode('register');
                 setError(null);
               }}
-              className={`py-2 text-center transition-all rounded-[3px] font-medium ${
+              className={`py-1.5 text-center transition-all rounded-[2px] font-medium cursor-pointer ${
                 mode === 'register'
-                  ? 'bg-white text-[#24352D] font-semibold shadow-xs'
-                  : 'text-[#626C65] hover:text-[#202923]'
+                  ? 'bg-[#041a24] text-white shadow-2xs'
+                  : 'text-[#41555f] hover:text-[#041a24]'
               }`}
             >
               Register
@@ -126,20 +126,20 @@ export default function LoginPage() {
           {error && (
             <div
               role="alert"
-              className="rounded-[4px] bg-[#FDF3F2] border border-[#FECDCA] p-3 text-xs text-[#B42318] flex items-start gap-2"
+              className="rounded-[2px] bg-red-50 border border-red-200 p-2.5 text-xs text-red-800 flex items-start gap-2 font-mono"
             >
-              <span className="font-semibold text-[#B42318] shrink-0">Error:</span>
+              <span className="font-semibold shrink-0">ERROR:</span>
               <span>{error}</span>
             </div>
           )}
 
           {/* Sign In Form */}
           {mode === 'signin' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
               <div>
                 <label
                   htmlFor="signin-email"
-                  className="block text-[13px] font-medium text-[#202923] mb-1.5"
+                  className="block text-xs font-semibold text-[#041a24] mb-1 font-sans"
                 >
                   Email address
                 </label>
@@ -150,14 +150,14 @@ export default function LoginPage() {
                   required
                   autoComplete="username"
                   placeholder="Enter your email address"
-                  className="w-full h-11 px-3.5 bg-white border border-[#CCD5CD] focus:border-[#285B48] focus:ring-2 focus:ring-[#A8C6B2]/40 rounded-[4px] text-[14px] font-normal text-[#202923] placeholder-[#8E9A90] outline-none transition-all font-sans"
+                  className="w-full h-9 px-3 bg-white border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 rounded-[2px] text-xs text-[#041a24] placeholder-[#41555f]/60 outline-none transition-all font-sans"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="signin-password"
-                  className="block text-[13px] font-medium text-[#202923] mb-1.5"
+                  className="block text-xs font-semibold text-[#041a24] mb-1 font-sans"
                 >
                   Password
                 </label>
@@ -169,15 +169,15 @@ export default function LoginPage() {
                     required
                     autoComplete="current-password"
                     placeholder="Enter your password"
-                    className="w-full h-11 pl-3.5 pr-10 bg-white border border-[#CCD5CD] focus:border-[#285B48] focus:ring-2 focus:ring-[#A8C6B2]/40 rounded-[4px] text-[14px] font-normal text-[#202923] placeholder-[#8E9A90] outline-none transition-all font-sans"
+                    className="w-full h-9 pl-3 pr-9 bg-white border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 rounded-[2px] text-xs text-[#041a24] placeholder-[#41555f]/60 outline-none transition-all font-sans"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#66736B] hover:text-[#24352D] p-1 rounded focus:outline-none focus:ring-2 focus:ring-[#A8C6B2]/40 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-black/40 hover:text-[#041a24] p-1 rounded transition-colors"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
@@ -185,11 +185,11 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full h-11 bg-[#285B48] hover:bg-[#204737] active:bg-[#1a3b2e] disabled:opacity-50 text-white font-semibold text-[14px] rounded-[4px] shadow-xs flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A8C6B2] cursor-pointer"
+                className="w-full h-9 bg-[#041a24] hover:bg-[#1c313b] active:bg-black disabled:opacity-50 text-white font-medium text-xs rounded-[2px] shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 {isPending ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span className="flex items-center gap-2 font-mono">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                     <span>Signing in...</span>
                   </span>
                 ) : (
@@ -197,7 +197,7 @@ export default function LoginPage() {
                 )}
               </button>
 
-              <div className="text-center pt-1 text-[14px] text-[#626C65]">
+              <div className="text-center pt-1 text-xs text-[#41555f] font-sans">
                 Don&apos;t have an account?{' '}
                 <button
                   type="button"
@@ -205,7 +205,7 @@ export default function LoginPage() {
                     setMode('register');
                     setError(null);
                   }}
-                  className="font-medium text-[#285B48] hover:underline focus:outline-none focus:ring-1 focus:ring-[#285B48] rounded"
+                  className="font-medium text-[#041a24] hover:underline"
                 >
                   Create an account
                 </button>
@@ -215,11 +215,11 @@ export default function LoginPage() {
 
           {/* Registration Form */}
           {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
               <div>
                 <label
                   htmlFor="reg-name"
-                  className="block text-[13px] font-medium text-[#202923] mb-1.5"
+                  className="block text-xs font-semibold text-[#041a24] mb-1 font-sans"
                 >
                   Full name
                 </label>
@@ -230,14 +230,14 @@ export default function LoginPage() {
                   required
                   autoComplete="name"
                   placeholder="Enter your full name"
-                  className="w-full h-11 px-3.5 bg-white border border-[#CCD5CD] focus:border-[#285B48] focus:ring-2 focus:ring-[#A8C6B2]/40 rounded-[4px] text-[14px] font-normal text-[#202923] placeholder-[#8E9A90] outline-none transition-all font-sans"
+                  className="w-full h-9 px-3 bg-white border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 rounded-[2px] text-xs text-[#041a24] placeholder-[#41555f]/60 outline-none transition-all font-sans"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="reg-email"
-                  className="block text-[13px] font-medium text-[#202923] mb-1.5"
+                  className="block text-xs font-semibold text-[#041a24] mb-1 font-sans"
                 >
                   Email address
                 </label>
@@ -248,14 +248,14 @@ export default function LoginPage() {
                   required
                   autoComplete="email"
                   placeholder="Enter your email address"
-                  className="w-full h-11 px-3.5 bg-white border border-[#CCD5CD] focus:border-[#285B48] focus:ring-2 focus:ring-[#A8C6B2]/40 rounded-[4px] text-[14px] font-normal text-[#202923] placeholder-[#8E9A90] outline-none transition-all font-sans"
+                  className="w-full h-9 px-3 bg-white border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 rounded-[2px] text-xs text-[#041a24] placeholder-[#41555f]/60 outline-none transition-all font-sans"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="reg-password"
-                  className="block text-[13px] font-medium text-[#202923] mb-1.5"
+                  className="block text-xs font-semibold text-[#041a24] mb-1 font-sans"
                 >
                   Password
                 </label>
@@ -268,15 +268,15 @@ export default function LoginPage() {
                     minLength={6}
                     autoComplete="new-password"
                     placeholder="Enter your password"
-                    className="w-full h-11 pl-3.5 pr-10 bg-white border border-[#CCD5CD] focus:border-[#285B48] focus:ring-2 focus:ring-[#A8C6B2]/40 rounded-[4px] text-[14px] font-normal text-[#202923] placeholder-[#8E9A90] outline-none transition-all font-sans"
+                    className="w-full h-9 pl-3 pr-9 bg-white border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 rounded-[2px] text-xs text-[#041a24] placeholder-[#41555f]/60 outline-none transition-all font-sans"
                   />
                   <button
                     type="button"
                     onClick={() => setShowRegPassword(!showRegPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#66736B] hover:text-[#24352D] p-1 rounded focus:outline-none focus:ring-2 focus:ring-[#A8C6B2]/40 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-black/40 hover:text-[#041a24] p-1 rounded transition-colors"
                     aria-label={showRegPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
@@ -284,7 +284,7 @@ export default function LoginPage() {
               <div>
                 <label
                   htmlFor="reg-confirm"
-                  className="block text-[13px] font-medium text-[#202923] mb-1.5"
+                  className="block text-xs font-semibold text-[#041a24] mb-1 font-sans"
                 >
                   Confirm password
                 </label>
@@ -296,14 +296,14 @@ export default function LoginPage() {
                   minLength={6}
                   autoComplete="new-password"
                   placeholder="Confirm your password"
-                  className="w-full h-11 px-3.5 bg-white border border-[#CCD5CD] focus:border-[#285B48] focus:ring-2 focus:ring-[#A8C6B2]/40 rounded-[4px] text-[14px] font-normal text-[#202923] placeholder-[#8E9A90] outline-none transition-all font-sans"
+                  className="w-full h-9 px-3 bg-white border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 rounded-[2px] text-xs text-[#041a24] placeholder-[#41555f]/60 outline-none transition-all font-sans"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="reg-role"
-                  className="block text-[13px] font-medium text-[#202923] mb-1.5"
+                  className="block text-xs font-semibold text-[#041a24] mb-1 font-sans"
                 >
                   Staff role
                 </label>
@@ -311,7 +311,7 @@ export default function LoginPage() {
                   id="reg-role"
                   name="role"
                   defaultValue="admin"
-                  className="w-full h-11 px-3.5 bg-white border border-[#CCD5CD] focus:border-[#285B48] focus:ring-2 focus:ring-[#A8C6B2]/40 rounded-[4px] text-[14px] font-normal text-[#202923] outline-none transition-all font-sans cursor-pointer"
+                  className="w-full h-9 px-3 bg-white border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 rounded-[2px] text-xs text-[#041a24] outline-none transition-all font-sans cursor-pointer"
                 >
                   <option value="admin">Administrator (Complete access)</option>
                   <option value="sales">Sales Specialist (Orders & invoicing)</option>
@@ -322,11 +322,11 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full h-11 bg-[#285B48] hover:bg-[#204737] active:bg-[#1a3b2e] disabled:opacity-50 text-white font-semibold text-[14px] rounded-[4px] shadow-xs flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A8C6B2] cursor-pointer"
+                className="w-full h-9 bg-[#041a24] hover:bg-[#1c313b] active:bg-black disabled:opacity-50 text-white font-medium text-xs rounded-[2px] shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 {isPending ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span className="flex items-center gap-2 font-mono">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                     <span>Creating account...</span>
                   </span>
                 ) : (
@@ -334,7 +334,7 @@ export default function LoginPage() {
                 )}
               </button>
 
-              <div className="text-center pt-1 text-[14px] text-[#626C65]">
+              <div className="text-center pt-1 text-xs text-[#41555f] font-sans">
                 Already have an account?{' '}
                 <button
                   type="button"
@@ -342,7 +342,7 @@ export default function LoginPage() {
                     setMode('signin');
                     setError(null);
                   }}
-                  className="font-medium text-[#285B48] hover:underline focus:outline-none focus:ring-1 focus:ring-[#285B48] rounded"
+                  className="font-medium text-[#041a24] hover:underline"
                 >
                   Sign In
                 </button>
@@ -352,9 +352,9 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="relative z-10 w-full max-w-5xl mx-auto px-6 py-6 text-center text-xs font-normal text-gray-500">
-        {BRAND.name} &middot; {BRAND.systemName}
+      {/* Minimal Editorial Footer */}
+      <footer className="relative z-10 w-full max-w-5xl mx-auto px-6 py-6 text-center font-mono text-[11px] text-[#41555f]">
+        {BRAND.name} &bull; {BRAND.systemName} &bull; Group 4 ElectronDB
       </footer>
     </div>
   );

@@ -10,10 +10,10 @@ import { X, Receipt, AlertCircle, Calendar } from 'lucide-react';
 interface RecordCustomerPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  custNo: number;
+  custNo: string | number;
   custName: string;
   eligibleTransactions: {
-    transNo: number;
+    transNo: string | number;
     salesDate: string;
   }[];
 }
@@ -31,8 +31,8 @@ export function RecordCustomerPaymentModal({
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
   };
 
-  const [selectedTransNo, setSelectedTransNo] = useState<number>(
-    eligibleTransactions[0]?.transNo || 0
+  const [selectedTransNo, setSelectedTransNo] = useState<string | number>(
+    eligibleTransactions[0]?.transNo || ''
   );
   const [orNo, setOrNo] = useState('');
   const [amount, setAmount] = useState('');
@@ -56,7 +56,7 @@ export function RecordCustomerPaymentModal({
   if (!isOpen) return null;
 
   const currentSelectedSale = eligibleTransactions.find(
-    (t) => t.transNo === Number(selectedTransNo)
+    (t) => String(t.transNo) === String(selectedTransNo)
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +75,7 @@ export function RecordCustomerPaymentModal({
       return;
     }
 
-    if (!selectedTransNo || selectedTransNo <= 0) {
+    if (!selectedTransNo || selectedTransNo === 0 || selectedTransNo === '0') {
       setErrorMsg('Please select a valid sales transaction (R-05).');
       return;
     }
@@ -175,7 +175,7 @@ export function RecordCustomerPaymentModal({
             <select
               required
               value={selectedTransNo}
-              onChange={(e) => setSelectedTransNo(Number(e.target.value))}
+              onChange={(e) => setSelectedTransNo(e.target.value)}
               className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs font-mono text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
             >
               {eligibleTransactions.map((t) => (

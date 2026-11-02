@@ -50,37 +50,37 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-[#041a24]/40 backdrop-blur-xs transition-opacity"
         onClick={onClose} 
       />
 
       {/* Modal Dialog */}
       <div
         className={cn(
-          'relative w-full rounded-2xl bg-white shadow-2xl border border-gray-200 z-10 overflow-hidden font-sans',
+          'relative w-full rounded-[4px] bg-white shadow-xl border border-black/10 z-10 overflow-hidden font-sans',
           maxWidths[maxWidth]
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4.5">
+        <div className="flex items-center justify-between border-b border-black/10 bg-white px-5 py-4">
           <div>
-            <h2 className="font-sans text-lg font-bold text-gray-900 tracking-tight">{title}</h2>
+            <h2 className="font-editorial text-lg sm:text-xl font-normal text-[#041a24] tracking-tight">{title}</h2>
             {description && (
-              <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+              <p className="font-sans text-xs text-[#41555f] mt-0.5">{description}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+            className="rounded-[2px] p-1 text-black/40 hover:bg-black/5 hover:text-[#041a24] transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[82vh] overflow-y-auto bg-white text-gray-900">{children}</div>
+        <div className="p-5 max-h-[82vh] overflow-y-auto bg-white text-[#041a24]">{children}</div>
       </div>
     </div>
   );

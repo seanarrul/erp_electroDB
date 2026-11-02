@@ -263,18 +263,18 @@ export function EmployeesListView({
   return (
     <div className="space-y-6">
       {/* 1. Header (Section 7.1) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#DDE3DE] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-black/10 pb-4">
         <div>
-          <nav className="flex items-center text-xs text-[#52615B] mb-1 font-mono uppercase tracking-[0.12em]">
+          <nav className="flex items-center text-[10px] text-[#41555f] mb-1 font-mono uppercase tracking-[0.12em]">
             <span>ElectronDB G4 HopeERD</span>
-            <span className="mx-1.5">·</span>
-            <span className="text-[#17231F] font-semibold">Employees</span>
+            <span className="mx-1.5">&bull;</span>
+            <span className="text-[#041a24] font-semibold">Employees</span>
           </nav>
-          <h1 className="text-2xl sm:text-[28px] font-semibold text-[#17231F] tracking-tight">
-            Employees
+          <h1 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] tracking-tight">
+            Employees &amp; Staff
           </h1>
-          <p className="text-xs sm:text-sm text-[#52615B] mt-0.5">
-            Employee records, job history and department assignments.
+          <p className="text-xs text-[#41555f] mt-0.5 font-sans">
+            Employee personnel records, job history, and department assignments.
           </p>
         </div>
 
@@ -283,25 +283,25 @@ export function EmployeesListView({
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="h-9 px-3 text-xs"
+            className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] h-8 px-3 text-xs font-medium shadow-2xs"
           >
-            <Download className="w-3.5 h-3.5 mr-1.5" />
+            <Download className="w-3.5 h-3.5 mr-1.5 text-black/40" />
             Export CSV
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsManageModalOpen(true)}
-            className="h-9 px-3 text-xs"
+            className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] h-8 px-3 text-xs font-medium shadow-2xs"
           >
-            <Settings2 className="w-3.5 h-3.5 mr-1.5" />
-            Departments & Jobs
+            <Settings2 className="w-3.5 h-3.5 mr-1.5 text-black/40" />
+            Departments &amp; Jobs
           </Button>
           <Button
             variant="primary"
             size="sm"
             onClick={() => setIsAddModalOpen(true)}
-            className="h-9 px-3.5 text-xs font-medium"
+            className="bg-[#041a24] hover:bg-[#1c313b] text-white rounded-[2px] h-8 px-3.5 text-xs font-medium shadow-2xs cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             Add Employee
@@ -311,13 +311,13 @@ export function EmployeesListView({
 
       {/* Responsive Department Select (Tablet / Mobile) */}
       <div className="lg:hidden">
-        <label className="block text-xs font-semibold text-[#17231F] mb-1.5">
+        <label className="block text-xs font-semibold text-[#041a24] mb-1.5">
           Select Department
         </label>
         <select
           value={selectedDept}
           onChange={(e) => handleSelectDept(e.target.value)}
-          className="w-full h-10 rounded-md border border-[#CCD5CD] bg-white px-3 text-xs text-[#17231F] font-medium focus:outline-none focus:border-[#245B48]"
+          className="w-full h-8 rounded-[2px] border border-black/15 bg-white px-3 text-xs text-[#041a24] font-medium focus:outline-none focus:border-[#041a24]"
         >
           <option value="ALL">All departments ({totalActiveCount} active)</option>
           {departments.map((d) => (
@@ -329,33 +329,33 @@ export function EmployeesListView({
       </div>
 
       {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start font-sans">
         {/* 2. Department Sections (Left Column, Desktop) */}
         <div className="hidden lg:block lg:col-span-1">
-          <Card className="border border-[#DDE3DE] bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="p-3.5 border-b border-[#DDE3DE] bg-[#FAFBFA] flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#17231F] tracking-tight">
+          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs">
+            <div className="p-3 border-b border-black/10 bg-[#F4F4F0]/70 flex items-center justify-between">
+              <span className="text-xs font-bold text-[#041a24] tracking-tight">
                 Departments
               </span>
-              <span className="text-[11px] font-mono text-[#52615B]">
+              <span className="text-[10px] font-mono text-[#41555f]">
                 {departments.length} units
               </span>
             </div>
 
-            <div className="p-1.5 space-y-0.5">
+            <div className="p-1 space-y-0.5">
               {/* All departments */}
               <button
                 type="button"
                 onClick={() => handleSelectDept('ALL')}
-                className={`w-full flex items-center justify-between py-2 px-2.5 rounded-md text-xs transition-colors text-left ${
+                className={`w-full flex items-center justify-between py-2 px-2.5 rounded-[2px] text-xs transition-colors text-left cursor-pointer ${
                   selectedDept === 'ALL'
-                    ? 'bg-[#EAF2ED] text-[#245B48] font-semibold border-l-2 border-[#245B48]'
-                    : 'text-[#52615B] hover:text-[#17231F] hover:bg-[#F5F6F4]'
+                    ? 'bg-black/5 text-[#041a24] font-semibold border-l-3 border-[#041a24]'
+                    : 'text-[#41555f] hover:text-[#041a24] hover:bg-[#F4F4F0]/60'
                 }`}
               >
                 <span className="truncate">All departments</span>
-                <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded ml-2 ${
-                  selectedDept === 'ALL' ? 'bg-[#245B48]/10 text-[#245B48]' : 'bg-[#F0F3F0] text-[#52615B]'
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] ml-2 ${
+                  selectedDept === 'ALL' ? 'bg-[#041a24] text-white font-medium' : 'bg-black/5 text-[#41555f]'
                 }`}>
                   {totalActiveCount}
                 </span>
@@ -369,23 +369,23 @@ export function EmployeesListView({
                     key={dept.deptCode}
                     type="button"
                     onClick={() => handleSelectDept(dept.deptCode)}
-                    className={`w-full flex items-center justify-between py-2 px-2.5 rounded-md text-xs transition-colors text-left ${
+                    className={`w-full flex items-center justify-between py-2 px-2.5 rounded-[2px] text-xs transition-colors text-left cursor-pointer ${
                       isSelected
-                        ? 'bg-[#EAF2ED] text-[#245B48] font-semibold border-l-2 border-[#245B48]'
-                        : 'text-[#52615B] hover:text-[#17231F] hover:bg-[#F5F6F4]'
+                        ? 'bg-black/5 text-[#041a24] font-semibold border-l-3 border-[#041a24]'
+                        : 'text-[#41555f] hover:text-[#041a24] hover:bg-[#F4F4F0]/60'
                     }`}
                   >
                     <div className="min-w-0 pr-2">
                       <p className="truncate leading-tight">{dept.deptName}</p>
-                      <p className="text-[10px] font-mono text-[#7A8781] mt-0.5">{dept.deptCode}</p>
+                      <p className="text-[10px] font-mono text-[#41555f] mt-0.5">{dept.deptCode}</p>
                     </div>
                     <span
-                      className={`text-[11px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] shrink-0 ${
                         isSelected
-                          ? 'bg-[#245B48]/10 text-[#245B48]'
+                          ? 'bg-[#041a24] text-white font-medium'
                           : dept.activeCount > 0
-                          ? 'bg-[#F0F3F0] text-[#52615B]'
-                          : 'bg-[#F5F6F4] text-[#A0AAA4]'
+                          ? 'bg-black/5 text-[#41555f]'
+                          : 'bg-black/2 text-black/30'
                       }`}
                     >
                       {dept.activeCount}
@@ -394,50 +394,50 @@ export function EmployeesListView({
                 );
               })}
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* 3. Table & Content (Right Column) */}
         <div className="lg:col-span-3 space-y-4">
-          <Card className="border border-[#DDE3DE] bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs">
             {/* Selected Department Header */}
-            <div className="p-4 border-b border-[#DDE3DE] bg-[#FAFBFA] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="p-3.5 border-b border-black/10 bg-[#F4F4F0]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <h2 className="text-sm font-semibold text-[#17231F] tracking-tight">
+                <h2 className="text-sm font-semibold text-[#041a24] tracking-tight">
                   {currentDeptMeta.title}
                   {currentDeptMeta.code && (
-                    <span className="ml-2 font-mono text-[11px] text-[#7A8781] font-normal">
+                    <span className="ml-2 font-mono text-[10px] text-[#41555f] font-normal">
                       ({currentDeptMeta.code})
                     </span>
                   )}
                 </h2>
-                <p className="text-[11px] text-[#7A8781] mt-0.5">
+                <p className="text-[10px] font-mono text-[#41555f] mt-0.5">
                   {currentDeptMeta.activeCount} active, {currentDeptMeta.separatedCount} separated
                 </p>
               </div>
 
               {/* Search Box */}
               <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#7A8781]" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40" />
                 <input
                   type="text"
                   placeholder="Search name, emp no, job..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-[#CCD5CD] bg-white text-[#17231F] placeholder:text-[#A0AAA4] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
+                  className="w-full h-8 pl-8 pr-3 text-xs rounded-[2px] border border-black/15 bg-white text-[#041a24] placeholder:text-[#41555f]/60 focus:outline-none focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 transition-all"
                 />
               </div>
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 px-4 pt-3 border-b border-[#DDE3DE] bg-white">
+            <div className="flex items-center gap-1 px-4 pt-2.5 border-b border-black/10 bg-white font-mono text-xs">
               <button
                 type="button"
                 onClick={() => setStatusTab('ALL')}
-                className={`py-2.5 px-4 text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                className={`py-2 px-3 text-xs font-mono transition-colors cursor-pointer border-b-2 ${
                   statusTab === 'ALL'
-                    ? 'border-[#166B52] text-[#166B52] font-semibold'
-                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                    ? 'border-[#041a24] text-[#041a24] font-bold'
+                    : 'border-transparent text-[#41555f] hover:text-[#041a24]'
                 }`}
               >
                 All ({tabCounts.all})
@@ -445,10 +445,10 @@ export function EmployeesListView({
               <button
                 type="button"
                 onClick={() => setStatusTab('Active')}
-                className={`py-2.5 px-4 text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                className={`py-2 px-3 text-xs font-mono transition-colors cursor-pointer border-b-2 ${
                   statusTab === 'Active'
-                    ? 'border-[#166B52] text-[#166B52] font-semibold'
-                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                    ? 'border-[#041a24] text-[#041a24] font-bold'
+                    : 'border-transparent text-[#41555f] hover:text-[#041a24]'
                 }`}
               >
                 Active ({tabCounts.active})
@@ -456,10 +456,10 @@ export function EmployeesListView({
               <button
                 type="button"
                 onClick={() => setStatusTab('Separated')}
-                className={`py-2.5 px-4 text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+                className={`py-2 px-3 text-xs font-mono transition-colors cursor-pointer border-b-2 ${
                   statusTab === 'Separated'
-                    ? 'border-[#166B52] text-[#166B52] font-semibold'
-                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                    ? 'border-[#041a24] text-[#041a24] font-bold'
+                    : 'border-transparent text-[#41555f] hover:text-[#041a24]'
                 }`}
               >
                 Separated ({tabCounts.separated})
@@ -468,8 +468,8 @@ export function EmployeesListView({
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAFBFA] border-b border-[#DDE3DE] text-[#17231F] font-semibold">
+              <table className="w-full text-left text-xs font-sans">
+                <thead className="bg-[#F4F4F0]/70 border-b border-black/10 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
                   <tr>
                     <th
                       onClick={() => handleSort('empNo')}
@@ -548,26 +548,26 @@ export function EmployeesListView({
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-[#E9EDEA]">
+                <tbody className="divide-y divide-black/5">
                   {paginatedEmployees.length === 0 ? (
                     <tr>
                       <td
                         colSpan={selectedDept === 'ALL' ? 8 : 7}
-                        className="py-12 text-center text-[#52615B]"
+                        className="py-12 text-center text-[#41555f] font-mono text-xs"
                       >
                         {searchQuery.trim() ? (
                           <div className="space-y-1">
-                            <p className="font-medium text-[#17231F]">No employees match your search.</p>
-                            <p className="text-xs text-[#7A8781]">Try searching for a different name, job, or ID.</p>
+                            <p className="font-semibold text-[#041a24]">No employees match your search.</p>
+                            <p className="text-[11px] text-[#41555f]">Try searching for a different name, job, or ID.</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            <p className="font-medium text-[#17231F]">No employees in this department yet.</p>
+                            <p className="font-semibold text-[#041a24]">No employees in this department yet.</p>
                             <Button
                               variant="primary"
                               size="sm"
                               onClick={() => setIsAddModalOpen(true)}
-                              className="text-xs"
+                              className="bg-[#041a24] text-white rounded-[2px] text-xs px-3 py-1.5"
                             >
                               <Plus className="w-3.5 h-3.5 mr-1" />
                               Add Employee
@@ -588,46 +588,46 @@ export function EmployeesListView({
                             router.push(`/employees/${emp.empNo}`);
                           }
                         }}
-                        className="hover:bg-[#F5F6F4] cursor-pointer transition-colors focus:bg-[#EAF2ED] focus:outline-none"
+                        className="hover:bg-[#F4F4F0]/60 cursor-pointer transition-colors focus:bg-black/5 focus:outline-none"
                       >
-                        <td className="py-2.5 px-3 font-mono font-medium text-[#17231F]">
+                        <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24]">
                           {emp.empNo}
                         </td>
-                        <td className="py-2.5 px-3 font-medium text-[#17231F]">
+                        <td className="py-2.5 px-3 font-semibold text-[#041a24]">
                           {emp.lastName}
                         </td>
-                        <td className="py-2.5 px-3 text-[#17231F]">
+                        <td className="py-2.5 px-3 text-[#041a24]">
                           {emp.firstName}
                         </td>
-                        <td className="py-2.5 px-3 text-[#17231F]">
+                        <td className="py-2.5 px-3 text-[#041a24]">
                           <div>{emp.jobDesc}</div>
-                          <div className="text-[10px] font-mono text-[#7A8781]">
+                          <div className="text-[10px] font-mono text-[#41555f]">
                             {emp.jobCode}
                           </div>
                         </td>
                         {selectedDept === 'ALL' && (
-                          <td className="py-2.5 px-3 text-[#17231F]">
+                          <td className="py-2.5 px-3 text-[#041a24]">
                             <div>{emp.deptName}</div>
-                            <div className="text-[10px] font-mono text-[#7A8781]">
+                            <div className="text-[10px] font-mono text-[#41555f]">
                               {emp.deptCode}
                             </div>
                           </td>
                         )}
-                        <td className="py-2.5 px-3 text-[#52615B] font-mono text-[11px]">
+                        <td className="py-2.5 px-3 text-[#41555f] font-mono text-xs tabular-nums">
                           {formatDate(emp.hireDate)}
                         </td>
                         <td className="py-2.5 px-3 text-center">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-medium border uppercase tracking-wider ${
+                            className={`inline-block px-1.5 py-0.5 rounded-[2px] text-[9px] font-mono font-medium uppercase tracking-wider ${
                               emp.employmentStatus === 'Active'
-                                ? 'bg-[#E8F4EC] text-[#24734D] border-[#D5DDD6]'
-                                : 'bg-[#F0F3F0] text-[#52615B] border-[#DDE3DE]'
+                                ? 'bg-[#041a24] text-white'
+                                : 'bg-black/5 text-[#41555f] border border-black/10'
                             }`}
                           >
                             {emp.employmentStatus}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-medium tabular-nums text-[#17231F]">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold tabular-nums text-[#041a24]">
                           {emp.salary != null ? formatPHP(emp.salary) : '—'}
                         </td>
                       </tr>
@@ -684,7 +684,7 @@ export function EmployeesListView({
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         </div>
       </div>
 

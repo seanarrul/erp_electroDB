@@ -4,13 +4,13 @@ import { cn } from '@/lib/utils';
 export function Table({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) {
   return (
     <div className="relative w-full overflow-auto">
-      <table className={cn('w-full caption-bottom text-xs sm:text-sm font-sans', className)} {...props} />
+      <table className={cn('w-full caption-bottom text-xs font-sans', className)} {...props} />
     </div>
   );
 }
 
 export function TableHeader({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn('border-b border-gray-200 bg-[#FAFAFA]/80', className)} {...props} />;
+  return <thead className={cn('border-b border-black/10 bg-[#F4F4F0]/70', className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
@@ -21,7 +21,7 @@ export function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTable
   return (
     <tr
       className={cn(
-        'border-b border-gray-100 transition-colors hover:bg-gray-50/70',
+        'border-b border-black/5 transition-colors hover:bg-[#F4F4F0]/60',
         className
       )}
       {...props}
@@ -33,7 +33,7 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
   return (
     <th
       className={cn(
-        'h-10 px-4 text-left align-middle font-medium text-xs text-gray-500 uppercase tracking-wider',
+        'h-8 px-3 text-left align-middle font-mono font-medium text-[10px] text-[#41555f] uppercase tracking-wider',
         className
       )}
       {...props}
@@ -42,5 +42,5 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
 }
 
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn('p-3.5 sm:p-4 align-middle text-gray-900', className)} {...props} />;
+  return <td className={cn('p-2.5 sm:p-3 align-middle text-[#041a24]', className)} {...props} />;
 }

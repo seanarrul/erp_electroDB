@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Newsreader, Inter, JetBrains_Mono } from 'next/font/google';
+import { Newsreader, Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { BRAND } from '@/lib/brand';
 
@@ -10,13 +10,13 @@ const newsreader = Newsreader({
   display: 'swap',
 });
 
-const inter = Inter({
+const geistSans = Geist({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
@@ -41,7 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`h-full ${newsreader.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`h-full ${newsreader.variable} ${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="h-full flex flex-col font-sans bg-paper text-ink antialiased">
         {children}

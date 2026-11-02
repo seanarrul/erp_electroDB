@@ -9,23 +9,30 @@ import { getCurrentUser } from './auth';
 import { getSalesForPayment, getNextORNumberPreview } from '@/lib/data/payments';
 
 const recordPaymentSchema = z.object({
-  transNo: z.number().int().positive('Transaction number is required'),
+  transNo: z.union([
+    z.number().int().positive('Transaction number is required'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
   amount: z.number().positive('Payment amount must be greater than zero'),
   payDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid payment date (YYYY-MM-DD) is required'),
 });
 
-export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
+export type RecordPaymentInput = {
+  transNo: string | number;
+  amount: number;
+  payDate: string;
+};
 
-export async function getPaymentFormDataAction(filter?: { transNo?: number; custNo?: number }) {
+export async function getPaymentFormDataAction(filter?: { transNo?: string | number; custNo?: string | number }) {
   try {
     const nextOrPreview = await getNextORNumberPreview();
     const rawSales = await getSalesForPayment();
     let sales = rawSales;
     if (filter?.custNo) {
-      sales = sales.filter((s) => s.custNo === filter.custNo);
+      sales = sales.filter((s) => String(s.custNo) === String(filter.custNo));
     }
     if (filter?.transNo) {
-      sales = sales.filter((s) => s.transNo === filter.transNo);
+      sales = sales.filter((s) => String(s.transNo) === String(filter.transNo));
     }
     return { sales, nextOrPreview };
   } catch (err: any) {

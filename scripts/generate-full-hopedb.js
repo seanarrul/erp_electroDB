@@ -161,11 +161,11 @@ console.log(`Generated ${products.length} products with complete descriptions`);
 
 // 6. Departments
 const departments = [
-  { deptCode: 'DEP-SLS', deptName: 'Commercial & Wholesale Sales' },
-  { deptCode: 'DEP-CRP', deptName: 'Corporate & Government Accounts' },
-  { deptCode: 'DEP-LOG', deptName: 'Logistics & Supply Fulfillment' },
-  { deptCode: 'DEP-FIN', deptName: 'Finance, Credit & Billing' },
-  { deptCode: 'DEP-EXE', deptName: 'Executive & Strategic Planning' },
+  { deptCode: 'DEP-SLS', deptName: 'Sales' },
+  { deptCode: 'DEP-CRP', deptName: 'Corporate Accounts' },
+  { deptCode: 'DEP-LOG', deptName: 'Warehouse & Logistics' },
+  { deptCode: 'DEP-FIN', deptName: 'Finance & Billing' },
+  { deptCode: 'DEP-EXE', deptName: 'Executive Management' },
 ];
 
 // 7. Jobs
@@ -192,7 +192,7 @@ employees.forEach((emp, index) => {
   } else if (index === 1 || index === 2) {
     // Supervisor / Senior Manager
     jobCode = 'JOB-SUPV';
-    deptCode = 'DEP-CRP';
+    deptCode = 'DEP-SLS';
     salary = 52000;
   } else if (index % 4 === 1) {
     jobCode = 'JOB-AMGR';

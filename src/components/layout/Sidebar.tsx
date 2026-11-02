@@ -3,12 +3,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, X } from 'lucide-react';
-import { navigationItems, type NavigationItem } from '@/lib/labels';
+import {
+  Home,
+  Receipt,
+  CreditCard,
+  Package,
+  Users,
+  CheckCircle2,
+  Lock,
+  PanelLeftClose,
+  X,
+} from 'lucide-react';
 import { BRAND } from '@/lib/brand';
 import type { UserRole } from '@/lib/types';
 import { logoutAction } from '@/app/actions/auth';
-import { HopeLogo } from '@/components/brand/HopeLogo';
 import { useSidebar } from '@/components/layout/SidebarContext';
 import { cn } from '@/lib/utils';
 
@@ -17,80 +25,81 @@ interface SidebarProps {
   userName?: string;
 }
 
-export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps) {
+export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso' }: SidebarProps) {
   const pathname = usePathname();
   const { isMobileOpen, closeMobileSidebar } = useSidebar();
 
-  const filteredNav = navigationItems.filter((item) => item.roles.includes(userRole));
-
-  const roleLabels: Record<UserRole, string> = {
-    admin: 'Administrator',
-    sales: 'Sales Representative',
-    cashier: 'Cashier / Billing',
-  };
-
-  const roleLabel = roleLabels[userRole] || 'Administrator';
-
-  // Group items by clean canonical sections
-  const sections: { key: string; label: string; items: NavigationItem[] }[] = [
-    { key: 'OVERVIEW', label: 'OVERVIEW', items: [] },
-    { key: 'TRANSACTIONS', label: 'TRANSACTIONS', items: [] },
-    { key: 'CATALOG', label: 'CATALOG', items: [] },
-    { key: 'ORGANIZATION', label: 'ORGANIZATION', items: [] },
+  const navLinks = [
+    {
+      section: 'OVERVIEW',
+      items: [
+        { href: '/', label: 'Home', icon: Home },
+      ],
+    },
+    {
+      section: 'TRANSACTIONS',
+      items: [
+        { href: '/sales', label: 'Sales', icon: Receipt },
+        { href: '/customers', label: 'Customers & Payments', icon: CreditCard },
+      ],
+    },
+    {
+      section: 'CATALOG',
+      items: [
+        { href: '/products', label: 'Products & Pricing', icon: Package },
+      ],
+    },
+    {
+      section: 'ORGANIZATION',
+      items: [
+        { href: '/employees', label: 'Employees', icon: Users },
+      ],
+    },
   ];
 
-  filteredNav.forEach((item) => {
-    const sec = sections.find((s) => s.key === item.section);
-    if (sec) sec.items.push(item);
-  });
-
-  const activeSections = sections.filter((s) => s.items.length > 0);
-
-  // Common inner sidebar content with improved, generous dimensions
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between p-4.5 sm:p-5 overflow-y-auto">
+    <div className="flex h-full flex-col justify-between p-4 sm:p-5 overflow-y-auto font-sans">
       <div className="space-y-4">
-        {/* Brand Section */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-[#E2E8F0]">
+        {/* Brand Section matching Stitch */}
+        <div className="flex items-center justify-between pb-3 border-b border-black/10">
           <Link
             href="/"
             onClick={closeMobileSidebar}
-            className="flex items-center gap-3 group select-none"
-            aria-label="ElectronDB G4 HopeERD — Information Management Monitoring System"
+            className="flex flex-col select-none group"
+            aria-label="ElectronDB G4 HopeERD"
           >
-            <HopeLogo size={30} className="shrink-0 transition-transform group-hover:scale-105" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[15px] font-semibold text-[#1F2937] leading-tight tracking-tight">
-                {BRAND.name}
+            <div className="flex items-center gap-1.5">
+              <span className="font-editorial italic text-[22px] font-bold tracking-tight text-[#041a24]">
+                ElectronDB
               </span>
-              <span className="text-[11px] font-normal text-[#64748B] leading-tight mt-0.5 truncate">
-                {BRAND.systemName}
-              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             </div>
+            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[#41555f] mt-0.5">
+              G4 HOPEERD &bull; MONITORING
+            </span>
           </Link>
 
-          {/* Mobile drawer close button */}
+          {/* Panel collapse indicator / mobile close */}
           <button
             type="button"
             onClick={closeMobileSidebar}
-            className="lg:hidden p-1.5 text-[#64748B] hover:text-[#1F2937] hover:bg-[#F5F7F6] rounded-md transition-colors"
-            aria-label="Close navigation"
+            className="p-1 text-black/40 hover:text-[#041a24] transition-colors"
+            aria-label="Toggle panel"
           >
-            <X className="w-4 h-4" />
+            <PanelLeftClose className="w-4 h-4 hidden lg:block" />
+            <X className="w-4 h-4 lg:hidden" />
           </button>
         </div>
 
         {/* Grouped Navigation */}
         <nav className="space-y-4 pt-1" aria-label="Main Navigation">
-          {activeSections.map((sec) => (
-            <div key={sec.key} className="space-y-1.5">
-              {/* Section Header */}
-              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
-                {sec.label}
+          {navLinks.map((sec) => (
+            <div key={sec.section} className="space-y-1">
+              <div className="px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-400 select-none">
+                {sec.section}
               </div>
 
-              {/* Section Items */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {sec.items.map((item) => {
                   const Icon = item.icon;
                   const isDashboard = item.href === '/';
@@ -100,44 +109,30 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
 
                   return (
                     <Link
-                      key={`${item.href}-${item.label}`}
+                      key={item.href}
                       href={item.href}
                       onClick={closeMobileSidebar}
-                      aria-label={`${item.label} — ${item.subtitle}`}
-                      title={`${item.label} — ${item.subtitle}`}
                       className={cn(
-                        'group flex items-start gap-3 px-3 py-2 rounded-lg font-sans transition-colors cursor-pointer outline-none select-none',
+                        'group flex items-center justify-between px-2.5 py-2 rounded-[3px] text-sm transition-all outline-none select-none',
                         isActive
-                          ? 'bg-[#E8F3EE] text-[#166B52]'
-                          : 'text-[#1F2937] hover:bg-[#F5F7F6]'
+                          ? 'bg-black/5 text-[#041a24] font-semibold'
+                          : 'text-[#041a24] hover:bg-black/4 font-medium'
                       )}
                     >
-                      <Icon
-                        className={cn(
-                          'w-4 h-4 shrink-0 mt-0.5 transition-colors',
-                          isActive
-                            ? 'text-[#166B52] stroke-[2.2]'
-                            : 'text-[#64748B] group-hover:text-[#1F2937] stroke-[1.8]'
-                        )}
-                      />
-                      <div className="flex flex-col min-w-0 text-left">
-                        <span
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon
                           className={cn(
-                            'text-[13px] leading-tight truncate tracking-tight',
-                            isActive ? 'font-semibold text-[#166B52]' : 'font-medium text-[#1F2937]'
+                            'w-4 h-4 shrink-0 transition-colors',
+                            isActive ? 'text-[#041a24] stroke-[2.2]' : 'text-black/40 group-hover:text-[#041a24] stroke-[1.8]'
                           )}
-                        >
-                          {item.label}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[11px] leading-tight truncate mt-0.5',
-                            isActive ? 'text-[#166B52]/80 font-normal' : 'text-[#64748B]'
-                          )}
-                        >
-                          {item.subtitle}
-                        </span>
+                        />
+                        <span className="truncate">{item.label}</span>
                       </div>
+
+                      {/* Stitch Active Indicator Dot */}
+                      {isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#041a24] shrink-0 ml-2" />
+                      )}
                     </Link>
                   );
                 })}
@@ -147,18 +142,21 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
         </nav>
       </div>
 
-      {/* Bottom Utility Area */}
-      <div className="pt-3.5 border-t border-[#E2E8F0] mt-auto flex items-center justify-between gap-2.5">
+      {/* Bottom Profile matching Stitch Image */}
+      <div className="pt-3 border-t border-black/10 mt-auto flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-[#166B52] text-white flex items-center justify-center font-semibold text-xs shrink-0 shadow-2xs select-none">
+          <div className="w-7 h-7 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 select-none">
             {userName.charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col text-left min-w-0">
-            <span className="text-[13px] font-semibold text-[#1F2937] leading-tight truncate">
-              {userName}
-            </span>
-            <span className="text-[11px] text-[#64748B] leading-tight truncate mt-0.5">
-              {roleLabel}
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-semibold text-[#041a24] leading-tight truncate">
+                {userName}
+              </span>
+              <CheckCircle2 className="w-3 h-3 text-[#041a24] shrink-0 fill-[#041a24] text-white" />
+            </div>
+            <span className="font-mono text-[10px] text-[#41555f] leading-tight truncate mt-0.5">
+              @{userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'administrator'}
             </span>
           </div>
         </div>
@@ -166,11 +164,11 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
         <form action={logoutAction} className="shrink-0">
           <button
             type="submit"
-            title="Sign Out"
+            title="Sign Out (Lock Session)"
             aria-label="Sign Out"
-            className="p-1.5 text-[#64748B] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+            className="p-1.5 text-black/40 hover:text-red-600 hover:bg-red-50 rounded-[2px] transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <Lock className="w-3.5 h-3.5" />
           </button>
         </form>
       </div>
@@ -179,15 +177,15 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
 
   return (
     <>
-      {/* 1. Desktop Persistent Sidebar with generous width */}
-      <aside className="hidden lg:flex w-[268px] h-screen flex-col bg-white border-r border-[#E2E8F0] shrink-0 select-none sticky top-0">
+      {/* 1. Desktop Persistent Sidebar */}
+      <aside className="hidden lg:flex w-[248px] h-screen flex-col bg-white/95 backdrop-blur-xs border-r border-black/10 shrink-0 select-none sticky top-0">
         {sidebarContent}
       </aside>
 
-      {/* 2. Mobile Responsive Drawer Backdrop */}
+      {/* 2. Mobile Drawer Backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-[1px] z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 bg-[#041a24]/40 backdrop-blur-xs z-40 lg:hidden transition-opacity"
           onClick={closeMobileSidebar}
           aria-hidden="true"
         />
@@ -196,7 +194,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
       {/* 3. Mobile Responsive Drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-[275px] bg-white border-r border-[#E2E8F0] shadow-2xl flex flex-col lg:hidden transition-transform duration-200 ease-in-out',
+          'fixed inset-y-0 left-0 z-50 w-[280px] bg-white border-r border-black/10 shadow-xl flex flex-col lg:hidden transition-transform duration-200 ease-in-out',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         aria-label="Mobile Navigation"
