@@ -7,118 +7,161 @@ import {
   ShieldCheck,
   Palette,
   Code2,
+  Users,
+  Layers,
+  ArrowUpRight,
 } from 'lucide-react';
 
 interface TeamMember {
   role: string;
   name: string;
+  handle: string;
   initials: string;
+  tag: string;
   icon: React.ComponentType<{ className?: string }>;
-  avatarStyle: string;
-  badgeStyle: string;
+  avatarBg: string;
+  avatarFg: string;
 }
 
 const MEMBERS: TeamMember[] = [
   {
     role: 'ScrumMaster',
     name: 'DE LEON, Sean Arrul',
+    handle: '@seanarrul',
     initials: 'SA',
+    tag: '#Agile #SprintLead',
     icon: Workflow,
-    avatarStyle: 'bg-slate-100 text-slate-700 border border-slate-200',
-    badgeStyle: 'text-slate-600 bg-slate-50 border-slate-200',
+    avatarBg: 'bg-[#F4F4F0]',
+    avatarFg: 'text-[#041a24]',
   },
   {
     role: 'DB Admin',
     name: 'DELA CRUZ, Veil',
-    initials: 'VC',
+    handle: '@veil',
+    initials: 'VD',
+    tag: '#SQL #SchemaMaster',
     icon: Database,
-    avatarStyle: 'bg-amber-50 text-amber-800 border border-amber-200/80',
-    badgeStyle: 'text-amber-800 bg-amber-50/80 border-amber-200',
+    avatarBg: 'bg-[#F4F4F0]',
+    avatarFg: 'text-[#041a24]',
   },
   {
     role: 'Tester',
     name: 'ECHAGUE, Arielle',
+    handle: '@arielle',
     initials: 'AE',
+    tag: '#QA #Validation',
     icon: ShieldCheck,
-    avatarStyle: 'bg-emerald-50 text-emerald-800 border border-emerald-200/80',
-    badgeStyle: 'text-emerald-800 bg-emerald-50/80 border-emerald-200',
+    avatarBg: 'bg-[#F4F4F0]',
+    avatarFg: 'text-[#041a24]',
   },
   {
     role: 'UI Designer',
     name: 'CASING, Christian jay',
+    handle: '@christianjay',
     initials: 'CC',
+    tag: '#UIDesign #Figma',
     icon: Palette,
-    avatarStyle: 'bg-indigo-50 text-indigo-800 border border-indigo-200/80',
-    badgeStyle: 'text-indigo-800 bg-indigo-50/80 border-indigo-200',
+    avatarBg: 'bg-[#F4F4F0]',
+    avatarFg: 'text-[#041a24]',
   },
   {
     role: 'Developer',
     name: 'Ildefonso, Jeptah Ashley',
+    handle: '@jeptah',
     initials: 'JI',
+    tag: '#FullStack #NextJS',
     icon: Code2,
-    avatarStyle: 'bg-[#166B52] text-white shadow-2xs',
-    badgeStyle: 'text-[#166B52] bg-[#E8F3EE] border-[#C3DED3]',
+    avatarBg: 'bg-[#041a24]',
+    avatarFg: 'text-white',
   },
 ];
 
 export function ProjectTeamCard() {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 sm:px-5 sm:py-3.5 shadow-2xs font-sans space-y-2.5">
-      {/* Slim Header Ribbon */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-gray-100">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs sm:text-[13px] font-bold text-gray-900 tracking-tight">
-            Group 4 ElectronDB
-          </span>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
-            2 BSCS 1
-          </span>
-          <span className="text-gray-300 hidden sm:inline">&bull;</span>
-          <span className="text-[11px] text-gray-500 font-normal">
-            Information Management Hope ERD &mdash; Nov 9, 2026
-          </span>
+    <article className="w-full rounded-[4px] border border-black/10 bg-white/90 backdrop-blur-xs shadow-xs overflow-hidden font-sans">
+      <div className="p-5 sm:p-7 space-y-5">
+        {/* ── Top Header Toolbar (Matched to JeptahzRepo Header) ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/10">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-base sm:text-lg font-bold text-[#041a24] tracking-tight">
+                Group 4 ElectronDB
+              </h2>
+              <span className="bg-[#041a24] text-white text-[10px] px-2 py-0.5 rounded-[2px] font-mono font-medium tracking-wide">
+                2 BSCS 1
+              </span>
+            </div>
+            <p className="text-xs text-[#55554F] font-sans">
+              Information Management Hope ERD &mdash; November 9, 2026
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2 font-mono text-[11px] text-black/50">
+            <Users className="w-3.5 h-3.5 text-black/40" />
+            <span>5 core contributors</span>
+          </div>
         </div>
 
-        <div className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-          <span>5 Members</span>
-        </div>
-      </div>
-
-      {/* Slim & Distinctive Member Chips */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-2.5">
-        {MEMBERS.map((member) => {
-          const Icon = member.icon;
-          return (
-            <div
-              key={member.name}
-              className="group bg-[#FAFBFA] hover:bg-white rounded-lg border border-gray-200 hover:border-gray-300 p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-xs transition-all"
-            >
-              {/* Unique Initial Avatar */}
+        {/* ── 5 Member Boxes (Exact JeptahzRepo Card Geometry & Fonts) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {MEMBERS.map((member) => {
+            const Icon = member.icon;
+            return (
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 select-none ${member.avatarStyle}`}
+                key={member.name}
+                className="group relative rounded-[4px] border border-black/10 hover:border-[#041a24] bg-white p-4 space-y-3 shadow-2xs hover:shadow-xs transition-all"
               >
-                {member.initials}
-              </div>
-
-              {/* Member Name & Role */}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-gray-900 truncate leading-tight group-hover:text-[#166B52] transition-colors">
-                  {member.name}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded border truncate ${member.badgeStyle}`}
+                {/* Author Avatar & Badge Row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div
+                    className={`w-9 h-9 rounded-full ring-2 ring-black/5 flex items-center justify-center font-mono font-bold text-xs select-none shrink-0 ${member.avatarBg} ${member.avatarFg}`}
                   >
-                    <Icon className="w-2.5 h-2.5 shrink-0" />
-                    <span className="truncate">{member.role}</span>
+                    {member.initials}
+                  </div>
+
+                  <span className="bg-[#041a24] text-white text-[10px] px-1.5 py-0.5 rounded-[2px] font-mono font-medium tracking-wide">
+                    {member.role}
                   </span>
                 </div>
+
+                {/* Name & Handle */}
+                <div className="space-y-0.5 min-w-0">
+                  <h3 className="text-xs font-semibold text-[#041a24] truncate leading-snug group-hover:text-[#041a24] transition-colors">
+                    {member.name}
+                  </h3>
+                  <p className="font-mono text-[11px] text-[#6E6E68] truncate">
+                    {member.handle}
+                  </p>
+                </div>
+
+                {/* Tag & Icon Indicator */}
+                <div className="pt-2 border-t border-black/5 flex items-center justify-between gap-1 font-mono text-[10px] text-[#41555f]">
+                  <span className="truncate">{member.tag}</span>
+                  <Icon className="w-3 h-3 text-black/35 shrink-0 group-hover:text-black/70 transition-colors" />
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* ── Footer Status Strip (Exact JeptahzRepo Bottom Actions Bar) ── */}
+        <div className="pt-3 border-t border-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-black/50">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] border border-black/15 bg-white text-black/70">
+              <Layers className="w-3 h-3 text-black/40" />
+              <span>Strict 10-Table Canonical Schema</span>
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-[2px] border border-black/10 text-black/60 bg-black/2">
+              #HopeERD
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 text-black/40">
+            <span>Verified System Architecture</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-black/40" />
+          </div>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
