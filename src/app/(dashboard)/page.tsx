@@ -5,7 +5,6 @@ import { DashboardHeader } from '@/components/home/DashboardHeader';
 import { ProjectTeamCard } from '@/components/home/ProjectTeamCard';
 import { DashboardKpis } from '@/components/home/DashboardKpis';
 import { ErdDiagram } from '@/components/home/ErdDiagram';
-import { ExploreGrid } from '@/components/home/ExploreGrid';
 import { redirect } from 'next/navigation';
 
 export const revalidate = 30;
@@ -68,15 +67,7 @@ export default async function HomePage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* 5. Explore System Modules (Standalone Section) */}
-      <section id="modules" aria-label="Explore System Modules">
-        <ExploreGrid
-          counts={counts}
-          userRole={user.role}
-        />
-      </section>
-
-      {/* 6. KPI Metric Cards */}
+      {/* 4. KPI Metric Cards */}
       <section aria-label="Key Performance Indicators">
         {data?.kpis && <DashboardKpis kpis={data.kpis} />}
       </section>
