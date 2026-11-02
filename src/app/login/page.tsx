@@ -53,17 +53,17 @@ export default function LoginPage() {
       {/* Matte Light Topographic Background */}
       <TopographicCanvas />
 
-      {/* Brand Header */}
-      <header className="relative z-10 w-full max-w-5xl mx-auto px-6 py-6 sm:py-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <HopeLogo size={36} className="shrink-0" />
-          <div className="flex flex-col">
-            <span className="text-[19px] font-bold text-gray-900 leading-tight tracking-tight">
+      {/* Brand Header — Centered and prominently sized */}
+      <header className="relative z-10 w-full max-w-5xl mx-auto px-6 pt-8 pb-4 sm:pt-12 sm:pb-6 flex items-center justify-center text-center">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4.5 text-center sm:text-left">
+          <HopeLogo size={54} className="shrink-0 drop-shadow-sm" />
+          <div className="flex flex-col items-center sm:items-start">
+            <h1 className="text-2xl sm:text-[32px] font-extrabold text-gray-900 leading-tight tracking-tight">
               {BRAND.name}
-            </span>
-            <span className="text-[12px] font-normal text-gray-500 leading-tight mt-0.5">
+            </h1>
+            <p className="text-sm sm:text-[16px] font-semibold text-[#166B52] leading-snug mt-1">
               {BRAND.systemName}
-            </span>
+            </p>
           </div>
         </div>
       </header>

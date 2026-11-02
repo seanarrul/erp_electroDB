@@ -56,7 +56,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
             href="/"
             onClick={closeMobileSidebar}
             className="flex items-center gap-3 group select-none"
-            aria-label="ElectronDB G4 HopeERD — Business Information System"
+            aria-label="ElectronDB G4 HopeERD — Information Management Monitoring System"
           >
             <HopeLogo size={30} className="shrink-0 transition-transform group-hover:scale-105" />
             <div className="flex flex-col min-w-0">

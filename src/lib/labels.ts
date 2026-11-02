@@ -74,7 +74,7 @@ export const navigationItems: NavigationItem[] = [
 export const LABELS = {
   // Brand Header
   brandName: 'ElectronDB G4 HopeERD',
-  brandSubtitle: 'Business Information System',
+  brandSubtitle: 'Information Management Monitoring System',
 
   // Navigation Items
   nav: navigationItems.map((item) => ({
