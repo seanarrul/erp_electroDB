@@ -93,11 +93,13 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000) in your browser. You will be redirected to `/` or `/login`.
 
-### Demo Login Credentials
-On the `/login` screen, use the **One-Click Demo Login** buttons:
-- 👑 **Executive Administrator** (`admin@hopegroup4.local`): Full access including employee records, compensation details, and organization configuration.
-- 💼 **Sales Representative** (`sales@hopegroup4.local`): Invoicing, customer account management, and product catalog access.
-- 💳 **Billing Cashier** (`cashier@hopegroup4.local`): Payment receipt validation, Official Receipts issuance, and payment records access.
+### Demo Login Credentials & Account Registration
+On the `/login` screen, you can sign in directly or register a new staff account:
+- 👑 **Executive Administrator** (`admin@hope.demo` / Password: `demo`): Full access including employee records, compensation details, and organization configuration.
+- 💼 **Sales Representative** (`sales@hope.demo` / Password: `demo`): Invoicing, customer account management, and product catalog access.
+- 💳 **Billing Cashier** (`cashier@hope.demo` / Password: `demo`): Payment receipt validation, Official Receipts issuance, and payment records access.
+
+> **Secure Local Account Storage:** Newly registered staff accounts are securely hashed using **bcrypt (10 salt rounds)** and stored permanently in an isolated local database (`auth.db`), preserving the strict 10-table canonical schema of `hope.db`.
 
 ---
 
