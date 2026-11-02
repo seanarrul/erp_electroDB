@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Bell, ChevronDown, Menu, LogOut, ShieldCheck } from 'lucide-react';
-import { GlobalSearchBar } from './GlobalSearchBar';
+import { usePathname } from 'next/navigation';
+import { Bell, ChevronDown, Menu, LogOut, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
 import { logoutAction } from '@/app/actions/auth';
 import type { UserRole } from '@/lib/types';
@@ -13,8 +13,9 @@ interface HeaderProps {
   title?: string;
 }
 
-export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) {
-  const [dateString, setDateString] = useState<string>('Wed, Oct 28, 2026');
+export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso' }: HeaderProps) {
+  const pathname = usePathname();
+  const [dateString, setDateString] = useState<string>('Nov 2, 2026');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { toggleMobileSidebar } = useSidebar();
@@ -22,7 +23,6 @@ export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) 
   useEffect(() => {
     const now = new Date();
     const formatted = new Intl.DateTimeFormat('en-US', {
-      weekday: 'short',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -52,6 +52,14 @@ export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) 
     };
   }, [isMenuOpen]);
 
+  // Compute dynamic breadcrumb based on route
+  let breadcrumb = 'OVERVIEW';
+  if (pathname.startsWith('/customers')) breadcrumb = 'CUSTOMERS & PAYMENTS';
+  else if (pathname.startsWith('/sales')) breadcrumb = 'SALES';
+  else if (pathname.startsWith('/products')) breadcrumb = 'PRODUCTS & PRICING';
+  else if (pathname.startsWith('/employees')) breadcrumb = 'EMPLOYEES';
+  else if (pathname.startsWith('/payments') || pathname.startsWith('/receipts')) breadcrumb = 'PAYMENTS & RECEIPTS';
+
   const roleLabels: Record<UserRole, string> = {
     admin: 'Administrator',
     sales: 'Sales Specialist',
@@ -62,8 +70,8 @@ export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) 
 
   return (
     <header className="h-14 bg-white/95 backdrop-blur-xs border-b border-black/10 px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 shrink-0 select-none relative z-30 font-sans">
-      {/* Left Area: Mobile Menu Toggle + Global Search Bar */}
-      <div className="flex items-center gap-2.5 flex-1 max-w-xl">
+      {/* Left: Mobile Toggle + Breadcrumb (Stitch Style) */}
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={toggleMobileSidebar}
@@ -73,41 +81,43 @@ export function Header({ userRole = 'admin', userName = 'Admin' }: HeaderProps) 
           <Menu className="w-4 h-4" />
         </button>
 
-        <GlobalSearchBar />
+        <nav className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-[#41555f] select-none">
+          <span>DATABASE</span>
+          <span className="text-black/25">/</span>
+          <span className="font-semibold text-[#041a24]">{breadcrumb}</span>
+        </nav>
       </div>
 
-      {/* Right Controls: Notification, Date, User Avatar Menu */}
-      <div className="flex items-center gap-3 sm:gap-5 shrink-0">
+      {/* Right Controls: Live Status Pill, Notification Bell, User Name in Editorial Italic */}
+      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        {/* Live Status Pill matching Stitch */}
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] border border-black/10 bg-white/90 shadow-2xs font-mono text-[10px] text-[#41555f]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-semibold text-emerald-800">LIVE</span>
+          <span className="text-black/30">|</span>
+          <span>{dateString}</span>
+        </div>
+
         {/* Notification Bell */}
         <button
           type="button"
           title="Notifications"
           aria-label="Notifications"
-          className="relative p-1.5 text-black/60 hover:text-[#041a24] hover:bg-black/5 rounded-[2px] transition-colors cursor-pointer"
+          className="relative p-1 text-black/60 hover:text-[#041a24] hover:bg-black/5 rounded-[2px] transition-colors cursor-pointer"
         >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#041a24] rounded-full ring-1 ring-white" />
         </button>
 
-        {/* Date Display (Monospace Provenance) */}
-        <div className="hidden md:flex items-center gap-1.5 font-mono text-[11px] text-[#41555f]">
-          <Calendar className="w-3.5 h-3.5 text-black/40" />
-          <span>{dateString}</span>
-        </div>
-
-        {/* User Profile Dropdown Menu */}
+        {/* User Profile Dropdown Menu in Editorial Italic */}
         <div className="relative" ref={menuRef}>
           <button
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
             aria-expanded={isMenuOpen}
             aria-haspopup="true"
-            className="flex items-center gap-2 pl-3 border-l border-black/10 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
+            className="flex items-center gap-1.5 pl-2 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
           >
-            <div className="w-7 h-7 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs ring-1 ring-black/10">
-              {userName.charAt(0).toUpperCase()}
-            </div>
-            <span className="hidden sm:inline text-xs font-semibold text-[#041a24] group-hover:text-black">
+            <span className="font-editorial italic text-sm text-[#041a24] group-hover:text-black">
               {userName}
             </span>
             <ChevronDown

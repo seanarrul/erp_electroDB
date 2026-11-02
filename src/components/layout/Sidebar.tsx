@@ -1,14 +1,23 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LogOut, X } from 'lucide-react';
-import { navigationItems, type NavigationItem } from '@/lib/labels';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  Home,
+  Receipt,
+  CreditCard,
+  Package,
+  Users,
+  Search,
+  CheckCircle2,
+  Lock,
+  PanelLeftClose,
+  X,
+} from 'lucide-react';
 import { BRAND } from '@/lib/brand';
 import type { UserRole } from '@/lib/types';
 import { logoutAction } from '@/app/actions/auth';
-import { HopeLogo } from '@/components/brand/HopeLogo';
 import { useSidebar } from '@/components/layout/SidebarContext';
 import { cn } from '@/lib/utils';
 
@@ -17,79 +26,105 @@ interface SidebarProps {
   userName?: string;
 }
 
-export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps) {
+export function Sidebar({ userRole = 'admin', userName = 'JeptahzRepo' }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isMobileOpen, closeMobileSidebar } = useSidebar();
+  const [sidebarSearch, setSidebarSearch] = useState('');
 
-  const filteredNav = navigationItems.filter((item) => item.roles.includes(userRole));
-
-  const roleLabels: Record<UserRole, string> = {
-    admin: 'Administrator',
-    sales: 'Sales Representative',
-    cashier: 'Cashier / Billing',
-  };
-
-  const roleLabel = roleLabels[userRole] || 'Administrator';
-
-  // Group items by clean canonical sections
-  const sections: { key: string; label: string; items: NavigationItem[] }[] = [
-    { key: 'OVERVIEW', label: 'OVERVIEW', items: [] },
-    { key: 'TRANSACTIONS', label: 'TRANSACTIONS', items: [] },
-    { key: 'CATALOG', label: 'CATALOG', items: [] },
-    { key: 'ORGANIZATION', label: 'ORGANIZATION', items: [] },
+  const navLinks = [
+    {
+      section: 'OVERVIEW',
+      items: [
+        { href: '/', label: 'Home', icon: Home },
+      ],
+    },
+    {
+      section: 'TRANSACTIONS',
+      items: [
+        { href: '/sales', label: 'Sales', icon: Receipt },
+        { href: '/customers', label: 'Customers & Payments', icon: CreditCard },
+      ],
+    },
+    {
+      section: 'CATALOG',
+      items: [
+        { href: '/products', label: 'Products & Pricing', icon: Package },
+      ],
+    },
+    {
+      section: 'ORGANIZATION',
+      items: [
+        { href: '/employees', label: 'Employees', icon: Users },
+      ],
+    },
   ];
 
-  filteredNav.forEach((item) => {
-    const sec = sections.find((s) => s.key === item.section);
-    if (sec) sec.items.push(item);
-  });
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (sidebarSearch.trim()) {
+      router.push(`/customers?q=${encodeURIComponent(sidebarSearch.trim())}`);
+      closeMobileSidebar();
+    }
+  };
 
-  const activeSections = sections.filter((s) => s.items.length > 0);
-
-  // Common inner sidebar content with editorial broadsheet aesthetics
   const sidebarContent = (
-    <div className="flex h-full flex-col justify-between p-4 sm:p-4.5 overflow-y-auto font-sans">
+    <div className="flex h-full flex-col justify-between p-4 sm:p-5 overflow-y-auto font-sans">
       <div className="space-y-4">
-        {/* Brand Section */}
+        {/* Brand Section matching Stitch */}
         <div className="flex items-center justify-between pb-3 border-b border-black/10">
           <Link
             href="/"
             onClick={closeMobileSidebar}
-            className="flex items-center gap-2.5 group select-none"
-            aria-label="ElectronDB G4 HopeERD — Information Management Monitoring System"
+            className="flex flex-col select-none group"
+            aria-label="ElectronDB G4 HopeERD"
           >
-            <HopeLogo size={28} className="shrink-0 transition-transform group-hover:scale-105" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[14px] font-bold text-[#041a24] leading-tight tracking-tight">
-                {BRAND.name}
+            <div className="flex items-center gap-1.5">
+              <span className="font-editorial italic text-[22px] font-bold tracking-tight text-[#041a24]">
+                ElectronDB
               </span>
-              <span className="font-mono text-[10px] text-[#41555f] leading-tight mt-0.5 truncate">
-                {BRAND.systemName}
-              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             </div>
+            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[#41555f] mt-0.5">
+              G4 HOPEERD &bull; MONITORING
+            </span>
           </Link>
 
-          {/* Mobile drawer close button */}
+          {/* Panel collapse indicator / mobile close */}
           <button
             type="button"
             onClick={closeMobileSidebar}
-            className="lg:hidden p-1 text-black/50 hover:text-[#041a24] hover:bg-black/5 rounded-[2px] transition-colors"
-            aria-label="Close navigation"
+            className="p-1 text-black/40 hover:text-[#041a24] transition-colors"
+            aria-label="Toggle panel"
           >
-            <X className="w-4 h-4" />
+            <PanelLeftClose className="w-4 h-4 hidden lg:block" />
+            <X className="w-4 h-4 lg:hidden" />
           </button>
         </div>
 
+        {/* Quick Search Bar matching Stitch */}
+        <form onSubmit={handleSearchSubmit} className="relative">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 pointer-events-none" />
+          <input
+            type="text"
+            value={sidebarSearch}
+            onChange={(e) => setSidebarSearch(e.target.value)}
+            placeholder="Search..."
+            className="w-full h-8 pl-8 pr-8 text-xs bg-black/3 hover:bg-black/5 focus:bg-white text-[#041a24] placeholder:text-[#41555f]/60 rounded-[3px] border border-black/10 focus:border-[#041a24] focus:outline-none transition-all"
+          />
+          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[9px] text-black/40 border border-black/10 px-1 py-0.2 rounded-[2px] bg-white pointer-events-none select-none">
+            ⌘K
+          </kbd>
+        </form>
+
         {/* Grouped Navigation */}
-        <nav className="space-y-3.5 pt-0.5" aria-label="Main Navigation">
-          {activeSections.map((sec) => (
-            <div key={sec.key} className="space-y-1">
-              {/* Section Header */}
-              <div className="px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[#41555f]">
-                {sec.label}
+        <nav className="space-y-4 pt-1" aria-label="Main Navigation">
+          {navLinks.map((sec) => (
+            <div key={sec.section} className="space-y-1">
+              <div className="px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#41555f]">
+                {sec.section}
               </div>
 
-              {/* Section Items */}
               <div className="space-y-0.5">
                 {sec.items.map((item) => {
                   const Icon = item.icon;
@@ -100,44 +135,30 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
 
                   return (
                     <Link
-                      key={`${item.href}-${item.label}`}
+                      key={item.href}
                       href={item.href}
                       onClick={closeMobileSidebar}
-                      aria-label={`${item.label} — ${item.subtitle}`}
-                      title={`${item.label} — ${item.subtitle}`}
                       className={cn(
-                        'group flex items-start gap-2.5 px-2.5 py-1.5 rounded-[2px] font-sans transition-all cursor-pointer outline-none select-none',
+                        'group flex items-center justify-between px-2.5 py-1.5 rounded-[3px] text-xs transition-all outline-none select-none',
                         isActive
-                          ? 'bg-[#041a24] text-white shadow-2xs'
-                          : 'text-[#041a24] hover:bg-black/5 hover:text-[#041a24]'
+                          ? 'bg-black/5 text-[#041a24] font-semibold'
+                          : 'text-[#041a24] hover:bg-black/4 font-medium'
                       )}
                     >
-                      <Icon
-                        className={cn(
-                          'w-4 h-4 shrink-0 mt-0.5 transition-colors',
-                          isActive
-                            ? 'text-white stroke-[2]'
-                            : 'text-black/40 group-hover:text-[#041a24] stroke-[1.8]'
-                        )}
-                      />
-                      <div className="flex flex-col min-w-0 text-left">
-                        <span
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon
                           className={cn(
-                            'text-[12px] leading-tight truncate tracking-tight',
-                            isActive ? 'font-semibold text-white' : 'font-medium text-[#041a24]'
+                            'w-4 h-4 shrink-0 transition-colors',
+                            isActive ? 'text-[#041a24] stroke-[2.2]' : 'text-black/40 group-hover:text-[#041a24] stroke-[1.8]'
                           )}
-                        >
-                          {item.label}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[10px] leading-tight truncate mt-0.5',
-                            isActive ? 'text-white/70 font-normal' : 'text-[#41555f]'
-                          )}
-                        >
-                          {item.subtitle}
-                        </span>
+                        />
+                        <span className="truncate">{item.label}</span>
                       </div>
+
+                      {/* Stitch Active Indicator Dot */}
+                      {isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#041a24] shrink-0 ml-2" />
+                      )}
                     </Link>
                   );
                 })}
@@ -147,18 +168,21 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
         </nav>
       </div>
 
-      {/* Bottom Utility Area */}
+      {/* Bottom Profile matching Stitch Image */}
       <div className="pt-3 border-t border-black/10 mt-auto flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 ring-1 ring-black/10 select-none">
-            {userName.charAt(0).toUpperCase()}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 select-none">
+            J
           </div>
           <div className="flex flex-col text-left min-w-0">
-            <span className="text-[12px] font-semibold text-[#041a24] leading-tight truncate">
-              {userName}
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-semibold text-[#041a24] leading-tight truncate">
+                JeptahzRepo
+              </span>
+              <CheckCircle2 className="w-3 h-3 text-[#041a24] shrink-0 fill-[#041a24] text-white" />
+            </div>
             <span className="font-mono text-[10px] text-[#41555f] leading-tight truncate mt-0.5">
-              {roleLabel}
+              @administrator
             </span>
           </div>
         </div>
@@ -166,11 +190,11 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
         <form action={logoutAction} className="shrink-0">
           <button
             type="submit"
-            title="Sign Out"
+            title="Sign Out (Lock Session)"
             aria-label="Sign Out"
-            className="p-1.5 text-black/50 hover:text-red-600 hover:bg-red-50 rounded-[2px] transition-colors cursor-pointer"
+            className="p-1.5 text-black/40 hover:text-red-600 hover:bg-red-50 rounded-[2px] transition-colors cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <Lock className="w-3.5 h-3.5" />
           </button>
         </form>
       </div>
@@ -180,11 +204,11 @@ export function Sidebar({ userRole = 'admin', userName = 'Admin' }: SidebarProps
   return (
     <>
       {/* 1. Desktop Persistent Sidebar */}
-      <aside className="hidden lg:flex w-[240px] h-screen flex-col bg-white/95 backdrop-blur-xs border-r border-black/10 shrink-0 select-none sticky top-0">
+      <aside className="hidden lg:flex w-[230px] h-screen flex-col bg-white/95 backdrop-blur-xs border-r border-black/10 shrink-0 select-none sticky top-0">
         {sidebarContent}
       </aside>
 
-      {/* 2. Mobile Responsive Drawer Backdrop */}
+      {/* 2. Mobile Drawer Backdrop */}
       {isMobileOpen && (
         <div
           className="fixed inset-0 bg-[#041a24]/40 backdrop-blur-xs z-40 lg:hidden transition-opacity"

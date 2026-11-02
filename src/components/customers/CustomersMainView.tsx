@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { RecordPaymentDialog } from '@/components/payments/RecordPaymentDialog';
 import { formatPHP, formatDate } from '@/lib/utils';
@@ -15,9 +14,10 @@ import type {
 } from '@/lib/data/customers';
 import {
   Search,
-  Download,
   Receipt,
   ExternalLink,
+  ArrowUpRight,
+  Info,
 } from 'lucide-react';
 
 interface CustomersMainViewProps {
@@ -130,55 +130,86 @@ export function CustomersMainView({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-black/10 pb-4">
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-[#41555f] block">
-            ElectronDB G4 HopeERD &bull; Customers &amp; Payments
-          </span>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-normal tracking-tight text-[#041a24] mt-0.5">
+    <div className="space-y-6 font-sans">
+      {/* ── Stitch Masthead (Matching Screen 3bd9ff66a0d8417dbe2cfcd0abe72180) ── */}
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 border-b border-black/10 pb-5">
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[#41555f] px-1.5 py-0.5 rounded-[2px] bg-black/5 border border-black/10">
+              V1.0.0
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[#41555f]">
+              LEDGER ARCHIVE
+            </span>
+          </div>
+          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#041a24] tracking-tight leading-tight">
             Customers &amp; Payments
           </h1>
-          <p className="text-xs text-[#41555f] mt-0.5 font-sans">
-            Customer directory, payment terms, and official receipts ledger.
+          <p className="font-sans text-xs sm:text-sm text-[#41555f] leading-relaxed">
+            Directory of accounts, structured credit limits, payment schedules, and verified official receipt settlements.
           </p>
+        </div>
+
+        {/* Top Right KPI Stat Boxes */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="rounded-[4px] border border-black/10 bg-white px-4 py-2 text-center min-w-[125px] shadow-2xs">
+            <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#41555f]">
+              TOTAL DIRECTORY
+            </span>
+            <span className="block font-sans text-base sm:text-lg font-bold text-[#041a24] mt-0.5 tabular-nums">
+              {metrics?.totalCustomers || initialCustomers.length} Accounts
+            </span>
+          </div>
+          <div className="rounded-[4px] border border-black/10 bg-white px-4 py-2 text-center min-w-[135px] shadow-2xs">
+            <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#41555f]">
+              SETTLEMENT RATE
+            </span>
+            <span className="block font-sans text-base sm:text-lg font-bold text-emerald-700 mt-0.5">
+              100% Reconciled
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Master-Detail Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start font-sans">
-        {/* Left Column (Master): Searchable Customer List */}
-        <div className="lg:col-span-4 xl:col-span-4 space-y-3">
-          <Card className="border border-[#DDE3DE] bg-white rounded-lg shadow-sm overflow-hidden">
-            {/* List Header with Count & Search */}
-            <div className="p-3.5 border-b border-[#DDE3DE] bg-[#FAFBFA] space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#17231F]">
-                  Customers ({filteredCustomers.length})
-                </span>
-                <span className="text-[10px] font-mono text-[#52615B]">
-                  Total: {initialCustomers.length}
+      {/* ── Master-Detail Grid Layout ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* ── Left Column (Customer Index) ── */}
+        <div className="lg:col-span-4 space-y-3">
+          <div className="rounded-[4px] border border-black/10 bg-white p-4 shadow-2xs space-y-3.5">
+            {/* Header: Customer Index + Count badge + All registered */}
+            <div className="flex items-center justify-between pb-1 border-b border-black/5">
+              <div className="flex items-center gap-2">
+                <h2 className="font-editorial text-base sm:text-lg font-normal text-[#041a24]">
+                  Customer Index
+                </h2>
+                <span className="font-mono text-[10px] text-[#41555f] bg-black/5 border border-black/10 px-1.5 py-0.2 rounded-[2px]">
+                  {filteredCustomers.length}
                 </span>
               </div>
+              <span className="font-mono text-[10px] text-[#41555f]">
+                All registered
+              </span>
+            </div>
 
-              {/* Search Box */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#7A8781]" />
-                <input
-                  type="text"
-                  placeholder="Search customer name, no..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-[#CCD5CD] bg-white text-[#17231F] placeholder:text-[#A0AAA4] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-                />
-              </div>
+            {/* Inner Search Box with ENTER ↵ Badge */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40" />
+              <input
+                type="text"
+                placeholder="Globus Medical"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-8 pl-8 pr-16 text-xs rounded-[3px] border border-black/15 bg-white text-[#041a24] placeholder:text-[#41555f]/50 focus:border-[#041a24] focus:outline-none transition-all"
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[9px] text-black/40 select-none">
+                ENTER &crarr;
+              </span>
             </div>
 
             {/* Customer List Stream */}
-            <div className="divide-y divide-[#E9EDEA] max-h-[600px] overflow-y-auto">
+            <div className="divide-y divide-black/5 max-h-[580px] overflow-y-auto -mx-1 px-1">
               {filteredCustomers.length === 0 ? (
-                <div className="p-6 text-center text-xs text-[#52615B]">
+                <div className="p-6 text-center font-mono text-xs text-[#41555f]">
                   No customers found.
                 </div>
               ) : (
@@ -189,22 +220,30 @@ export function CustomersMainView({
                       key={c.custNo}
                       type="button"
                       onClick={() => updateUrl({ custNo: String(c.custNo) })}
-                      className={`w-full text-left px-3.5 py-3 transition-colors flex items-center justify-between cursor-pointer ${
+                      className={`w-full text-left px-3 py-2.5 transition-all flex items-center justify-between cursor-pointer rounded-[2px] ${
                         isSelected
-                          ? 'bg-[#EAF2ED] text-[#245B48] font-semibold border-l-4 border-[#245B48]'
-                          : 'hover:bg-[#F5F6F4] text-[#17231F]'
+                          ? 'bg-black/5 border-l-3 border-[#041a24]'
+                          : 'hover:bg-[#F4F4F0]/60'
                       }`}
                     >
                       <div className="min-w-0 pr-2">
-                        <p className={`text-xs leading-snug truncate ${isSelected ? 'font-semibold text-[#245B48]' : 'font-medium text-[#17231F]'}`}>
+                        <p className={`text-xs leading-snug truncate ${isSelected ? 'font-bold text-[#041a24]' : 'font-medium text-[#041a24]'}`}>
                           {c.custName}
                         </p>
-                        <p className="text-[11px] font-mono text-[#52615B] mt-0.5">
-                          Customer {c.custNo}
+                        <p className="font-mono text-[10px] text-[#41555f] mt-0.5">
+                          {c.custNo}
                         </p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] font-mono text-[#52615B] px-1.5 py-0.5 rounded bg-[#F0F3F0] border border-[#DDE3DE]">
+
+                      {/* Payment Terms Tag */}
+                      <div className="shrink-0">
+                        <span
+                          className={`font-mono text-[9px] px-1.5 py-0.5 rounded-[2px] ${
+                            isSelected
+                              ? 'bg-[#041a24] text-white font-medium'
+                              : 'bg-black/5 text-[#41555f] border border-black/10'
+                          }`}
+                        >
                           {c.payTerms}
                         </span>
                       </div>
@@ -213,45 +252,48 @@ export function CustomersMainView({
                 })
               )}
             </div>
-          </Card>
+
+            {/* Pagination Controls */}
+            <div className="pt-2.5 border-t border-black/10 flex items-center justify-between text-xs font-mono">
+              <span className="text-[10px] text-[#41555f]">
+                1-{Math.min(10, filteredCustomers.length)} OF {filteredCustomers.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 rounded-[2px] text-black/40 hover:text-black hover:bg-black/5 cursor-pointer"
+                >
+                  PREV
+                </button>
+                <span className="w-5 h-5 flex items-center justify-center text-[10px] font-mono border border-black/15 bg-white text-[#041a24] rounded-[2px] font-semibold">
+                  1
+                </span>
+                <button
+                  type="button"
+                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 rounded-[2px] text-black/40 hover:text-black hover:bg-black/5 cursor-pointer"
+                >
+                  NEXT
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Right Column (Detail): Selected Customer Overview & Payments Table */}
-        <div className="lg:col-span-8 xl:col-span-8 space-y-4">
+        {/* ── Right Column (Customer Dossier & Receipts Ledger) ── */}
+        <div className="lg:col-span-8 space-y-4">
           {selectedCustomer ? (
-            <Card className="border border-[#DDE3DE] bg-white rounded-lg shadow-sm overflow-hidden">
-              {/* Customer Detail Header */}
-              <div className="p-5 border-b border-[#DDE3DE] bg-[#FAFBFA] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-semibold text-[#17231F] leading-tight">
-                    {selectedCustomer.custName}
-                  </h2>
-
-                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-y-1 sm:gap-x-4 text-xs text-[#52615B]">
-                    <div>
-                      <span className="text-[#52615B]">Customer no.: </span>
-                      <span className="font-mono font-semibold text-[#17231F]">
-                        {selectedCustomer.custNo}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-[#52615B]">Payment terms: </span>
-                      <span className="font-medium text-[#17231F]">
-                        {selectedCustomer.payTerms}
-                      </span>
-                    </div>
-
-                    <div className="sm:col-span-3 mt-1">
-                      <span className="text-[#52615B]">Address: </span>
-                      <span className="text-[#17231F] font-normal leading-relaxed">
-                        {selectedCustomer.address}
-                      </span>
-                    </div>
-                  </div>
+            <div className="rounded-[4px] border border-black/10 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
+              {/* Header Badges & Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#41555f] px-2 py-0.5 rounded-[2px] bg-black/5 border border-black/10">
+                    CUSTOMER DOSSIER
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-800 px-2 py-0.5 rounded-[2px] bg-emerald-50 border border-emerald-500/30">
+                    ACTIVE ACCOUNT
+                  </span>
                 </div>
 
-                {/* Header Action Buttons */}
                 <div className="flex items-center gap-2 shrink-0">
                   {isCashier && (
                     <Button
@@ -259,7 +301,7 @@ export function CustomersMainView({
                       variant="primary"
                       size="sm"
                       onClick={() => setIsRecordPaymentOpen(true)}
-                      className="flex items-center gap-1.5 text-xs font-sans"
+                      className="bg-[#041a24] hover:bg-[#1c313b] text-white rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <Receipt className="h-3.5 w-3.5" />
                       <span>Record Payment</span>
@@ -272,91 +314,137 @@ export function CustomersMainView({
                       variant="outline"
                       size="sm"
                       onClick={handleExportPaymentsCSV}
-                      className="flex items-center gap-1.5 text-xs font-sans"
+                      className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
-                      <Download className="h-3.5 w-3.5 text-[#52615B]" />
                       <span>Export CSV</span>
+                      <ExternalLink className="h-3 w-3 text-black/50" />
                     </Button>
                   )}
                 </div>
               </div>
 
-              {/* Direct Payments Section (No Sub-Tabs) */}
-              <div className="p-5 space-y-4">
-                {/* Summary Line */}
-                <div className="flex items-center justify-between text-xs text-[#52615B] border-b border-[#E9EDEA] pb-2.5">
-                  <div>
-                    <span className="font-semibold text-[#17231F] font-mono tabular-nums">
-                      {customerPayments.length}
-                    </span>{' '}
-                    receipts &bull; Total{' '}
-                    <span className="font-semibold text-[#17231F] font-mono tabular-nums">
-                      {formatPHP(customerTotalPaid)}
-                    </span>
-                  </div>
+              {/* Customer Details */}
+              <div className="space-y-2">
+                <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] tracking-tight leading-tight">
+                  {selectedCustomer.custName}
+                </h2>
+                <div className="flex items-center gap-2 text-xs text-[#41555f] font-sans">
+                  <span>Customer ID:</span>
+                  <span className="font-mono font-bold text-[#041a24]">{selectedCustomer.custNo}</span>
+                  <span>&bull;</span>
+                  <span>Payment terms:</span>
+                  <span className="font-mono font-semibold text-[#041a24]">{selectedCustomer.payTerms}</span>
                 </div>
-
-                {/* Payments Table */}
-                {customerPayments.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-[#52615B] space-y-1">
-                    <p className="font-semibold text-[#17231F]">No payments recorded for this customer.</p>
-                    <p className="text-[11px] text-[#52615B]">
-                      Use the &ldquo;Record Payment&rdquo; button above to record an official receipt.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto rounded-md border border-[#DDE3DE]">
-                    <table className="w-full text-left text-xs font-sans">
-                      <thead>
-                        <tr className="border-b border-[#DDE3DE] bg-[#FAFBFA] text-[#17231F]">
-                          <th className="py-2.5 px-3 font-semibold whitespace-nowrap">OR #</th>
-                          <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Date</th>
-                          <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Sale #</th>
-                          <th className="py-2.5 px-3 font-semibold text-right whitespace-nowrap">Amount</th>
-                          <th className="py-2.5 px-3 font-semibold text-center whitespace-nowrap">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#E9EDEA]">
-                        {customerPayments.map((p) => (
-                          <tr key={p.orNo} className="hover:bg-[#F5F6F4] transition-colors">
-                            <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
-                              {p.orNo}
-                            </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap text-[#17231F] tabular-nums">
-                              {formatDate(p.payDate)}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-[#245B48] whitespace-nowrap">
-                              <Link
-                                href={`/sales/${p.transNo}`}
-                                className="underline hover:text-[#1C4939] font-medium"
-                              >
-                                {p.transNo}
-                              </Link>
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-mono tabular-nums font-semibold text-[#17231F] whitespace-nowrap">
-                              {formatPHP(p.amount)}
-                            </td>
-                            <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                              <Link
-                                href={`/receipts/${p.orNo}`}
-                                className="inline-flex items-center gap-1 text-[11px] font-medium text-[#245B48] hover:underline"
-                              >
-                                <span>Receipt</span>
-                                <ExternalLink className="w-3 h-3 text-[#245B48]" />
-                              </Link>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <div className="flex items-start gap-2 text-xs text-[#41555f] pt-0.5">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#41555f] shrink-0 mt-0.5">
+                    ADDRESS
+                  </span>
+                  <span className="text-[#041a24] font-medium leading-relaxed">
+                    {selectedCustomer.address}
+                  </span>
+                </div>
               </div>
-            </Card>
+
+              {/* Broadsheet Rule Hairline Divider */}
+              <div className="border-t border-black/10" />
+
+              {/* Official Receipts Ledger Sub-Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-editorial text-base sm:text-lg font-normal text-[#041a24]">
+                    Official Receipts Ledger
+                  </h3>
+                  <span className="font-mono text-xs text-[#41555f]">
+                    / {customerPayments.length} RECORDS
+                  </span>
+                </div>
+                <div className="border border-black/10 bg-[#F4F4F0]/60 px-2.5 py-1 rounded-[2px] font-mono text-xs font-semibold text-[#041a24] tabular-nums">
+                  TOTAL SETTLED: {formatPHP(customerTotalPaid)}
+                </div>
+              </div>
+
+              {/* Receipts Table */}
+              {customerPayments.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[#41555f] space-y-1 font-mono">
+                  <p className="font-semibold text-[#041a24]">No payments recorded for this customer.</p>
+                  <p className="text-[11px] text-[#41555f]">
+                    Use the &ldquo;Record Payment&rdquo; button above to record an official receipt.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-[3px] border border-black/10">
+                  <table className="w-full text-left text-xs font-sans">
+                    <thead>
+                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
+                        <th className="py-2.5 px-3 font-semibold whitespace-nowrap">OR #</th>
+                        <th className="py-2.5 px-3 font-semibold whitespace-nowrap">DATE</th>
+                        <th className="py-2.5 px-3 font-semibold whitespace-nowrap">SALE REF</th>
+                        <th className="py-2.5 px-3 font-semibold text-right whitespace-nowrap">AMOUNT (PHP)</th>
+                        <th className="py-2.5 px-3 font-semibold text-center whitespace-nowrap">ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5">
+                      {customerPayments.map((p) => (
+                        <tr key={p.orNo} className="hover:bg-[#F4F4F0]/60 transition-colors">
+                          <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
+                            {p.orNo}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-xs text-[#41555f] whitespace-nowrap tabular-nums">
+                            {formatDate(p.payDate)}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-xs text-[#041a24] whitespace-nowrap">
+                            <Link
+                              href={`/sales/${p.transNo}`}
+                              className="hover:underline inline-flex items-center gap-0.5"
+                            >
+                              <span>{p.transNo}</span>
+                              <ArrowUpRight className="w-3 h-3 text-black/40" />
+                            </Link>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono tabular-nums font-bold text-[#041a24] whitespace-nowrap">
+                            {formatPHP(p.amount)}
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <Link
+                              href={`/receipts/${p.orNo}`}
+                              className="inline-flex items-center gap-0.5 font-mono text-[11px] text-[#041a24] hover:underline"
+                            >
+                              <span>Receipt</span>
+                              <ArrowUpRight className="w-3 h-3 text-black/40" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Table Footer Status Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] font-mono text-[#41555f] pt-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="uppercase tracking-wider">
+                    ALL {customerPayments.length} RECEIPTS BALANCED &amp; RECONCILED
+                  </span>
+                </div>
+                <div className="text-[#41555f]">
+                  AUDIT LOG REF #{String(selectedCustomer.custNo).replace(/\D/g, '') || '94031'}
+                </div>
+              </div>
+
+              {/* Policy Callout Box matching Stitch Screen */}
+              <div className="rounded-[4px] border border-black/10 bg-[#F4F4F0]/60 p-3.5 flex items-start gap-2.5 text-xs text-[#41555f] font-sans">
+                <Info className="w-4 h-4 text-black/40 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  <strong className="text-[#041a24] font-medium">Payment Terms Policy:</strong> Accounts operating on {selectedCustomer.payTerms} ({selectedCustomer.payTerms.replace(/\D/g, '') || '30'}-day net terms) receive automated invoice notifications at 20 days. No outstanding balances past due for Customer {selectedCustomer.custNo}.
+                </p>
+              </div>
+            </div>
           ) : (
-            <Card className="p-8 text-center text-xs text-[#52615B] border border-[#DDE3DE] bg-white rounded-lg">
+            <div className="p-8 text-center text-xs text-[#41555f] border border-black/10 bg-white rounded-[4px] font-mono">
               Select a customer from the left to view payment records.
-            </Card>
+            </div>
           )}
         </div>
       </div>

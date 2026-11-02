@@ -25,29 +25,28 @@ export default async function DashboardLayout({
         {/* Center Main Channel */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F4F4F0]">
           <Header userRole={user.role} userName={user.fullName || 'Admin'} />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 scroll-smooth">
-            <div className="max-w-[1240px] mx-auto w-full">
+          <main className="flex-1 overflow-y-auto flex flex-col justify-between scroll-smooth">
+            <div className="max-w-[1240px] mx-auto w-full p-4 sm:p-6 md:p-8 flex-1">
               {children}
-
-              {/* Editorial Broadsheet Colophon Footer */}
-              <footer className="mt-16 pt-6 pb-10 border-t border-black/10 text-xs font-mono text-black/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-[#041a24] font-medium">
-                    <span>Group 4 ElectronDB</span>
-                    <span>&mdash;</span>
-                    <span className="text-[11px] text-[#41555f]">Information Management Hope ERD</span>
-                  </div>
-                  <p className="text-[10px] text-[#55554F]">
-                    Canonical 10-Table Relational Schema &bull; Strict 3NF Database System
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 text-[10px] text-[#41555f]">
-                  <span>Monochromatic Editorial System</span>
-                  <span>&bull;</span>
-                  <span>Typeset in Newsreader &amp; Geist</span>
-                </div>
-              </footer>
             </div>
+
+            {/* Global Dark Navy Blue Broadsheet Footer (#041a24) */}
+            <footer className="w-full mt-auto bg-[#041a24] text-white/80 border-t border-[#041a24] select-none shrink-0">
+              <div className="max-w-[1240px] mx-auto px-4 sm:px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
+                <div className="flex items-center space-x-2.5">
+                  <span className="font-editorial italic text-base text-white font-normal">
+                    JeptahzRepo
+                  </span>
+                  <span className="text-white/30">&bull;</span>
+                  <span className="text-[10px] uppercase tracking-wider text-white/70 font-mono">
+                    ELECTRONDB G4 HOPEERD
+                  </span>
+                </div>
+                <div className="text-[10px] text-white/50 tracking-wider">
+                  EST. 2026 &bull; ALL RIGHTS RESERVED
+                </div>
+              </div>
+            </footer>
           </main>
         </div>
       </div>
