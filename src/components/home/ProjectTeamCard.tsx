@@ -22,7 +22,7 @@ const MEMBERS: TeamMember[] = [
   },
   {
     role: 'UI Designer',
-    name: 'CASING, Christian',
+    name: 'CASING, Christian jay',
   },
   {
     role: 'Developer',
