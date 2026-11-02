@@ -2,11 +2,6 @@
 
 import React from 'react';
 import {
-  Workflow,
-  Database,
-  ShieldCheck,
-  Palette,
-  Code2,
   Users,
   Layers,
   ArrowUpRight,
@@ -17,8 +12,6 @@ interface TeamMember {
   name: string;
   handle: string;
   initials: string;
-  tag: string;
-  icon: React.ComponentType<{ className?: string }>;
   avatarBg: string;
   avatarFg: string;
 }
@@ -29,8 +22,6 @@ const MEMBERS: TeamMember[] = [
     name: 'DE LEON, Sean Arrul',
     handle: '@seanarrul',
     initials: 'SA',
-    tag: '#Agile #SprintLead',
-    icon: Workflow,
     avatarBg: 'bg-[#F4F4F0]',
     avatarFg: 'text-[#041a24]',
   },
@@ -39,8 +30,6 @@ const MEMBERS: TeamMember[] = [
     name: 'DELA CRUZ, Veil',
     handle: '@veil',
     initials: 'VD',
-    tag: '#SQL #SchemaMaster',
-    icon: Database,
     avatarBg: 'bg-[#F4F4F0]',
     avatarFg: 'text-[#041a24]',
   },
@@ -49,8 +38,6 @@ const MEMBERS: TeamMember[] = [
     name: 'ECHAGUE, Arielle',
     handle: '@arielle',
     initials: 'AE',
-    tag: '#QA #Validation',
-    icon: ShieldCheck,
     avatarBg: 'bg-[#F4F4F0]',
     avatarFg: 'text-[#041a24]',
   },
@@ -59,8 +46,6 @@ const MEMBERS: TeamMember[] = [
     name: 'CASING, Christian jay',
     handle: '@christianjay',
     initials: 'CC',
-    tag: '#UIDesign #Figma',
-    icon: Palette,
     avatarBg: 'bg-[#F4F4F0]',
     avatarFg: 'text-[#041a24]',
   },
@@ -69,8 +54,6 @@ const MEMBERS: TeamMember[] = [
     name: 'Ildefonso, Jeptah Ashley',
     handle: '@jeptah',
     initials: 'JI',
-    tag: '#FullStack #NextJS',
-    icon: Code2,
     avatarBg: 'bg-[#041a24]',
     avatarFg: 'text-white',
   },
@@ -104,44 +87,35 @@ export function ProjectTeamCard() {
 
         {/* ── 5 Member Boxes (Exact JeptahzRepo Card Geometry & Fonts) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {MEMBERS.map((member) => {
-            const Icon = member.icon;
-            return (
-              <div
-                key={member.name}
-                className="group relative rounded-[4px] border border-black/10 hover:border-[#041a24] bg-white p-4 space-y-3 shadow-2xs hover:shadow-xs transition-all"
-              >
-                {/* Author Avatar & Badge Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div
-                    className={`w-9 h-9 rounded-full ring-2 ring-black/5 flex items-center justify-center font-mono font-bold text-xs select-none shrink-0 ${member.avatarBg} ${member.avatarFg}`}
-                  >
-                    {member.initials}
-                  </div>
-
-                  <span className="bg-[#041a24] text-white text-[10px] px-1.5 py-0.5 rounded-[2px] font-mono font-medium tracking-wide">
-                    {member.role}
-                  </span>
+          {MEMBERS.map((member) => (
+            <div
+              key={member.name}
+              className="group relative rounded-[4px] border border-black/10 hover:border-[#041a24] bg-white p-4 space-y-3 shadow-2xs hover:shadow-xs transition-all"
+            >
+              {/* Author Avatar & Badge Row */}
+              <div className="flex items-center justify-between gap-2">
+                <div
+                  className={`w-9 h-9 rounded-full ring-2 ring-black/5 flex items-center justify-center font-mono font-bold text-xs select-none shrink-0 ${member.avatarBg} ${member.avatarFg}`}
+                >
+                  {member.initials}
                 </div>
 
-                {/* Name & Handle */}
-                <div className="space-y-0.5 min-w-0">
-                  <h3 className="text-xs font-semibold text-[#041a24] truncate leading-snug group-hover:text-[#041a24] transition-colors">
-                    {member.name}
-                  </h3>
-                  <p className="font-mono text-[11px] text-[#6E6E68] truncate">
-                    {member.handle}
-                  </p>
-                </div>
-
-                {/* Tag & Icon Indicator */}
-                <div className="pt-2 border-t border-black/5 flex items-center justify-between gap-1 font-mono text-[10px] text-[#41555f]">
-                  <span className="truncate">{member.tag}</span>
-                  <Icon className="w-3 h-3 text-black/35 shrink-0 group-hover:text-black/70 transition-colors" />
-                </div>
+                <span className="bg-[#041a24] text-white text-[10px] px-1.5 py-0.5 rounded-[2px] font-mono font-medium tracking-wide">
+                  {member.role}
+                </span>
               </div>
-            );
-          })}
+
+              {/* Name & Handle */}
+              <div className="space-y-0.5 min-w-0">
+                <h3 className="text-xs font-semibold text-[#041a24] truncate leading-snug group-hover:text-[#041a24] transition-colors">
+                  {member.name}
+                </h3>
+                <p className="font-mono text-[11px] text-[#6E6E68] truncate">
+                  {member.handle}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* ── Footer Status Strip (Exact JeptahzRepo Bottom Actions Bar) ── */}
@@ -150,9 +124,6 @@ export function ProjectTeamCard() {
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] border border-black/15 bg-white text-black/70">
               <Layers className="w-3 h-3 text-black/40" />
               <span>Strict 10-Table Canonical Schema</span>
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-[2px] border border-black/10 text-black/60 bg-black/2">
-              #HopeERD
             </span>
           </div>
 
