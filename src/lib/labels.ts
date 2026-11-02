@@ -92,8 +92,8 @@ export const LABELS = {
   // Page Titles and Subtitles
   pages: {
     home: {
-      title: 'Dashboard',
-      subtitle: 'Overview 3NF data managed',
+      title: 'Overview 3NF Data Managed',
+      subtitle: '',
     },
     sales: {
       title: 'Sales',

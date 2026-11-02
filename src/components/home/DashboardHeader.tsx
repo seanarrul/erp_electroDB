@@ -17,14 +17,11 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1">
-      {/* Dashboard Title & Description */}
+      {/* Dashboard Title */}
       <div>
         <h1 className="text-2xl sm:text-[26px] font-bold text-gray-900 tracking-tight">
-          Dashboard
+          Overview 3NF Data Managed
         </h1>
-        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-          Overview 3NF data managed
-        </p>
       </div>
 
       {/* Database Connection Status Card */}
