@@ -7,9 +7,7 @@ interface TeamMember {
   role: string;
   name: string;
   handle: string;
-  initials: string;
-  avatarBg: string;
-  avatarFg: string;
+  avatar?: string;
 }
 
 const MEMBERS: TeamMember[] = [
@@ -17,41 +15,31 @@ const MEMBERS: TeamMember[] = [
     role: 'ScrumMaster',
     name: 'DE LEON, Sean Arrul',
     handle: '@seanarrul',
-    initials: 'SA',
-    avatarBg: 'bg-[#F4F4F0]',
-    avatarFg: 'text-[#041a24]',
+    avatar: '/images/default-avatar.jpg',
   },
   {
     role: 'DB Admin',
     name: 'DELA CRUZ, Veil',
     handle: '@veil',
-    initials: 'VD',
-    avatarBg: 'bg-[#F4F4F0]',
-    avatarFg: 'text-[#041a24]',
+    avatar: '/images/default-avatar.jpg',
   },
   {
     role: 'Tester',
     name: 'ECHAGUE, Arielle',
     handle: '@arielle',
-    initials: 'AE',
-    avatarBg: 'bg-[#F4F4F0]',
-    avatarFg: 'text-[#041a24]',
+    avatar: '/images/default-avatar.jpg',
   },
   {
     role: 'UI Designer',
     name: 'CASING, Christian jay',
     handle: '@christianjay',
-    initials: 'CC',
-    avatarBg: 'bg-[#F4F4F0]',
-    avatarFg: 'text-[#041a24]',
+    avatar: '/images/default-avatar.jpg',
   },
   {
     role: 'Developer',
     name: 'Ildefonso, Jeptah Ashley',
     handle: '@jeptah',
-    initials: 'JI',
-    avatarBg: 'bg-[#041a24]',
-    avatarFg: 'text-white',
+    avatar: '/images/default-avatar.jpg',
   },
 ];
 
@@ -90,10 +78,12 @@ export function ProjectTeamCard() {
             >
               {/* Author Avatar & Badge Row */}
               <div className="flex items-center justify-between gap-2">
-                <div
-                  className={`w-9 h-9 rounded-full ring-2 ring-black/5 flex items-center justify-center font-mono font-bold text-xs select-none shrink-0 ${member.avatarBg} ${member.avatarFg}`}
-                >
-                  {member.initials}
+                <div className="w-9 h-9 rounded-full ring-2 ring-black/5 overflow-hidden select-none shrink-0 bg-neutral-200">
+                  <img
+                    src={member.avatar || '/images/default-avatar.jpg'}
+                    alt={member.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
 
                 <span className="bg-[#041a24] text-white text-[10px] px-1.5 py-0.5 rounded-[2px] font-mono font-medium tracking-wide">
