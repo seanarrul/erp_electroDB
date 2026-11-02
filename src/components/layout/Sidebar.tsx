@@ -4,11 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home,
-  Receipt,
-  CreditCard,
-  Package,
-  Users,
+  ChevronRight,
   CheckCircle2,
   Lock,
   PanelLeftClose,
@@ -33,26 +29,26 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
     {
       section: 'OVERVIEW',
       items: [
-        { href: '/', label: 'Home', icon: Home },
+        { href: '/', label: 'Home' },
       ],
     },
     {
       section: 'TRANSACTIONS',
       items: [
-        { href: '/sales', label: 'Sales', icon: Receipt },
-        { href: '/customers', label: 'Customers & Payments', icon: CreditCard },
+        { href: '/sales', label: 'Sales' },
+        { href: '/customers', label: 'Customers & Payments' },
       ],
     },
     {
       section: 'CATALOG',
       items: [
-        { href: '/products', label: 'Products & Pricing', icon: Package },
+        { href: '/products', label: 'Products & Pricing' },
       ],
     },
     {
       section: 'ORGANIZATION',
       items: [
-        { href: '/employees', label: 'Employees', icon: Users },
+        { href: '/employees', label: 'Employees' },
       ],
     },
   ];
@@ -60,52 +56,50 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
   const sidebarContent = (
     <div className="flex h-full flex-col justify-between p-4 sm:p-5 overflow-y-auto font-sans">
       <div className="space-y-4">
-        {/* Brand Section matching Stitch */}
-        <div className="flex items-center justify-between pb-3 border-b border-black/10">
+        {/* Brand Section matching JeptahzRepo */}
+        <div className="flex items-start justify-between pb-5 border-b border-neutral-100">
           <Link
             href="/"
             onClick={closeMobileSidebar}
-            className="flex flex-col select-none group"
+            className="group block select-none"
             aria-label="ElectronDB G4 HopeERD"
           >
-            <div className="flex items-center gap-1.5">
-              <span className="font-editorial italic text-[22px] font-bold tracking-tight text-[#041a24]">
-                ElectronDB
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <div className="font-editorial italic text-[25px] font-normal tracking-tight text-black group-hover:text-black/70 transition-colors leading-none">
+              ElectronDB
             </div>
-            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[#41555f] mt-0.5">
-              G4 HOPEERD &bull; MONITORING
-            </span>
+            <div className="font-mono text-[10px] tracking-widest text-neutral-400 uppercase mt-1">
+              Blog Archive &bull; HopeERD
+            </div>
           </Link>
 
           {/* Panel collapse indicator / mobile close */}
           <button
             type="button"
             onClick={closeMobileSidebar}
-            className="p-1 text-black/40 hover:text-[#041a24] transition-colors"
+            className="p-1.5 rounded-[6px] text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
+            title="Toggle panel"
             aria-label="Toggle panel"
           >
-            <PanelLeftClose className="w-4 h-4 hidden lg:block" />
+            <PanelLeftClose className="w-4 h-4 hidden lg:block stroke-[1.5]" />
             <X className="w-4 h-4 lg:hidden" />
           </button>
         </div>
 
-        {/* Grouped Navigation */}
-        <nav className="space-y-4 pt-1" aria-label="Main Navigation">
+        {/* Minimalist Flat Vertical Navigation Stream (Exact JeptahzRepo Text Sizing & Spacing) */}
+        <nav className="mt-5 space-y-4 pt-1" aria-label="Main Navigation">
           {navLinks.map((sec) => (
             <div key={sec.section} className="space-y-1">
-              <div className="px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-400 select-none">
+              <div className="px-1 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-400 select-none">
                 {sec.section}
               </div>
 
               <div className="space-y-0.5">
                 {sec.items.map((item) => {
-                  const Icon = item.icon;
                   const isDashboard = item.href === '/';
                   const isActive = isDashboard
                     ? pathname === '/'
                     : pathname === item.href || pathname.startsWith(item.href + '/');
+                  const hasChevron = item.href !== '/';
 
                   return (
                     <Link
@@ -113,25 +107,22 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
                       href={item.href}
                       onClick={closeMobileSidebar}
                       className={cn(
-                        'group flex items-center justify-between px-2.5 py-2 rounded-[3px] text-sm transition-all outline-none select-none',
+                        'group flex items-center justify-between py-2 px-1 text-[15px] font-sans transition-colors cursor-pointer select-none',
                         isActive
-                          ? 'bg-black/5 text-[#041a24] font-semibold'
-                          : 'text-[#041a24] hover:bg-black/4 font-medium'
+                          ? 'font-bold text-black'
+                          : 'text-neutral-600 hover:text-black font-medium'
                       )}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Icon
+                      <span className="tracking-tight truncate">{item.label}</span>
+                      {hasChevron && (
+                        <ChevronRight
                           className={cn(
-                            'w-4 h-4 shrink-0 transition-colors',
-                            isActive ? 'text-[#041a24] stroke-[2.2]' : 'text-black/40 group-hover:text-[#041a24] stroke-[1.8]'
+                            'w-3.5 h-3.5 transition-colors stroke-[1.5]',
+                            isActive
+                              ? 'text-black stroke-[2]'
+                              : 'text-neutral-300 group-hover:text-neutral-500'
                           )}
                         />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-
-                      {/* Stitch Active Indicator Dot */}
-                      {isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#041a24] shrink-0 ml-2" />
                       )}
                     </Link>
                   );
@@ -142,20 +133,24 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
         </nav>
       </div>
 
-      {/* Bottom Profile matching Stitch Image */}
-      <div className="pt-3 border-t border-black/10 mt-auto flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 select-none">
-            {userName.charAt(0).toUpperCase()}
+      {/* Bottom Profile matching JeptahzRepo */}
+      <div className="pt-4 border-t border-neutral-100 mt-auto flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-black/10 shrink-0 shadow-xs bg-neutral-200">
+            <img
+              src="/images/default-avatar.jpg"
+              alt={userName}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="flex flex-col text-left min-w-0">
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-semibold text-[#041a24] leading-tight truncate">
+            <div className="flex items-center space-x-1">
+              <span className="font-editorial italic text-[15px] text-black leading-tight truncate">
                 {userName}
               </span>
-              <CheckCircle2 className="w-3 h-3 text-[#041a24] shrink-0 fill-[#041a24] text-white" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 fill-sky-500/20 shrink-0" />
             </div>
-            <span className="font-mono text-[10px] text-[#41555f] leading-tight truncate mt-0.5">
+            <span className="text-xs text-neutral-400 font-sans leading-tight truncate mt-0.5">
               @{userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'administrator'}
             </span>
           </div>
@@ -166,9 +161,9 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
             type="submit"
             title="Sign Out (Lock Session)"
             aria-label="Sign Out"
-            className="p-1.5 text-black/40 hover:text-red-600 hover:bg-red-50 rounded-[2px] transition-colors cursor-pointer"
+            className="p-1.5 text-neutral-400 hover:text-black rounded-[4px] transition-colors cursor-pointer"
           >
-            <Lock className="w-3.5 h-3.5" />
+            <Lock className="w-3.5 h-3.5 stroke-[1.5]" />
           </button>
         </form>
       </div>
