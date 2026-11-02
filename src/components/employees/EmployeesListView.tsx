@@ -266,7 +266,7 @@ export function EmployeesListView({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#DDE3DE] pb-4">
         <div>
           <nav className="flex items-center text-xs text-[#52615B] mb-1 font-mono uppercase tracking-[0.12em]">
-            <span>GROUP 4 Hope ERD</span>
+            <span>ElectronDB G4 HopeERD</span>
             <span className="mx-1.5">·</span>
             <span className="text-[#17231F] font-semibold">Employees</span>
           </nav>

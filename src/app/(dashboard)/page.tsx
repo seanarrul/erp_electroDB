@@ -2,6 +2,7 @@ import React from 'react';
 import { getCurrentUser } from '@/app/actions/auth';
 import { getHomeSummary } from '@/lib/data/home';
 import { DashboardHeader } from '@/components/home/DashboardHeader';
+import { ProjectTeamCard } from '@/components/home/ProjectTeamCard';
 import { DashboardKpis } from '@/components/home/DashboardKpis';
 import { RecentTransactionsCard } from '@/components/home/RecentTransactionsCard';
 import { ErdDiagram } from '@/components/home/ErdDiagram';
@@ -39,7 +40,12 @@ export default async function HomePage({ searchParams }: PageProps) {
         isConnected={summary.success}
       />
 
-      {/* 2. Operational Transactions Ledger */}
+      {/* 2. Project Engineering Team & Role Introductions */}
+      <section aria-label="Project Engineering Team">
+        <ProjectTeamCard />
+      </section>
+
+      {/* 3. Operational Transactions Ledger */}
       {data?.recentTransactions && (
         <section aria-label="Recent Transactions">
           <RecentTransactionsCard transactions={data.recentTransactions} />

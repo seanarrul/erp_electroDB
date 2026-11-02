@@ -363,7 +363,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
           <div
             className="min-w-[1080px] lg:min-w-full"
             role="img"
-            aria-label="GROUP 4 Hope ERD Entity Relationship Diagram: 10 tables including DEPARTMENT, JOB, EMPLOYEE, JOBHISTORY, CUSTOMER, PRODUCT, PRICEHIST, SALES, SALESDETAIL, PAYMENT, and 9 relationships."
+            aria-label="ElectronDB G4 HopeERD Entity Relationship Diagram: 10 tables including DEPARTMENT, JOB, EMPLOYEE, JOBHISTORY, CUSTOMER, PRODUCT, PRICEHIST, SALES, SALESDETAIL, PAYMENT, and 9 relationships."
           >
             <svg
               viewBox="0 0 1240 610"

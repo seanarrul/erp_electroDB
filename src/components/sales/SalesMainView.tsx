@@ -310,7 +310,7 @@ export function SalesMainView({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-[#DDE3DE] pb-4">
         <div>
           <span className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] block">
-            GROUP 4 Hope ERD · Sales
+            ElectronDB G4 HopeERD · Sales
           </span>
           <h1 className="font-sans text-2xl sm:text-[28px] font-semibold tracking-tight text-[#17231F] mt-1">
             Sales

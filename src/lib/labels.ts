@@ -1,5 +1,5 @@
 // ========================================================================
-// GROUP 4 Hope ERD: CENTRALIZED UI LABELS & NAVIGATION
+// ElectronDB G4 HopeERD: CENTRALIZED UI LABELS & NAVIGATION
 // Clean, non-repeating navigation mapping 1-to-1 with actual system routes.
 // ========================================================================
 
@@ -73,7 +73,7 @@ export const navigationItems: NavigationItem[] = [
 
 export const LABELS = {
   // Brand Header
-  brandName: 'GROUP 4 Hope ERD',
+  brandName: 'ElectronDB G4 HopeERD',
   brandSubtitle: 'Business Information System',
 
   // Navigation Items
