@@ -1,11 +1,7 @@
 'use client';
 
 import React from 'react';
-import {
-  Users,
-  Layers,
-  ArrowUpRight,
-} from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface TeamMember {
   role: string;
@@ -116,21 +112,6 @@ export function ProjectTeamCard() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* ── Footer Status Strip (Exact JeptahzRepo Bottom Actions Bar) ── */}
-        <div className="pt-3 border-t border-black/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-black/50">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] border border-black/15 bg-white text-black/70">
-              <Layers className="w-3 h-3 text-black/40" />
-              <span>Strict 10-Table Canonical Schema</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 text-black/40">
-            <span>Verified System Architecture</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-black/40" />
-          </div>
         </div>
       </div>
     </article>
