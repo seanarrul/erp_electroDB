@@ -26,7 +26,7 @@ interface SidebarProps {
   userName?: string;
 }
 
-export function Sidebar({ userRole = 'admin', userName = 'JeptahzRepo' }: SidebarProps) {
+export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso' }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { isMobileOpen, closeMobileSidebar } = useSidebar();
@@ -172,17 +172,17 @@ export function Sidebar({ userRole = 'admin', userName = 'JeptahzRepo' }: Sideba
       <div className="pt-3 border-t border-black/10 mt-auto flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 select-none">
-            J
+            {userName.charAt(0).toUpperCase()}
           </div>
           <div className="flex flex-col text-left min-w-0">
             <div className="flex items-center gap-1">
               <span className="text-xs font-semibold text-[#041a24] leading-tight truncate">
-                JeptahzRepo
+                {userName}
               </span>
               <CheckCircle2 className="w-3 h-3 text-[#041a24] shrink-0 fill-[#041a24] text-white" />
             </div>
             <span className="font-mono text-[10px] text-[#41555f] leading-tight truncate mt-0.5">
-              @administrator
+              @{userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'administrator'}
             </span>
           </div>
         </div>

@@ -331,28 +331,28 @@ export function SalesMainView({
               variant="outline"
               size="sm"
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-1.5 font-sans text-xs"
+              className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs"
             >
-              <Download className="h-3.5 w-3.5 text-[#52615B]" />
+              <Download className="h-3.5 w-3.5 text-black/40" />
               <span>Export CSV</span>
             </Button>
 
             {isExportMenuOpen && (
-              <div className="absolute right-0 mt-1 w-48 rounded-[4px] border border-[#DDE3DE] bg-white py-1 shadow-lg z-20 text-xs">
+              <div className="absolute right-0 mt-1 w-48 rounded-[2px] border border-black/10 bg-white py-1 shadow-lg z-20 text-xs font-mono">
                 <button
                   type="button"
                   onClick={handleExportSummaryCSV}
-                  className="w-full text-left px-3 py-2 text-[#17231F] hover:bg-[#FAFBFA] flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-[#041a24] hover:bg-[#F4F4F0] flex items-center gap-2 cursor-pointer"
                 >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-[#52615B]" />
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-black/40" />
                   <span>Sales summary</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleExportLinesCSV}
-                  className="w-full text-left px-3 py-2 text-[#17231F] hover:bg-[#FAFBFA] flex items-center gap-2 border-t border-[#E9EDEA]"
+                  className="w-full text-left px-3 py-2 text-[#041a24] hover:bg-[#F4F4F0] flex items-center gap-2 border-t border-black/5 cursor-pointer"
                 >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-[#52615B]" />
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-black/40" />
                   <span>Sales detail</span>
                 </button>
               </div>
@@ -365,7 +365,7 @@ export function SalesMainView({
               variant="primary"
               size="sm"
               onClick={() => setIsNewSaleOpen(true)}
-              className="flex items-center gap-1.5 font-sans text-xs cursor-pointer"
+              className="bg-[#041a24] hover:bg-[#1c313b] text-white rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>New Sale</span>
@@ -377,22 +377,22 @@ export function SalesMainView({
       {/* View Tabs & Search Filters Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
         {/* Left: View Tabs */}
-        <div className="inline-flex p-1.5 bg-gray-100 rounded-xl border border-gray-200 gap-1.5 shadow-2xs">
+        <div className="inline-flex p-1 bg-[#F4F4F0] rounded-[2px] border border-black/10 gap-1 font-mono text-xs">
           <button
             type="button"
             onClick={() => updateUrl({ view: 'sales', page: '1' })}
-            className={`inline-flex items-center gap-2.5 px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'sales'
-                ? 'bg-[#166B52] text-white shadow-xs'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-white/70 font-medium'
+                ? 'bg-[#041a24] text-white shadow-2xs'
+                : 'text-[#41555f] hover:text-[#041a24]'
             }`}
           >
             <span>Sales</span>
             <span
-              className={`text-[11px] font-mono tabular-nums px-2.5 py-0.5 rounded-full ${
+              className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
                 activeView === 'sales'
-                  ? 'bg-white/20 text-white font-bold'
-                  : 'bg-gray-200 text-gray-700 font-semibold'
+                  ? 'bg-white/20 text-white font-semibold'
+                  : 'bg-black/5 text-[#41555f]'
               }`}
             >
               {filteredSales.length}
@@ -402,18 +402,18 @@ export function SalesMainView({
           <button
             type="button"
             onClick={() => updateUrl({ view: 'lines', page: '1' })}
-            className={`inline-flex items-center gap-2.5 px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'lines'
-                ? 'bg-[#166B52] text-white shadow-xs'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-white/70 font-medium'
+                ? 'bg-[#041a24] text-white shadow-2xs'
+                : 'text-[#41555f] hover:text-[#041a24]'
             }`}
           >
             <span>Sales Detail</span>
             <span
-              className={`text-[11px] font-mono tabular-nums px-2.5 py-0.5 rounded-full ${
+              className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
                 activeView === 'lines'
-                  ? 'bg-white/20 text-white font-bold'
-                  : 'bg-gray-200 text-gray-700 font-semibold'
+                  ? 'bg-white/20 text-white font-semibold'
+                  : 'bg-black/5 text-[#41555f]'
               }`}
             >
               {filteredLines.length}
@@ -422,22 +422,22 @@ export function SalesMainView({
         </div>
 
         {/* Right: Search & Dropdown Filters */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
           {/* Search Box */}
-          <div className="relative min-w-[200px] sm:w-60">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#7A8781]" />
+          <div className="relative min-w-[200px] sm:w-60 font-sans">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-black/40" />
             <input
               type="text"
               placeholder="Search sale, customer, rep..."
               value={searchQuery}
               onChange={(e) => updateUrl({ q: e.target.value || null, page: '1' })}
-              className="w-full rounded-[4px] border border-[#CCD5CD] bg-white pl-8 pr-7 py-1.5 text-xs text-[#17231F] placeholder-[#7A8781] focus:border-[#245B48] focus:ring-2 focus:ring-[#245B48]/20 focus:outline-none"
+              className="w-full rounded-[2px] border border-black/15 bg-white pl-8 pr-7 py-1.5 text-xs text-[#041a24] placeholder:text-[#41555f]/60 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => updateUrl({ q: null, page: '1' })}
-                className="absolute right-2 top-2 text-[#7A8781] hover:text-[#17231F]"
+                className="absolute right-2 top-2 text-black/40 hover:text-[#041a24]"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -448,7 +448,7 @@ export function SalesMainView({
           <select
             value={periodFilter}
             onChange={(e) => updateUrl({ period: e.target.value === 'all' ? null : e.target.value, page: '1' })}
-            className="rounded-[4px] border border-[#CCD5CD] bg-white px-2 py-1.5 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none"
+            className="rounded-[2px] border border-black/15 bg-white px-2 py-1.5 text-xs text-[#041a24] focus:border-[#041a24] focus:outline-none cursor-pointer"
           >
             <option value="all">All time</option>
             <option value="today">Today</option>
@@ -461,7 +461,7 @@ export function SalesMainView({
           <select
             value={deptFilter}
             onChange={(e) => updateUrl({ dept: e.target.value === 'all' ? null : e.target.value, page: '1' })}
-            className="rounded-[4px] border border-[#CCD5CD] bg-white px-2 py-1.5 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none"
+            className="rounded-[2px] border border-black/15 bg-white px-2 py-1.5 text-xs text-[#041a24] focus:border-[#041a24] focus:outline-none cursor-pointer"
           >
             <option value="all">All departments</option>
             {lookups.departments.map((d) => (
@@ -475,7 +475,7 @@ export function SalesMainView({
           <select
             value={repFilter}
             onChange={(e) => updateUrl({ rep: e.target.value === '0' ? null : e.target.value, page: '1' })}
-            className="rounded-[4px] border border-[#CCD5CD] bg-white px-2 py-1.5 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none max-w-[150px]"
+            className="rounded-[2px] border border-black/15 bg-white px-2 py-1.5 text-xs text-[#041a24] focus:border-[#041a24] focus:outline-none max-w-[150px] cursor-pointer"
           >
             <option value="0">All sales reps</option>
             {lookups.employees.map((e) => (
@@ -490,7 +490,7 @@ export function SalesMainView({
             <button
               type="button"
               onClick={() => updateUrl({ q: null, period: null, dept: null, rep: null, page: '1' })}
-              className="text-xs text-[#52615B] hover:text-[#17231F] underline whitespace-nowrap ml-1"
+              className="text-xs text-[#41555f] hover:text-[#041a24] underline whitespace-nowrap ml-1 cursor-pointer"
             >
               Clear filters
             </button>
@@ -544,16 +544,17 @@ export function SalesMainView({
             selectedSaleDetail && isDesktop ? 'xl:col-span-7 2xl:col-span-8' : 'xl:col-span-12'
           }`}
         >
-          <div className="rounded-[4px] border border-[#DDE3DE] bg-white overflow-hidden shadow-xs">
+          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs">
             {activeView === 'sales' ? (
               // 7.4 SALES VIEW
               paginatedSales.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#52615B] space-y-2">
-                  <p className="font-semibold text-[#17231F]">No sales match your filters.</p>
+                <div className="p-8 text-center text-xs text-[#41555f] space-y-2 font-mono">
+                  <p className="font-semibold text-[#041a24]">No sales match your filters.</p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => updateUrl({ q: null, period: null, dept: null, rep: null, page: '1' })}
+                    className="rounded-[2px] border-black/15 text-xs"
                   >
                     Clear filters
                   </Button>
@@ -562,7 +563,7 @@ export function SalesMainView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#DDE3DE] bg-[#FAFBFA] text-[#52615B]">
+                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('transNo')}
                           className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -572,7 +573,7 @@ export function SalesMainView({
                             {sortCol === 'transNo' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -585,7 +586,7 @@ export function SalesMainView({
                             {sortCol === 'salesDate' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -598,7 +599,7 @@ export function SalesMainView({
                             {sortCol === 'custName' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -611,13 +612,13 @@ export function SalesMainView({
                             {sortCol === 'repName' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E9EDEA]">
+                    <tbody className="divide-y divide-black/5">
                       {paginatedSales.map((s) => {
                         const isSelected = selectedCode === String(s.transNo);
 
@@ -626,26 +627,26 @@ export function SalesMainView({
                             key={s.transNo}
                             onClick={() => updateUrl({ code: String(s.transNo) })}
                             className={`cursor-pointer transition-colors ${
-                              isSelected ? 'bg-[#EAF2ED]/60 font-medium' : 'hover:bg-[#F5F6F4]/70'
+                              isSelected ? 'bg-black/5 border-l-3 border-[#041a24] font-medium' : 'hover:bg-[#F4F4F0]/60'
                             }`}
                           >
-                            <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
                               {s.transNo}
                             </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap text-[#17231F] tabular-nums">
+                            <td className="py-2.5 px-3 whitespace-nowrap text-[#41555f] font-mono text-xs tabular-nums">
                               {formatDate(s.salesDate)}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#17231F] leading-snug">
+                              <div className="font-semibold text-[#041a24] leading-snug">
                                 {s.custName}
                               </div>
-                              <div className="text-[11px] font-mono text-[#52615B] mt-0.5">
+                              <div className="text-[10px] font-mono text-[#41555f] mt-0.5">
                                 Customer {s.custNo}
                               </div>
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-medium text-[#17231F]">
-                                <span className="font-mono text-[#52615B] mr-1.5 font-normal">#{s.empNo}</span>
+                              <div className="font-medium text-[#041a24]">
+                                <span className="font-mono text-[#41555f] mr-1.5 font-normal">#{s.empNo}</span>
                                 {s.repName}
                               </div>
                               <div className="text-[11px] text-[#52615B] mt-0.5">

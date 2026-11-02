@@ -16,15 +16,17 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
+  const displayName = user.fullName || 'Jeptah Ashley Ildefonso';
+
   return (
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden bg-[#F4F4F0] text-[#041a24] selection:bg-[#041a24] selection:text-white font-sans">
-        {/* Left Rail: Collapsible Navigation Sidebar */}
-        <Sidebar userRole={user.role} userName={user.fullName || 'Admin'} />
+        {/* Left Rail: Collapsible Navigation Sidebar connected to user account */}
+        <Sidebar userRole={user.role} userName={displayName} />
 
         {/* Center Main Channel */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F4F4F0]">
-          <Header userRole={user.role} userName={user.fullName || 'Admin'} />
+          <Header userRole={user.role} userName={displayName} />
           <main className="flex-1 overflow-y-auto flex flex-col justify-between scroll-smooth">
             <div className="max-w-[1240px] mx-auto w-full p-4 sm:p-6 md:p-8 flex-1">
               {children}
@@ -35,11 +37,11 @@ export default async function DashboardLayout({
               <div className="max-w-[1240px] mx-auto px-4 sm:px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
                 <div className="flex items-center space-x-2.5">
                   <span className="font-editorial italic text-base text-white font-normal">
-                    JeptahzRepo
+                    ElectronDB
                   </span>
                   <span className="text-white/30">&bull;</span>
                   <span className="text-[10px] uppercase tracking-wider text-white/70 font-mono">
-                    ELECTRONDB G4 HOPEERD
+                    G4 HOPEERD &bull; MONITORING SYSTEM
                   </span>
                 </div>
                 <div className="text-[10px] text-white/50 tracking-wider">

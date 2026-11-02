@@ -347,9 +347,9 @@ export function ProductsMainView({
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 font-sans text-xs"
+            className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs"
           >
-            <Download className="h-3.5 w-3.5 text-[#52615B]" />
+            <Download className="h-3.5 w-3.5 text-black/40" />
             <span>Export CSV</span>
           </Button>
 
@@ -359,7 +359,7 @@ export function ProductsMainView({
               variant="primary"
               size="sm"
               onClick={() => setIsAddProductOpen(true)}
-              className="flex items-center gap-1.5 font-sans text-xs cursor-pointer"
+              className="bg-[#041a24] hover:bg-[#1c313b] text-white rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Product</span>
@@ -371,22 +371,22 @@ export function ProductsMainView({
       {/* Filter and View Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
         {/* Left: View Tabs */}
-        <div className="inline-flex p-1.5 bg-gray-100 rounded-xl border border-gray-200 gap-1.5 shadow-2xs">
+        <div className="inline-flex p-1 bg-[#F4F4F0] rounded-[2px] border border-black/10 gap-1 font-mono text-xs">
           <button
             type="button"
             onClick={() => updateUrl({ view: 'products', page: '1' })}
-            className={`inline-flex items-center gap-2.5 px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'products'
-                ? 'bg-[#166B52] text-white shadow-xs'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-white/70 font-medium'
+                ? 'bg-[#041a24] text-white shadow-2xs'
+                : 'text-[#41555f] hover:text-[#041a24]'
             }`}
           >
             <span>Products</span>
             <span
-              className={`text-[11px] font-mono tabular-nums px-2.5 py-0.5 rounded-full ${
+              className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
                 activeView === 'products'
-                  ? 'bg-white/20 text-white font-bold'
-                  : 'bg-gray-200 text-gray-700 font-semibold'
+                  ? 'bg-white/20 text-white font-semibold'
+                  : 'bg-black/5 text-[#41555f]'
               }`}
             >
               {filteredProducts.length}
@@ -395,18 +395,18 @@ export function ProductsMainView({
           <button
             type="button"
             onClick={() => updateUrl({ view: 'history', page: '1' })}
-            className={`inline-flex items-center gap-2.5 px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'history'
-                ? 'bg-[#166B52] text-white shadow-xs'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-white/70 font-medium'
+                ? 'bg-[#041a24] text-white shadow-2xs'
+                : 'text-[#41555f] hover:text-[#041a24]'
             }`}
           >
             <span>Price history</span>
             <span
-              className={`text-[11px] font-mono tabular-nums px-2.5 py-0.5 rounded-full ${
+              className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
                 activeView === 'history'
-                  ? 'bg-white/20 text-white font-bold'
-                  : 'bg-gray-200 text-gray-700 font-semibold'
+                  ? 'bg-white/20 text-white font-semibold'
+                  : 'bg-black/5 text-[#41555f]'
               }`}
             >
               {filteredPriceHistory.length}
@@ -418,19 +418,19 @@ export function ProductsMainView({
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           {/* Search Box */}
           <div className="relative min-w-[240px] sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#7A8781]" />
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-black/40" />
             <input
               type="text"
               placeholder="Search code or description..."
               value={searchQuery}
               onChange={(e) => updateUrl({ q: e.target.value || null, page: '1' })}
-              className="w-full rounded-[4px] border border-[#CCD5CD] bg-white pl-8 pr-7 py-1.5 text-xs text-[#17231F] placeholder-[#7A8781] focus:border-[#245B48] focus:ring-2 focus:ring-[#245B48]/20 focus:outline-none"
+              className="w-full rounded-[2px] border border-black/15 bg-white pl-8 pr-7 py-1.5 text-xs text-[#041a24] placeholder:text-[#41555f]/60 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => updateUrl({ q: null, page: '1' })}
-                className="absolute right-2 top-2 text-[#7A8781] hover:text-[#17231F]"
+                className="absolute right-2 top-2 text-black/40 hover:text-[#041a24]"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -438,12 +438,12 @@ export function ProductsMainView({
           </div>
 
           {/* Sales Activity Select */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-[#52615B] whitespace-nowrap">Sales:</span>
+          <div className="flex items-center gap-1.5 font-mono text-xs">
+            <span className="text-[#41555f] whitespace-nowrap">Sales:</span>
             <select
               value={soldFilter}
               onChange={(e) => updateUrl({ sold: e.target.value === 'all' ? null : e.target.value, page: '1' })}
-              className="rounded-[4px] border border-[#CCD5CD] bg-white px-2 py-1.5 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none"
+              className="rounded-[2px] border border-black/15 bg-white px-2 py-1.5 text-xs text-[#041a24] focus:border-[#041a24] focus:outline-none cursor-pointer"
             >
               <option value="all">All</option>
               <option value="sold">Has sales</option>
@@ -479,16 +479,17 @@ export function ProductsMainView({
           }`}
         >
           {/* Card Container for Table */}
-          <div className="rounded-[4px] border border-[#DDE3DE] bg-white overflow-hidden shadow-xs font-sans">
+          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs font-sans">
             {activeView === 'products' ? (
               // PRODUCTS VIEW (Section 9.4)
               paginatedProducts.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#52615B] space-y-2">
-                  <p className="font-semibold text-[#17231F]">No products match your filters.</p>
+                <div className="p-8 text-center text-xs text-[#41555f] space-y-2 font-mono">
+                  <p className="font-semibold text-[#041a24]">No products match your filters.</p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => updateUrl({ family: null, q: null, sold: null, page: '1' })}
+                    className="rounded-[2px] border-black/15 text-xs"
                   >
                     Clear filters
                   </Button>
@@ -497,7 +498,7 @@ export function ProductsMainView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#DDE3DE] bg-[#FAFBFA] text-[#52615B]">
+                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('prodCode')}
                           className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -507,7 +508,7 @@ export function ProductsMainView({
                             {sortCol === 'prodCode' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -520,7 +521,7 @@ export function ProductsMainView({
                             {sortCol === 'description' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -533,7 +534,7 @@ export function ProductsMainView({
                             {sortCol === 'unit' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -546,13 +547,13 @@ export function ProductsMainView({
                             {sortCol === 'currentUnitPrice' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E9EDEA]">
+                    <tbody className="divide-y divide-black/5">
                       {paginatedProducts.map((p) => {
                         const { title, detail } = splitDescription(p.description);
                         const familyName = getFamilyLabel(p.family);
@@ -564,40 +565,40 @@ export function ProductsMainView({
                             onClick={() => updateUrl({ code: p.prodCode })}
                             className={`cursor-pointer transition-colors ${
                               isSelected
-                                ? 'bg-[#EAF2ED]/60 font-medium'
-                                : 'hover:bg-[#F5F6F4]/70'
+                                ? 'bg-black/5 border-l-3 border-[#041a24] font-medium'
+                                : 'hover:bg-[#F4F4F0]/60'
                             }`}
                           >
-                            <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
                               {p.prodCode}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#17231F] leading-tight">
+                              <div className="font-semibold text-[#041a24] leading-tight">
                                 {title}
                               </div>
                               {detail && (
-                                <div className="text-[11px] text-[#52615B] leading-snug line-clamp-1 mt-0.5">
+                                <div className="text-[11px] text-[#41555f] leading-snug line-clamp-1 mt-0.5">
                                   {detail}
                                 </div>
                               )}
-                              <span className="inline-block text-[10px] text-[#7A8781] mt-0.5">
-                                {p.family} · {familyName}
+                              <span className="inline-block font-mono text-[9px] text-[#41555f] mt-0.5">
+                                {p.family} &bull; {familyName}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 text-[#52615B] whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono text-xs text-[#41555f] whitespace-nowrap">
                               {p.unit}
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               {p.currentUnitPrice !== null ? (
-                                <div className="font-semibold tabular-nums text-[#17231F]">
+                                <div className="font-mono font-bold tabular-nums text-[#041a24]">
                                   {formatPHP(p.currentUnitPrice)}
-                                  <span className="font-normal text-[11px] text-[#52615B]">
+                                  <span className="font-normal font-sans text-[11px] text-[#41555f]">
                                     {' '}
                                     / {p.unit}
                                   </span>
                                 </div>
                               ) : (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[10px] bg-[#FBF2DD] text-[#956316]">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] font-mono text-[9px] bg-black/5 text-[#41555f] border border-black/10">
                                   No price record
                                 </span>
                               )}
@@ -624,9 +625,9 @@ export function ProductsMainView({
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs font-sans">
                     <thead>
-                      <tr className="border-b border-[#DDE3DE] bg-[#FAFBFA] text-[#52615B]">
+                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('effDate')}
                           className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -636,7 +637,7 @@ export function ProductsMainView({
                             {sortCol === 'effDate' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -649,7 +650,7 @@ export function ProductsMainView({
                             {sortCol === 'prodCode' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -662,7 +663,7 @@ export function ProductsMainView({
                             {sortCol === 'description' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -675,7 +676,7 @@ export function ProductsMainView({
                             {sortCol === 'unitPrice' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
@@ -688,13 +689,13 @@ export function ProductsMainView({
                             {sortCol === 'status' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-neutral-400" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30" />
                             )}
                           </div>
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E9EDEA]">
+                    <tbody className="divide-y divide-black/5">
                       {paginatedPriceHistory.map((h, i) => {
                         const { title, detail } = splitDescription(h.description);
                         const isSelected = selectedCode?.toUpperCase() === h.prodCode.toUpperCase();
@@ -704,47 +705,47 @@ export function ProductsMainView({
                             key={`${h.prodCode}-${h.effDate}-${i}`}
                             onClick={() => updateUrl({ code: h.prodCode })}
                             className={`cursor-pointer transition-colors ${
-                              isSelected ? 'bg-[#EAF2ED]/60 font-medium' : 'hover:bg-[#F5F6F4]/70'
+                              isSelected ? 'bg-black/5 border-l-3 border-[#041a24] font-medium' : 'hover:bg-[#F4F4F0]/60'
                             }`}
                           >
-                            <td className="py-2.5 px-3 whitespace-nowrap text-[#17231F] font-medium">
+                            <td className="py-2.5 px-3 font-mono text-xs whitespace-nowrap text-[#041a24]">
                               {formatDate(h.effDate)}
                             </td>
-                            <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
                               {h.prodCode}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#17231F] leading-tight">
+                              <div className="font-semibold text-[#041a24] leading-tight">
                                 {title}
                               </div>
                               {detail && (
-                                <div className="text-[11px] text-[#52615B] line-clamp-1 mt-0.5">
+                                <div className="text-[11px] text-[#41555f] line-clamp-1 mt-0.5">
                                   {detail}
                                 </div>
                               )}
                             </td>
-                            <td className="py-2.5 px-3 tabular-nums text-[#17231F] whitespace-nowrap font-semibold">
+                            <td className="py-2.5 px-3 font-mono font-bold tabular-nums text-[#041a24] whitespace-nowrap">
                               {formatPHP(h.unitPrice)}
-                              <span className="font-normal text-[11px] text-[#52615B]">
+                              <span className="font-normal font-sans text-[11px] text-[#41555f]">
                                 {' '}
                                 / {h.unit}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               {h.status === 'Current' && (
-                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#E8F4EC] px-2 py-0.5 text-[11px] font-medium text-[#24734D]">
+                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#041a24] px-1.5 py-0.5 text-[10px] font-mono text-white">
                                   <CheckCircle2 className="h-3 w-3" />
                                   Current
                                 </span>
                               )}
                               {h.status === 'Past' && (
-                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#F0F3F0] px-2 py-0.5 text-[11px] font-medium text-[#52615B]">
+                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 border border-black/10 px-1.5 py-0.5 text-[10px] font-mono text-[#41555f]">
                                   <Clock className="h-3 w-3" />
                                   Past
                                 </span>
                               )}
                               {h.status === 'Future-dated' && (
-                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#FBF2DD] px-2 py-0.5 text-[11px] font-medium text-[#956316]">
+                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#FEF08A]/80 border border-yellow-400/50 px-1.5 py-0.5 text-[10px] font-mono text-[#713F12]">
                                   <AlertTriangle className="h-3 w-3" />
                                   Future-dated
                                 </span>
