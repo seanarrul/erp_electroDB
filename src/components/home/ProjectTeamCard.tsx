@@ -63,7 +63,7 @@ export function ProjectTeamCard() {
 
             {/* Main title and subtitle */}
             <div className="pt-0.5">
-              <h2 className="font-editorial italic font-bold text-3xl sm:text-4xl lg:text-5xl text-[#041a24] tracking-tight leading-tight">
+              <h2 className="font-editorial italic font-normal text-3xl sm:text-4xl lg:text-5xl text-[#041a24] tracking-tight leading-tight">
                 Group 4 ElectronDB
               </h2>
               <p className="text-xs sm:text-sm text-[#55554F] font-sans mt-1">
