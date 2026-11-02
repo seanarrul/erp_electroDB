@@ -40,8 +40,8 @@ export default async function HomePage({ searchParams }: PageProps) {
         isConnected={summary.success}
       />
 
-      {/* 2. Project Engineering Team & Role Introductions */}
-      <section aria-label="Project Engineering Team">
+      {/* 2. Group 4 ElectronDB & Role Introductions */}
+      <section aria-label="Group 4 ElectronDB">
         <ProjectTeamCard />
       </section>
 

@@ -105,13 +105,13 @@ export function ProjectTeamCard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3.5">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <span>Project Engineering Team</span>
+            <span>Group 4 ElectronDB</span>
             <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#E8F3EE] text-[#166B52] border border-emerald-100">
-              Group 4 Contributors
+              2 BSCS 1
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Core members and designated engineering responsibilities for the ElectronDB G4 HopeERD system.
+            Information Management Hope ERD - November 9 2026
           </p>
         </div>
 
