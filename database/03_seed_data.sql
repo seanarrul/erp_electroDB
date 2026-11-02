@@ -18,11 +18,11 @@ TRUNCATE TABLE EMPLOYEE CASCADE;
 
 -- 1. DEPARTMENT (5 rows)
 INSERT INTO DEPARTMENT (deptCode, deptName) VALUES
-('DEP-SLS', 'Commercial & Wholesale Sales'),
-('DEP-CRP', 'Corporate & Government Accounts'),
-('DEP-LOG', 'Logistics & Supply Fulfillment'),
-('DEP-FIN', 'Finance, Credit & Billing'),
-('DEP-EXE', 'Executive & Strategic Planning');
+('DEP-SLS', 'Sales'),
+('DEP-CRP', 'Corporate Accounts'),
+('DEP-LOG', 'Warehouse & Logistics'),
+('DEP-FIN', 'Finance & Billing'),
+('DEP-EXE', 'Executive Management');
 
 -- 2. JOB (5 rows)
 INSERT INTO JOB (jobCode, jobDesc) VALUES
@@ -70,8 +70,8 @@ INSERT INTO EMPLOYEE (empNo, lastName, firstName, gender, birthDate, hireDate, s
 -- 4. JOBHISTORY (34 rows)
 INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode) VALUES
 ('00001', 'JOB-DIR', '2010-05-11', 75000, 'DEP-EXE'),
-('00003', 'JOB-SUPV', '2010-05-11', 52000, 'DEP-CRP'),
-('00005', 'JOB-SUPV', '2010-06-23', 52000, 'DEP-CRP'),
+('00003', 'JOB-SUPV', '2010-05-11', 52000, 'DEP-SLS'),
+('00005', 'JOB-SUPV', '2010-06-23', 52000, 'DEP-SLS'),
 ('00007', 'JOB-SREP', '2010-05-30', 38500, 'DEP-SLS'),
 ('00007', 'JOB-SUPV', '2011-01-15', 48000, 'DEP-SLS'),
 ('00009', 'JOB-SREP', '2010-05-30', 42000, 'DEP-SLS'),
