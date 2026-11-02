@@ -312,7 +312,7 @@ export const ERD_MODULES: ErdModule[] = [
     roles: ['admin'],
     tables: ['DEPARTMENT', 'JOB', 'EMPLOYEE', 'JOBHISTORY'],
     mainList: 'Staff directory with active status and tenure',
-    detail: 'Employee profile, career history, and department appointments',
+    detail: 'Staff, jobs & departments',
   },
   {
     id: 'products',
@@ -325,7 +325,7 @@ export const ERD_MODULES: ErdModule[] = [
     roles: ['admin', 'sales', 'cashier'],
     tables: ['PRODUCT', 'PRICEHIST'],
     mainList: 'Product catalog with current unit prices',
-    detail: 'Hardware specifications and historical price adjustments',
+    detail: 'Catalog & price history',
   },
   {
     id: 'customers',
@@ -338,7 +338,7 @@ export const ERD_MODULES: ErdModule[] = [
     roles: ['admin', 'sales', 'cashier'],
     tables: ['CUSTOMER', 'PAYMENT'],
     mainList: 'Searchable customer list with payment terms',
-    detail: 'Official receipts table and in-place payment recording',
+    detail: 'Accounts & payment records',
   },
   {
     id: 'sales',
@@ -351,6 +351,6 @@ export const ERD_MODULES: ErdModule[] = [
     roles: ['admin', 'sales', 'cashier'],
     tables: ['SALES', 'SALESDETAIL'],
     mainList: 'Sales transactions with sellers and departments',
-    detail: 'Itemized line items, unit prices, and computed totals',
+    detail: 'Transactions & line items',
   },
 ];
