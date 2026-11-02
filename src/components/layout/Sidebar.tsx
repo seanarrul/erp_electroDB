@@ -121,7 +121,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
         <nav className="space-y-4 pt-1" aria-label="Main Navigation">
           {navLinks.map((sec) => (
             <div key={sec.section} className="space-y-1">
-              <div className="px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#41555f]">
+              <div className="px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-400 select-none">
                 {sec.section}
               </div>
 
@@ -139,7 +139,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
                       href={item.href}
                       onClick={closeMobileSidebar}
                       className={cn(
-                        'group flex items-center justify-between px-2.5 py-1.5 rounded-[3px] text-xs transition-all outline-none select-none',
+                        'group flex items-center justify-between px-2.5 py-2 rounded-[3px] text-sm transition-all outline-none select-none',
                         isActive
                           ? 'bg-black/5 text-[#041a24] font-semibold'
                           : 'text-[#041a24] hover:bg-black/4 font-medium'
@@ -204,7 +204,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
   return (
     <>
       {/* 1. Desktop Persistent Sidebar */}
-      <aside className="hidden lg:flex w-[230px] h-screen flex-col bg-white/95 backdrop-blur-xs border-r border-black/10 shrink-0 select-none sticky top-0">
+      <aside className="hidden lg:flex w-[248px] h-screen flex-col bg-white/95 backdrop-blur-xs border-r border-black/10 shrink-0 select-none sticky top-0">
         {sidebarContent}
       </aside>
 
@@ -220,7 +220,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
       {/* 3. Mobile Responsive Drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-[260px] bg-white border-r border-black/10 shadow-xl flex flex-col lg:hidden transition-transform duration-200 ease-in-out',
+          'fixed inset-y-0 left-0 z-50 w-[280px] bg-white border-r border-black/10 shadow-xl flex flex-col lg:hidden transition-transform duration-200 ease-in-out',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         aria-label="Mobile Navigation"
