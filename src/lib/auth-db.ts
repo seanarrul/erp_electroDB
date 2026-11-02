@@ -65,39 +65,44 @@ export function ensureAuthDb(): void {
     );
   `);
 
-  // Check if admin demo exists
-  const existingAdmin = db
-    .prepare('SELECT id FROM staff_accounts WHERE LOWER(email) = ?')
-    .get('admin@hope.demo');
+  const defaultStaffAccounts: { email: string; name: string; role: UserRole; pass: string }[] = [
+    {
+      email: 'ildefonsojeptahashleyr@gmail.com',
+      name: 'Jeptah Ashley Ildefonso',
+      role: 'admin',
+      pass: '09355566245',
+    },
+    {
+      email: 'admin@hope.demo',
+      name: 'Maria Santos (Admin)',
+      role: 'admin',
+      pass: 'demo',
+    },
+    {
+      email: 'sales@hope.demo',
+      name: 'Juan Reyes (Sales Rep)',
+      role: 'sales',
+      pass: 'demo',
+    },
+    {
+      email: 'cashier@hope.demo',
+      name: 'Carlos Dizon (Cashier)',
+      role: 'cashier',
+      pass: 'demo',
+    },
+  ];
 
-  if (!existingAdmin) {
-    const demoAccounts: { email: string; name: string; role: UserRole; pass: string }[] = [
-      {
-        email: 'admin@hope.demo',
-        name: 'Maria Santos (Admin)',
-        role: 'admin',
-        pass: 'demo',
-      },
-      {
-        email: 'sales@hope.demo',
-        name: 'Juan Reyes (Sales Rep)',
-        role: 'sales',
-        pass: 'demo',
-      },
-      {
-        email: 'cashier@hope.demo',
-        name: 'Carlos Dizon (Cashier)',
-        role: 'cashier',
-        pass: 'demo',
-      },
-    ];
+  const insertStmt = db.prepare(`
+    INSERT INTO staff_accounts (email, passwordHash, fullName, role)
+    VALUES (?, ?, ?, ?)
+  `);
 
-    const insertStmt = db.prepare(`
-      INSERT INTO staff_accounts (email, passwordHash, fullName, role)
-      VALUES (?, ?, ?, ?)
-    `);
+  for (const acc of defaultStaffAccounts) {
+    const existing = db
+      .prepare('SELECT id FROM staff_accounts WHERE LOWER(email) = LOWER(?)')
+      .get(acc.email);
 
-    for (const acc of demoAccounts) {
+    if (!existing) {
       const hash = bcrypt.hashSync(acc.pass, 10);
       insertStmt.run(acc.email.toLowerCase(), hash, acc.name, acc.role);
     }
