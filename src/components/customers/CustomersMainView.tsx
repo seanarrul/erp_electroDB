@@ -17,7 +17,6 @@ import {
   Receipt,
   ExternalLink,
   ArrowUpRight,
-  Info,
 } from 'lucide-react';
 
 interface CustomersMainViewProps {
@@ -134,14 +133,6 @@ export function CustomersMainView({
       {/* ── Stitch Masthead (Matching Screen 3bd9ff66a0d8417dbe2cfcd0abe72180) ── */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 border-b border-black/10 pb-5">
         <div className="space-y-1.5 max-w-2xl">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[#41555f] px-1.5 py-0.5 rounded-[2px] bg-black/5 border border-black/10">
-              V1.0.0
-            </span>
-            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[#41555f]">
-              LEDGER ARCHIVE
-            </span>
-          </div>
           <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#041a24] tracking-tight leading-tight">
             Customers &amp; Payments
           </h1>
@@ -158,14 +149,6 @@ export function CustomersMainView({
             </span>
             <span className="block font-sans text-base sm:text-lg font-bold text-[#041a24] mt-0.5 tabular-nums">
               {metrics?.totalCustomers || initialCustomers.length} Accounts
-            </span>
-          </div>
-          <div className="rounded-[4px] border border-black/10 bg-white px-4 py-2 text-center min-w-[135px] shadow-2xs">
-            <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#41555f]">
-              SETTLEMENT RATE
-            </span>
-            <span className="block font-sans text-base sm:text-lg font-bold text-emerald-700 mt-0.5">
-              100% Reconciled
             </span>
           </div>
         </div>
@@ -286,9 +269,6 @@ export function CustomersMainView({
               {/* Header Badges & Actions */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#41555f] px-2 py-0.5 rounded-[2px] bg-black/5 border border-black/10">
-                    CUSTOMER DOSSIER
-                  </span>
                   <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-800 px-2 py-0.5 rounded-[2px] bg-emerald-50 border border-emerald-500/30">
                     ACTIVE ACCOUNT
                   </span>
@@ -348,16 +328,11 @@ export function CustomersMainView({
               {/* Broadsheet Rule Hairline Divider */}
               <div className="border-t border-black/10" />
 
-              {/* Official Receipts Ledger Sub-Header */}
+              {/* Payment History Sub-Header */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-editorial text-base sm:text-lg font-normal text-[#041a24]">
-                    Official Receipts Ledger
-                  </h3>
-                  <span className="font-mono text-xs text-[#41555f]">
-                    / {customerPayments.length} RECORDS
-                  </span>
-                </div>
+                <h3 className="font-editorial text-base sm:text-lg font-normal text-[#041a24]">
+                  Payment History
+                </h3>
                 <div className="border border-black/10 bg-[#F4F4F0]/60 px-2.5 py-1 rounded-[2px] font-mono text-xs font-semibold text-[#041a24] tabular-nums">
                   TOTAL SETTLED: {formatPHP(customerTotalPaid)}
                 </div>
@@ -431,14 +406,6 @@ export function CustomersMainView({
                 <div className="text-[#41555f]">
                   AUDIT LOG REF #{String(selectedCustomer.custNo).replace(/\D/g, '') || '94031'}
                 </div>
-              </div>
-
-              {/* Policy Callout Box matching Stitch Screen */}
-              <div className="rounded-[4px] border border-black/10 bg-[#F4F4F0]/60 p-3.5 flex items-start gap-2.5 text-xs text-[#41555f] font-sans">
-                <Info className="w-4 h-4 text-black/40 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">
-                  <strong className="text-[#041a24] font-medium">Payment Terms Policy:</strong> Accounts operating on {selectedCustomer.payTerms} ({selectedCustomer.payTerms.replace(/\D/g, '') || '30'}-day net terms) receive automated invoice notifications at 20 days. No outstanding balances past due for Customer {selectedCustomer.custNo}.
-                </p>
               </div>
             </div>
           ) : (
