@@ -4,7 +4,6 @@ import { getHomeSummary } from '@/lib/data/home';
 import { DashboardHeader } from '@/components/home/DashboardHeader';
 import { ProjectTeamCard } from '@/components/home/ProjectTeamCard';
 import { DashboardKpis } from '@/components/home/DashboardKpis';
-import { RecentTransactionsCard } from '@/components/home/RecentTransactionsCard';
 import { ErdDiagram } from '@/components/home/ErdDiagram';
 import { ExploreGrid } from '@/components/home/ExploreGrid';
 import { redirect } from 'next/navigation';
@@ -45,14 +44,7 @@ export default async function HomePage({ searchParams }: PageProps) {
         <ProjectTeamCard />
       </section>
 
-      {/* 3. Operational Transactions Ledger */}
-      {data?.recentTransactions && (
-        <section aria-label="Recent Transactions">
-          <RecentTransactionsCard transactions={data.recentTransactions} />
-        </section>
-      )}
-
-      {/* 4. Database Overview & Interactive Canonical ERD Section (Standalone Card) */}
+      {/* 3. Database Overview & Interactive Canonical ERD Section (Standalone Card) */}
       <section id="erd" aria-label="Relational Database Architecture">
         <div className="bg-white rounded-[4px] border border-black/10 p-5 sm:p-6 shadow-2xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/10 pb-3">
