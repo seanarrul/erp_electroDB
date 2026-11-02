@@ -57,13 +57,13 @@ export function ProjectTeamCard() {
                 <span>Group 4 ElectronDB</span>
               </span>
               <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#041a24] text-white text-xs font-semibold tracking-wide">
-                BSCS 1
+                2 BSCS 1
               </span>
             </div>
 
             {/* Main title and subtitle */}
             <div className="pt-0.5">
-              <h2 className="font-editorial italic font-normal text-3xl sm:text-4xl lg:text-5xl text-[#041a24] tracking-tight leading-tight">
+              <h2 className="font-editorial italic font-normal text-2xl sm:text-3xl lg:text-[32px] text-[#041a24] tracking-tight leading-tight">
                 Group 4 ElectronDB
               </h2>
               <p className="text-xs sm:text-sm text-[#55554F] font-sans mt-1">
