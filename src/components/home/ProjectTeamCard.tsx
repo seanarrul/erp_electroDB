@@ -25,7 +25,7 @@ const MEMBERS: TeamMember[] = [
     name: 'CASING, Christian',
   },
   {
-    role: 'Dev',
+    role: 'Developer',
     name: 'Ildefonso, Jeptah Ashley',
   },
 ];
