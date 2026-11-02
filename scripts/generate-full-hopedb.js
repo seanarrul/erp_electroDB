@@ -277,6 +277,25 @@ for (let i = 1; i <= 124; i++) {
     salesDate = (payD < minD ? minD : payD).toISOString().split('T')[0];
   }
 
+  // Ensure Point-in-Time pricing validity:
+  // salesDate must not precede the earliest effective price date of the items sold in this receipt.
+  const itemsInTrans = salesDetails.filter((sd) => sd.transNo === transNo);
+  let maxEarliestEff = '2010-05-15';
+  for (const item of itemsInTrans) {
+    const phList = priceHists.filter((ph) => ph.prodCode === item.prodCode).sort((a, b) => a.effDate.localeCompare(b.effDate));
+    if (phList.length > 0 && phList[0].effDate > maxEarliestEff) {
+      maxEarliestEff = phList[0].effDate;
+    }
+  }
+  if (salesDate < maxEarliestEff) {
+    salesDate = maxEarliestEff;
+  }
+
+  // Specific transaction alignment: TR000026 payment on 2010-08-20 reflects MD0003 effective price from 2010-08-01
+  if (transNo === 'TR000026') {
+    salesDate = '2010-08-01';
+  }
+
   // Active sales employee on salesDate
   const activeReps = salesReps.filter((e) => {
     return e.hireDate <= salesDate && (!e.sepDate || e.sepDate >= salesDate);

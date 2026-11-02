@@ -2,38 +2,38 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 
 export interface PaymentLedgerItem {
-  orNo: number;
+  orNo: string | number;
   payDate: string;
   amount: number;
-  transNo: number;
+  transNo: string | number;
   salesDate: string;
-  custNo: number;
+  custNo: string | number;
   custName: string;
 }
 
 export interface SaleForPaymentOption {
-  transNo: number;
+  transNo: string | number;
   salesDate: string;
-  custNo: number;
+  custNo: string | number;
   custName: string;
   totalAmount: number;
 }
 
 export interface OfficialReceiptData {
-  orNo: number;
+  orNo: string | number;
   payDate: string;
   amount: number;
-  transNo: number;
+  transNo: string | number;
   salesDate: string;
   totalAmount: number;
   customer: {
-    custNo: number;
+    custNo: string | number;
     custName: string;
     address: string;
     payTerms: string;
   };
   salesRep: {
-    empNo: number;
+    empNo: string | number;
     empName: string;
     deptName: string;
   };
@@ -73,12 +73,12 @@ export async function getPaymentsLedger(filter?: {
   `).all() as any[];
 
   let items: PaymentLedgerItem[] = rawPayments.map((r) => ({
-    orNo: Number(r.orNo),
+    orNo: String(r.orNo),
     payDate: String(r.payDate),
     amount: Number(r.amount),
-    transNo: Number(r.transNo),
+    transNo: String(r.transNo),
     salesDate: String(r.salesDate),
-    custNo: Number(r.custNo),
+    custNo: String(r.custNo),
     custName: String(r.custName),
   }));
 
@@ -147,9 +147,9 @@ export async function getSalesForPayment(preselectedTransNo?: number): Promise<S
   `).all() as any[];
 
   return rawRows.map((r) => ({
-    transNo: Number(r.transNo),
+    transNo: String(r.transNo),
     salesDate: String(r.salesDate),
-    custNo: Number(r.custNo),
+    custNo: String(r.custNo),
     custName: String(r.custName),
     totalAmount: Number(r.totalAmount || 0),
   }));
@@ -168,11 +168,16 @@ export async function getNextORNumberPreview(): Promise<number> {
 /**
  * Retrieve single official receipt document
  */
-export async function getOfficialReceipt(orNo: number): Promise<OfficialReceiptData | null> {
+export async function getOfficialReceipt(orNo: string | number): Promise<OfficialReceiptData | null> {
   const dbPath = path.join(process.cwd(), 'hope.db');
   const db = new DatabaseSync(dbPath);
 
-  const payment = db.prepare('SELECT ORNo AS orNo, payDate, amount, transNo FROM PAYMENT WHERE ORNo = ?').get(orNo) as any;
+  const rawStr = String(orNo).trim();
+  const formattedOrNo = rawStr.startsWith('OR')
+    ? rawStr
+    : `OR${rawStr.padStart(6, '0')}`;
+
+  const payment = db.prepare('SELECT ORNo AS orNo, payDate, amount, transNo FROM PAYMENT WHERE ORNo = ? OR ORNo = ?').get(formattedOrNo, rawStr) as any;
   if (!payment) return null;
 
   const sale = db.prepare(`
@@ -212,20 +217,20 @@ export async function getOfficialReceipt(orNo: number): Promise<OfficialReceiptD
   const totalAmount = details.reduce((sum, d) => sum + (Number(d.quantity) * Number(d.unitPrice)), 0);
 
   return {
-    orNo: Number(payment.orNo),
+    orNo: String(payment.orNo),
     payDate: String(payment.payDate),
     amount: Number(payment.amount),
-    transNo: Number(payment.transNo),
+    transNo: String(payment.transNo),
     salesDate: String(sale.salesDate),
     totalAmount,
     customer: {
-      custNo: Number(sale.custNo),
+      custNo: String(sale.custNo),
       custName: String(sale.custName),
       address: String(sale.address),
       payTerms: String(sale.payTerms),
     },
     salesRep: {
-      empNo: Number(sale.empNo),
+      empNo: String(sale.empNo),
       empName: String(sale.empName),
       deptName: String(sale.deptName),
     },

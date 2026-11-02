@@ -258,6 +258,138 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
           // ignore individual missing table
         }
       }
+
+      // 1. Dynamic KPIs directly from canonical tables & views
+      try {
+        const revRow = db.prepare('SELECT SUM(totalAmount) as totalRev, count(*) as totalTrans FROM v_sales_summary').get() as any;
+        const payRow = db.prepare('SELECT SUM(amount) as totalPaid FROM PAYMENT').get() as any;
+        const empRow = db.prepare('SELECT count(*) as totalEmp FROM EMPLOYEE WHERE sepDate IS NULL').get() as any;
+
+        const totalSales = Number(revRow?.totalRev || 0);
+        const totalTransactions = Number(revRow?.totalTrans || 0);
+        const totalPayments = Number(payRow?.totalPaid || 0);
+        const activeEmployees = Number(empRow?.totalEmp || 0);
+
+        kpis.totalSales = totalSales;
+        kpis.totalSalesFormatted = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(totalSales);
+        kpis.totalTransactions = totalTransactions;
+        kpis.totalPayments = totalPayments;
+        kpis.totalPaymentsFormatted = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(totalPayments);
+        kpis.activeEmployees = activeEmployees;
+      } catch {
+        // preserve fallback
+      }
+
+      // 2. Dynamic Recent Transactions
+      try {
+        const recentRows = db.prepare(`
+          SELECT 
+            s.transNo,
+            s.salesDate,
+            c.custName,
+            e.firstName || ' ' || e.lastName AS repName,
+            v.totalAmount,
+            COALESCE((SELECT SUM(p.amount) FROM PAYMENT p WHERE p.transNo = s.transNo), 0.0) AS paidAmount
+          FROM SALES s
+          JOIN CUSTOMER c ON c.custNo = s.custNo
+          JOIN EMPLOYEE e ON e.empNo = s.empNo
+          JOIN v_sales_summary v ON v.transNo = s.transNo
+          ORDER BY s.salesDate DESC, s.transNo DESC
+          LIMIT 5
+        `).all() as any[];
+
+        if (recentRows.length > 0) {
+          recentTransactions.length = 0;
+          for (const r of recentRows) {
+            const amount = Number(r.totalAmount || 0);
+            const paid = Number(r.paidAmount || 0);
+            recentTransactions.push({
+              transNo: String(r.transNo),
+              date: String(r.salesDate),
+              customer: String(r.custName),
+              employee: String(r.repName),
+              amount,
+              amountFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount),
+              status: paid >= amount ? 'Completed' : 'Pending',
+            });
+          }
+        }
+      } catch {
+        // preserve fallback
+      }
+
+      // 3. Dynamic Top Products
+      try {
+        const topRows = db.prepare(`
+          SELECT 
+            p.prodCode,
+            p.description as name,
+            SUM(sd.quantity) as soldCount,
+            SUM(l.lineAmount) as revenue,
+            LOWER(SUBSTR(p.prodCode, 1, 2)) as prefix
+          FROM SALESDETAIL sd
+          JOIN PRODUCT p ON p.prodCode = sd.prodCode
+          JOIN v_sale_lines l ON l.transNo = sd.transNo AND l.prodCode = sd.prodCode
+          GROUP BY p.prodCode, p.description
+          ORDER BY soldCount DESC
+          LIMIT 5
+        `).all() as any[];
+
+        if (topRows.length > 0) {
+          topProducts.length = 0;
+          for (const r of topRows) {
+            const revenue = Number(r.revenue || 0);
+            let category: TopProductItem['category'] = 'other';
+            if (r.prefix === 'pc') category = 'cpu';
+            else if (r.prefix === 'nb') category = 'gpu';
+            else if (r.prefix === 'md') category = 'monitor';
+            else if (r.prefix === 'ak') category = 'keyboard';
+            else if (r.prefix === 'ap') category = 'psu';
+
+            topProducts.push({
+              prodCode: String(r.prodCode),
+              name: String(r.name),
+              soldCount: Number(r.soldCount || 0),
+              revenue,
+              revenueFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(revenue),
+              category,
+            });
+          }
+        }
+      } catch {
+        // preserve fallback
+      }
+
+      // 4. Dynamic Monthly Sales Overview
+      try {
+        const monthlyRows = db.prepare(`
+          SELECT 
+            SUBSTR(s.salesDate, 1, 7) as ym,
+            SUM(v.totalAmount) as sales
+          FROM SALES s
+          JOIN v_sales_summary v ON v.transNo = s.transNo
+          GROUP BY ym
+          ORDER BY ym ASC
+        `).all() as any[];
+
+        if (monthlyRows.length > 0) {
+          salesOverview.length = 0;
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          for (const r of monthlyRows) {
+            const parts = String(r.ym).split('-');
+            const monthIdx = parseInt(parts[1], 10) - 1;
+            const mName = monthNames[monthIdx] || r.ym;
+            const sales = Number(r.sales || 0);
+            salesOverview.push({
+              month: mName,
+              sales,
+              label: `₱${Math.round(sales / 1000)}k`,
+            });
+          }
+        }
+      } catch {
+        // preserve fallback
+      }
     } catch {
       // Use fallback seed counts
     }

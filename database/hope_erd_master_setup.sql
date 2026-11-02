@@ -6,6 +6,7 @@
 -- Cleanup
 DROP VIEW IF EXISTS personnel CASCADE;
 DROP VIEW IF EXISTS receiptDetail CASCADE;
+DROP VIEW IF EXISTS priceHist CASCADE;
 DROP VIEW IF EXISTS v_sales_details_priced CASCADE;
 DROP VIEW IF EXISTS v_sales_with_dept CASCADE;
 DROP VIEW IF EXISTS v_sales_summary CASCADE;
@@ -118,8 +119,9 @@ CREATE VIEW receiptDetail AS
   SELECT transNo, prodCode, quantity 
   FROM SALESDETAIL;
 
--- Note: In PostgreSQL, PRICEHIST table already has columns (effDate, prodCode, unitPrice),
--- so a view named priceHist is redundant and causes relation "pricehist" already exists.
+CREATE VIEW priceHist AS 
+  SELECT effDate, prodCode, unitPrice 
+  FROM PRICEHIST;
 
 -- Data Insert
 -- ========================================================================
@@ -482,7 +484,7 @@ INSERT INTO SALES (transNo, salesDate, custNo, empNo) VALUES
 ('TR000023', '2010-07-26', 'C0023', '00009'),
 ('TR000024', '2010-07-26', 'C0024', '00011'),
 ('TR000025', '2010-07-16', 'C0025', '00019'),
-('TR000026', '2010-07-26', 'C0026', '00015'),
+('TR000026', '2010-08-01', 'C0026', '00015'),
 ('TR000027', '2010-08-15', 'C0027', '00017'),
 ('TR000028', '2010-08-21', 'C0028', '00019'),
 ('TR000029', '2010-08-26', 'C0029', '00021'),
@@ -505,8 +507,8 @@ INSERT INTO SALES (transNo, salesDate, custNo, empNo) VALUES
 ('TR000046', '2010-11-15', 'C0046', '00009'),
 ('TR000047', '2010-11-05', 'C0047', '00011'),
 ('TR000048', '2010-12-08', 'C0048', '00049'),
-('TR000049', '2010-11-25', 'C0049', '00015'),
-('TR000050', '2010-11-15', 'C0050', '00017'),
+('TR000049', '2010-12-01', 'C0049', '00015'),
+('TR000050', '2010-12-01', 'C0050', '00017'),
 ('TR000051', '2010-12-21', 'C0051', '00007'),
 ('TR000052', '2011-01-11', 'C0052', '00047'),
 ('TR000053', '2011-01-15', 'C0053', '00049'),
@@ -533,13 +535,13 @@ INSERT INTO SALES (transNo, salesDate, custNo, empNo) VALUES
 ('TR000074', '2011-02-25', 'C0074', '00031'),
 ('TR000075', '2011-02-25', 'C0075', '00033'),
 ('TR000076', '2011-02-25', 'C0076', '00035'),
-('TR000077', '2011-01-08', 'C0077', '00037'),
-('TR000078', '2011-01-31', 'C0078', '00039'),
+('TR000077', '2011-02-01', 'C0077', '00037'),
+('TR000078', '2011-02-01', 'C0078', '00039'),
 ('TR000079', '2011-01-16', 'C0079', '00041'),
-('TR000080', '2011-01-13', 'C0080', '00043'),
+('TR000080', '2011-02-01', 'C0080', '00043'),
 ('TR000081', '2011-02-01', 'C0081', '00045'),
 ('TR000082', '2011-01-21', 'C0082', '00047'),
-('TR000083', '2011-01-31', 'C0001', '00049'),
+('TR000083', '2011-02-01', 'C0001', '00049'),
 ('TR000084', '2011-02-08', 'C0002', '00051'),
 ('TR000085', '2011-03-05', 'C0003', '00053'),
 ('TR000086', '2011-02-18', 'C0004', '00055'),

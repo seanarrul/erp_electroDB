@@ -205,13 +205,16 @@ export function SalesMainView({
   // 5. Selected Sale Detail Object
   const selectedSaleDetail: SaleDetailData | null = useMemo(() => {
     if (!selectedCode) return null;
-    const transNum = parseInt(selectedCode, 10);
-    if (isNaN(transNum)) return null;
+    const cleanCode = selectedCode.trim();
 
-    const sale = initialSales.find((s) => s.transNo === transNum);
+    const sale = initialSales.find(
+      (s) => String(s.transNo) === cleanCode || String(s.transNo).replace(/\D/g, '') === cleanCode.replace(/\D/g, '')
+    );
     if (!sale) return null;
 
-    const items = initialLines.filter((l) => l.transNo === transNum);
+    const items = initialLines.filter(
+      (l) => String(l.transNo) === String(sale.transNo)
+    );
 
     // Receipts are fetched in detail page, but for the panel we construct from available data
     return {
@@ -627,7 +630,7 @@ export function SalesMainView({
                             }`}
                           >
                             <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
-                              #{s.transNo}
+                              {s.transNo}
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap text-[#17231F] tabular-nums">
                               {formatDate(s.salesDate)}
@@ -637,7 +640,7 @@ export function SalesMainView({
                                 {s.custName}
                               </div>
                               <div className="text-[11px] font-mono text-[#52615B] mt-0.5">
-                                Customer #{s.custNo}
+                                Customer {s.custNo}
                               </div>
                             </td>
                             <td className="py-2.5 px-3">
@@ -728,7 +731,7 @@ export function SalesMainView({
                             }`}
                           >
                             <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
-                              #{l.transNo}
+                              {l.transNo}
                             </td>
                             <td className="py-2.5 px-3">
                               <div className="font-mono font-medium text-[#17231F]">

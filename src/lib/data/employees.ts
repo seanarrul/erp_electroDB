@@ -174,13 +174,16 @@ export async function getEmployeesDirectory(
  * Fetch complete profile and job history for a single employee
  */
 export async function getEmployeeDetailPageData(
-  empNo: number,
+  empNo: number | string,
   userRole: string = 'admin'
 ): Promise<EmployeeDetailPageData | null> {
   const isAdmin = userRole.toLowerCase() === 'admin';
   const db = getSqliteDb();
 
-  const empRow = db.prepare('SELECT * FROM v_employee_current_status WHERE empNo = ?').get(empNo) as any;
+  const rawStr = String(empNo).trim();
+  const formattedEmpNo = rawStr.padStart(5, '0');
+
+  const empRow = db.prepare('SELECT * FROM v_employee_current_status WHERE empNo = ? OR empNo = ?').get(formattedEmpNo, rawStr) as any;
   if (!empRow) return null;
 
   const hireDate = String(empRow.hireDate || '');
@@ -201,9 +204,9 @@ export async function getEmployeeDetailPageData(
     FROM JOBHISTORY jh
     JOIN JOB j ON j.jobCode = jh.jobCode
     JOIN DEPARTMENT d ON d.deptCode = jh.deptCode
-    WHERE jh.empNo = ?
+    WHERE jh.empNo = ? OR jh.empNo = ?
     ORDER BY jh.effDate DESC
-  `).all(empNo) as any[];
+  `).all(formattedEmpNo, rawStr) as any[];
 
   // Current assignment is the row with latest effDate on or before today
   // Since ordered by effDate DESC, the first row with effDate <= today is current
@@ -240,8 +243,8 @@ export async function getEmployeeDetailPageData(
   const latestSale = db.prepare(`
     SELECT MAX(salesDate) AS latestSaleDate
     FROM SALES
-    WHERE empNo = ?
-  `).get(empNo) as any;
+    WHERE empNo = ? OR empNo = ?
+  `).get(formattedEmpNo, rawStr) as any;
 
   const employee: EmployeeDirectoryItem = {
     empNo: Number(empRow.empNo),

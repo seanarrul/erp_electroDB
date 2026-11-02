@@ -48,8 +48,8 @@ export function CustomersMainView({
   // Selected customer state (URL synced ?custNo=)
   const custNoParam = searchParams.get('custNo');
   const initialCustNo = custNoParam
-    ? parseInt(custNoParam, 10)
-    : initialCustomers[0]?.custNo || 0;
+    ? custNoParam
+    : initialCustomers[0]?.custNo || '';
 
   // Modal state
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
@@ -85,14 +85,17 @@ export function CustomersMainView({
 
   // Selected customer object
   const selectedCustomer = useMemo(() => {
-    const found = initialCustomers.find((c) => c.custNo === initialCustNo);
+    if (!initialCustNo) return initialCustomers[0] || null;
+    const found = initialCustomers.find(
+      (c) => String(c.custNo) === String(initialCustNo) || String(c.custNo).replace(/\D/g, '') === String(initialCustNo).replace(/\D/g, '')
+    );
     return found || initialCustomers[0] || null;
   }, [initialCustomers, initialCustNo]);
 
   // Payments for the selected customer
   const customerPayments = useMemo(() => {
     if (!selectedCustomer) return [];
-    return initialPayments.filter((p) => p.custNo === selectedCustomer.custNo);
+    return initialPayments.filter((p) => String(p.custNo) === String(selectedCustomer.custNo));
   }, [initialPayments, selectedCustomer]);
 
   // Payments total sum for selected customer
@@ -197,7 +200,7 @@ export function CustomersMainView({
                           {c.custName}
                         </p>
                         <p className="text-[11px] font-mono text-[#52615B] mt-0.5">
-                          Customer #{c.custNo}
+                          Customer {c.custNo}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
@@ -228,7 +231,7 @@ export function CustomersMainView({
                     <div>
                       <span className="text-[#52615B]">Customer no.: </span>
                       <span className="font-mono font-semibold text-[#17231F]">
-                        #{selectedCustomer.custNo}
+                        {selectedCustomer.custNo}
                       </span>
                     </div>
 
@@ -317,7 +320,7 @@ export function CustomersMainView({
                         {customerPayments.map((p) => (
                           <tr key={p.orNo} className="hover:bg-[#F5F6F4] transition-colors">
                             <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
-                              OR #{p.orNo}
+                              {p.orNo}
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap text-[#17231F] tabular-nums">
                               {formatDate(p.payDate)}
@@ -327,7 +330,7 @@ export function CustomersMainView({
                                 href={`/sales/${p.transNo}`}
                                 className="underline hover:text-[#1C4939] font-medium"
                               >
-                                #{p.transNo}
+                                {p.transNo}
                               </Link>
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono tabular-nums font-semibold text-[#17231F] whitespace-nowrap">

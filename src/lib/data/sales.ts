@@ -2,13 +2,13 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 
 export interface SalesSummaryItem {
-  transNo: number;
+  transNo: string | number;
   salesDate: string;
-  custNo: number;
+  custNo: string | number;
   custName: string;
   custAddress: string;
   payTerms: string;
-  empNo: number;
+  empNo: string | number;
   repName: string;
   deptCode: string;
   deptName: string;
@@ -17,9 +17,9 @@ export interface SalesSummaryItem {
 }
 
 export interface SaleLineItem {
-  transNo: number;
+  transNo: string | number;
   salesDate: string;
-  custNo: number;
+  custNo: string | number;
   custName: string;
   prodCode: string;
   description: string;
@@ -31,10 +31,10 @@ export interface SaleLineItem {
 }
 
 export interface SaleReceiptItem {
-  orNo: number;
+  orNo: string | number;
   payDate: string;
   amount: number;
-  transNo: number;
+  transNo: string | number;
 }
 
 export interface SaleDetailData {
@@ -55,13 +55,13 @@ export interface SalesSummaryMetrics {
 
 export interface SaleLookupData {
   customers: Array<{
-    custNo: number;
+    custNo: string | number;
     custName: string;
     address: string;
     payTerms: string;
   }>;
   employees: Array<{
-    empNo: number;
+    empNo: string | number;
     fullName: string;
     deptCode: string;
     deptName: string;
@@ -128,13 +128,13 @@ export async function getSalesPageData(): Promise<{
   `).all() as any[];
 
   const sales: SalesSummaryItem[] = salesRows.map((r) => ({
-    transNo: Number(r.transNo),
+    transNo: String(r.transNo),
     salesDate: String(r.salesDate),
-    custNo: Number(r.custNo),
+    custNo: String(r.custNo),
     custName: String(r.custName),
     custAddress: String(r.custAddress || ''),
     payTerms: String(r.payTerms || 'COD'),
-    empNo: Number(r.empNo),
+    empNo: String(r.empNo),
     repName: String(r.repName),
     deptCode: String(r.deptCode),
     deptName: String(r.deptName),
@@ -163,9 +163,9 @@ export async function getSalesPageData(): Promise<{
   `).all() as any[];
 
   const lines: SaleLineItem[] = linesRows.map((r) => ({
-    transNo: Number(r.transNo),
+    transNo: String(r.transNo),
     salesDate: String(r.salesDate),
-    custNo: Number(r.custNo),
+    custNo: String(r.custNo),
     custName: String(r.custName),
     prodCode: String(r.prodCode),
     description: String(r.description),
@@ -206,9 +206,14 @@ export async function getSalesPageData(): Promise<{
 /**
  * Retrieve comprehensive sale detail with items, prices, and linked receipts
  */
-export async function getSaleDetailData(transNo: number): Promise<SaleDetailData | null> {
+export async function getSaleDetailData(transNo: string | number): Promise<SaleDetailData | null> {
   const dbPath = path.join(process.cwd(), 'hope.db');
   const db = new DatabaseSync(dbPath);
+
+  const rawStr = String(transNo).trim();
+  const formattedTransNo = rawStr.startsWith('TR') 
+    ? rawStr 
+    : `TR${rawStr.padStart(6, '0')}`;
 
   // 1. Fetch sale header
   const saleRow = db.prepare(`
@@ -241,20 +246,20 @@ export async function getSaleDetailData(transNo: number): Promise<SaleDetailData
     JOIN EMPLOYEE e ON e.empNo = s.empNo
     LEFT JOIN SALESDETAIL sd ON sd.transNo = s.transNo
     LEFT JOIN v_sale_lines l ON l.transNo = sd.transNo AND l.prodCode = sd.prodCode
-    WHERE s.transNo = ?
+    WHERE s.transNo = ? OR s.transNo = ?
     GROUP BY s.transNo, s.salesDate, c.custNo, c.custName, c.address, c.payTerms, e.empNo, e.firstName, e.lastName
-  `).get(transNo) as any;
+  `).get(formattedTransNo, rawStr) as any;
 
   if (!saleRow) return null;
 
   const sale: SalesSummaryItem = {
-    transNo: Number(saleRow.transNo),
+    transNo: String(saleRow.transNo),
     salesDate: String(saleRow.salesDate),
-    custNo: Number(saleRow.custNo),
+    custNo: String(saleRow.custNo),
     custName: String(saleRow.custName),
     custAddress: String(saleRow.custAddress || ''),
     payTerms: String(saleRow.payTerms || 'COD'),
-    empNo: Number(saleRow.empNo),
+    empNo: String(saleRow.empNo),
     repName: String(saleRow.repName),
     deptCode: String(saleRow.deptCode),
     deptName: String(saleRow.deptName),
@@ -279,14 +284,14 @@ export async function getSaleDetailData(transNo: number): Promise<SaleDetailData
     FROM v_sale_lines l
     JOIN SALES s ON s.transNo = l.transNo
     JOIN CUSTOMER c ON c.custNo = s.custNo
-    WHERE l.transNo = ?
+    WHERE l.transNo = ? OR l.transNo = ?
     ORDER BY l.prodCode ASC
-  `).all(transNo) as any[];
+  `).all(formattedTransNo, rawStr) as any[];
 
   const items: SaleLineItem[] = itemsRows.map((r) => ({
-    transNo: Number(r.transNo),
+    transNo: String(r.transNo),
     salesDate: String(r.salesDate),
-    custNo: Number(r.custNo),
+    custNo: String(r.custNo),
     custName: String(r.custName),
     prodCode: String(r.prodCode),
     description: String(r.description),
@@ -301,15 +306,15 @@ export async function getSaleDetailData(transNo: number): Promise<SaleDetailData
   const paymentsRows = db.prepare(`
     SELECT ORNo AS orNo, payDate, amount, transNo
     FROM PAYMENT
-    WHERE transNo = ?
+    WHERE transNo = ? OR transNo = ?
     ORDER BY ORNo ASC
-  `).all(transNo) as any[];
+  `).all(formattedTransNo, rawStr) as any[];
 
   const payments: SaleReceiptItem[] = paymentsRows.map((p) => ({
-    orNo: Number(p.orNo ?? p.ORNo),
+    orNo: String(p.orNo ?? p.ORNo),
     payDate: String(p.payDate),
     amount: Number(p.amount),
-    transNo: Number(p.transNo),
+    transNo: String(p.transNo),
   }));
 
   return {
@@ -367,13 +372,13 @@ export async function getSaleCreationLookups(): Promise<SaleLookupData> {
 
   return {
     customers: customers.map((c) => ({
-      custNo: Number(c.custNo),
+      custNo: String(c.custNo),
       custName: String(c.custName),
       address: String(c.address),
       payTerms: String(c.payTerms),
     })),
     employees: employees.map((e) => ({
-      empNo: Number(e.empNo),
+      empNo: String(e.empNo),
       fullName: String(e.fullName),
       deptCode: String(e.deptCode),
       deptName: String(e.deptName),
