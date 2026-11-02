@@ -163,8 +163,11 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
           return (
             <div
               key={mod.id}
-              className="relative bg-white rounded-2xl border border-neutral-200/80 border-l-[5px] border-l-[#0C1418] shadow-sm hover:shadow-lg transition-all duration-300 ease-out p-6 sm:p-7 flex flex-col justify-between gap-5 overflow-hidden"
+              className="group relative bg-white rounded-2xl border border-neutral-200/80 shadow-sm hover:shadow-lg transition-all duration-300 ease-out p-6 sm:p-7 flex flex-col justify-between gap-5 overflow-hidden"
             >
+              {/* Distinct solid dark charcoal/black vertical accent bar on left edge */}
+              <div className="absolute left-0 inset-y-0 w-1.5 bg-[#0C1418] rounded-l-2xl pointer-events-none" />
+
               <div className="space-y-5">
                 {/* 1. Header: Circular Icon Badge + Title & Subtitle + Solid Black Count Pill */}
                 <div className="flex items-start justify-between gap-3">
@@ -235,10 +238,10 @@ export function ExploreGrid({ counts, userRole = 'admin' }: ExploreGridProps) {
                   {canAccess ? (
                     <Link
                       href={mod.href}
-                      className="group/btn inline-flex items-center gap-2 h-9 px-4 rounded-full bg-[#0C1418] hover:bg-[#18181B] text-white text-xs sm:text-[13px] font-medium shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                      className="group/btn inline-flex items-center gap-2 h-9 px-4 rounded-full bg-[#0C1418] hover:bg-[#18181B] text-white text-xs sm:text-[13px] font-medium shadow-sm hover:shadow-[0_2px_12px_rgba(12,20,24,0.3)] transition-all duration-200 cursor-pointer"
                     >
                       <span>Open {mod.name}</span>
-                      <span className="w-5 h-5 rounded-full bg-white text-[#0C1418] flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/btn:translate-x-0.5">
+                      <span className="w-5 h-5 rounded-full bg-white text-[#0C1418] flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/btn:translate-x-1 shadow-2xs">
                         <ArrowRight className="w-3 h-3 stroke-[2.5]" />
                       </span>
                     </Link>
