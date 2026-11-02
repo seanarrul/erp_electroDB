@@ -17,8 +17,14 @@ const saleItemSchema = z.object({
 });
 
 const createSaleSchema = z.object({
-  custNo: z.number().int().positive('Customer is required (R-01)'),
-  empNo: z.number().int().positive('Sales Representative is required (R-01)'),
+  custNo: z.union([
+    z.number().int().positive('Customer is required (R-01)'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
+  empNo: z.union([
+    z.number().int().positive('Sales Representative is required (R-01)'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
   salesDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid date (YYYY-MM-DD) is required'),
   items: z
     .array(saleItemSchema)
@@ -26,7 +32,12 @@ const createSaleSchema = z.object({
     .max(50, 'A sale cannot exceed 50 line items'),
 });
 
-export type CreateSaleInput = z.infer<typeof createSaleSchema>;
+export type CreateSaleInput = {
+  custNo: string | number;
+  empNo: string | number;
+  salesDate: string;
+  items: z.infer<typeof saleItemSchema>[];
+};
 
 export async function createSaleAction(input: CreateSaleInput) {
   try {

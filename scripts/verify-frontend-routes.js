@@ -1,14 +1,15 @@
 async function testRoutes() {
   const routes = [
     '/',
+    '/login',
     '/customers',
     '/customers?custNo=C0001',
     '/products',
     '/products?code=AK0001',
     '/sales',
     '/sales/TR000001',
+    '/sales/new',
     '/employees',
-    '/reports',
     '/receipts/OR000001',
   ];
 

@@ -22,7 +22,10 @@ function getManilaToday(): string {
 // ========================================================================
 
 const addCustomerSchema = z.object({
-  custNo: z.number().int().positive('Customer number must be a positive integer.'),
+  custNo: z.union([
+    z.number().int().positive('Customer number must be a positive integer.'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
   custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(120),
   address: z.string().trim().min(1, 'Customer address is required (R-03).').max(255),
   payTerms: z.enum(['COD', '30D', '45D'], {
@@ -31,7 +34,10 @@ const addCustomerSchema = z.object({
 });
 
 const updateCustomerSchema = z.object({
-  custNo: z.number().int().positive('Customer number must be a positive integer.'),
+  custNo: z.union([
+    z.number().int().positive('Customer number must be a positive integer.'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
   custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(120),
   address: z.string().trim().min(1, 'Customer address is required (R-03).').max(255),
   payTerms: z.enum(['COD', '30D', '45D'], {
@@ -40,7 +46,10 @@ const updateCustomerSchema = z.object({
 });
 
 const recordPaymentSchema = z.object({
-  orNo: z.number().int().positive('OR number must be a positive integer (R-08).'),
+  orNo: z.union([
+    z.number().int().positive('OR number must be a positive integer (R-08).'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
   payDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid payment date in YYYY-MM-DD format is required.'),
   amount: z
     .number()
@@ -48,13 +57,35 @@ const recordPaymentSchema = z.object({
     .refine((val) => Number(val.toFixed(2)) === val, {
       message: 'Payment amount cannot have more than 2 decimal places (R-07).',
     }),
-  transNo: z.number().int().positive('Sales transaction number is required (R-05).'),
-  custNo: z.number().int().positive('Customer number is required.'),
+  transNo: z.union([
+    z.number().int().positive('Sales transaction number is required (R-05).'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
+  custNo: z.union([
+    z.number().int().positive('Customer number is required.'),
+    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
+  ]),
 });
 
-export type AddCustomerInput = z.infer<typeof addCustomerSchema>;
-export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
-export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
+export type AddCustomerInput = {
+  custNo: string | number;
+  custName: string;
+  address: string;
+  payTerms: 'COD' | '30D' | '45D';
+};
+export type UpdateCustomerInput = {
+  custNo: string | number;
+  custName: string;
+  address: string;
+  payTerms: 'COD' | '30D' | '45D';
+};
+export type RecordPaymentInput = {
+  orNo: string | number;
+  payDate: string;
+  amount: number;
+  transNo: string | number;
+  custNo: string | number;
+};
 
 // ========================================================================
 // ACTIONS
