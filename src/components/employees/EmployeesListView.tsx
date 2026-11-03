@@ -1,13 +1,22 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useDeferredValue } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AddEmployeeModal } from './AddEmployeeModal';
-import { ManageJobsDeptsModal } from './ManageJobsDeptsModal';
 import { formatPHP, formatDate } from '@/lib/utils';
+
+const AddEmployeeModal = dynamic(
+  () => import('./AddEmployeeModal').then((mod) => mod.AddEmployeeModal),
+  { ssr: false }
+);
+
+const ManageJobsDeptsModal = dynamic(
+  () => import('./ManageJobsDeptsModal').then((mod) => mod.ManageJobsDeptsModal),
+  { ssr: false }
+);
 import type {
   EmployeeDirectoryItem,
   DepartmentStat,
@@ -74,14 +83,15 @@ export function EmployeesListView({
       params.set('dept', code);
     }
     const newSearch = params.toString();
-    router.push(newSearch ? `?${newSearch}` : '/employees');
+    router.replace(newSearch ? `?${newSearch}` : '/employees', { scroll: false });
   };
 
   // Filter Tabs: All, Active, Separated
   const [statusTab, setStatusTab] = useState<'ALL' | 'Active' | 'Separated'>('ALL');
 
-  // Search
+  // Search with deferred value for instant 0ms typing
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearch = useDeferredValue(searchQuery);
 
   // Sorting
   const [sortField, setSortField] = useState<SortField>('empNo');
@@ -146,9 +156,9 @@ export function EmployeesListView({
       result = result.filter((e) => e.employmentStatus === statusTab);
     }
 
-    // 3. Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
+    // 3. Search query (uses deferredSearch)
+    if (deferredSearch.trim()) {
+      const q = deferredSearch.toLowerCase().trim();
       result = result.filter((e) => {
         return (
           e.empNo.toString().includes(q) ||

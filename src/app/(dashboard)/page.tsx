@@ -1,11 +1,22 @@
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { getCurrentUser } from '@/app/actions/auth';
 import { getHomeSummary } from '@/lib/data/home';
 import { DashboardHeader } from '@/components/home/DashboardHeader';
 import { ProjectTeamCard } from '@/components/home/ProjectTeamCard';
 import { DashboardKpis } from '@/components/home/DashboardKpis';
-import { ErdDiagram } from '@/components/home/ErdDiagram';
 import { redirect } from 'next/navigation';
+
+const ErdDiagram = dynamic(
+  () => import('@/components/home/ErdDiagram').then((mod) => mod.ErdDiagram),
+  {
+    loading: () => (
+      <div className="w-full h-80 rounded-[4px] bg-neutral-100/70 border border-black/5 animate-pulse flex items-center justify-center font-mono text-xs text-[#52615B]">
+        Loading database architecture schema...
+      </div>
+    ),
+  }
+);
 
 export const revalidate = 30;
 

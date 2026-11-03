@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useTransition } from 'react';
+import React, { useState, useMemo, useEffect, useTransition, useDeferredValue, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent } from '@/components/ui/Card';
-import { AddProductModal } from './AddProductModal';
 import { ProductDetailPanel } from './ProductDetailPanel';
+
+const AddProductModal = dynamic(
+  () => import('./AddProductModal').then((mod) => mod.AddProductModal),
+  { ssr: false }
+);
 import { formatPHP, formatDate } from '@/lib/utils';
 import {
   splitDescription,
@@ -106,7 +111,23 @@ export function ProductsMainView({
   // Modal state
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
 
-  // Update URL helper
+  // Local Search state for instant, zero-lag typing
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const deferredSearch = useDeferredValue(localSearch);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Synchronize local search state if URL updates externally
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
+  // Update URL helper (uses router.replace to avoid history pollution and full reload costs)
   const updateUrl = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([key, val]) => {
@@ -117,8 +138,28 @@ export function ProductsMainView({
       }
     });
     startTransition(() => {
-      router.push(`/products?${params.toString()}`, { scroll: false });
+      router.replace(`/products?${params.toString()}`, { scroll: false });
     });
+  };
+
+  const handleSearchChange = (val: string) => {
+    setLocalSearch(val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      updateUrl({ q: val ? val : null, page: '1' });
+    }, 300);
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearch('');
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    updateUrl({ q: null, page: '1' });
+  };
+
+  const handleClearAllFilters = () => {
+    setLocalSearch('');
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    updateUrl({ family: null, q: null, sold: null, page: '1' });
   };
 
   // Distinct families in catalog
@@ -130,7 +171,7 @@ export function ProductsMainView({
     return list;
   }, [metrics.familyCounts]);
 
-  // 1. Filtered Products View list
+  // 1. Filtered Products View list (uses deferredSearch for non-blocking rendering)
   const filteredProducts = useMemo(() => {
     return initialProducts.filter((p) => {
       // Family filter
@@ -142,8 +183,8 @@ export function ProductsMainView({
       if (soldFilter === 'none' && p.unitsSold > 0) return false;
 
       // Search query (code or description)
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().toLowerCase();
+      if (deferredSearch.trim()) {
+        const q = deferredSearch.trim().toLowerCase();
         const codeMatch = p.prodCode.toLowerCase().includes(q);
         const descMatch = p.description.toLowerCase().includes(q);
         if (!codeMatch && !descMatch) return false;
@@ -151,7 +192,7 @@ export function ProductsMainView({
 
       return true;
     });
-  }, [initialProducts, selectedFamily, soldFilter, searchQuery]);
+  }, [initialProducts, selectedFamily, soldFilter, deferredSearch]);
 
   // 2. Filtered Price History View list
   const filteredPriceHistory = useMemo(() => {
@@ -170,8 +211,8 @@ export function ProductsMainView({
       }
 
       // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().toLowerCase();
+      if (deferredSearch.trim()) {
+        const q = deferredSearch.trim().toLowerCase();
         const codeMatch = h.prodCode.toLowerCase().includes(q);
         const descMatch = h.description.toLowerCase().includes(q);
         if (!codeMatch && !descMatch) return false;
@@ -179,7 +220,7 @@ export function ProductsMainView({
 
       return true;
     });
-  }, [initialPriceHistory, initialProducts, selectedFamily, soldFilter, searchQuery]);
+  }, [initialPriceHistory, initialProducts, selectedFamily, soldFilter, deferredSearch]);
 
   // 3. Sorting logic
   const sortedProducts = useMemo(() => {
@@ -422,14 +463,15 @@ export function ProductsMainView({
             <input
               type="text"
               placeholder="Search code or description..."
-              value={searchQuery}
-              onChange={(e) => updateUrl({ q: e.target.value || null, page: '1' })}
+              value={localSearch}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full rounded-[2px] border border-black/15 bg-white pl-8 pr-7 py-1.5 text-xs text-[#041a24] placeholder:text-[#41555f]/60 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
             />
-            {searchQuery && (
+            {localSearch && (
               <button
                 type="button"
-                onClick={() => updateUrl({ q: null, page: '1' })}
+                onClick={handleClearSearch}
+                aria-label="Clear search query"
                 className="absolute right-2 top-2 text-black/40 hover:text-[#041a24]"
               >
                 <X className="h-3.5 w-3.5" />
@@ -488,7 +530,7 @@ export function ProductsMainView({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateUrl({ family: null, q: null, sold: null, page: '1' })}
+                    onClick={handleClearAllFilters}
                     className="rounded-[2px] border-black/15 text-xs"
                   >
                     Clear filters
@@ -618,7 +660,7 @@ export function ProductsMainView({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateUrl({ family: null, q: null, sold: null, page: '1' })}
+                    onClick={handleClearAllFilters}
                   >
                     Clear filters
                   </Button>

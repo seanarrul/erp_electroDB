@@ -2,17 +2,30 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { NewJobRecordModal } from './NewJobRecordModal';
-import { EditEmployeeModal } from './EditEmployeeModal';
-import { SeparateEmployeeModal } from './SeparateEmployeeModal';
 import { formatPHP, formatDate } from '@/lib/utils';
 import type {
   EmployeeDetailPageData,
   DepartmentItem,
   JobItem,
 } from '@/lib/data/employees';
+
+const NewJobRecordModal = dynamic(
+  () => import('./NewJobRecordModal').then((mod) => mod.NewJobRecordModal),
+  { ssr: false }
+);
+
+const EditEmployeeModal = dynamic(
+  () => import('./EditEmployeeModal').then((mod) => mod.EditEmployeeModal),
+  { ssr: false }
+);
+
+const SeparateEmployeeModal = dynamic(
+  () => import('./SeparateEmployeeModal').then((mod) => mod.SeparateEmployeeModal),
+  { ssr: false }
+);
 import {
   ArrowLeft,
   Plus,

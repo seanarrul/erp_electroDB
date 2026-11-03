@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useTransition } from 'react';
+import React, { useState, useMemo, useTransition, useDeferredValue } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -41,8 +41,9 @@ export function CustomersMainView({
   const isAdmin = userRole.toLowerCase() === 'admin';
   const isCashier = userRole.toLowerCase() === 'cashier' || isAdmin;
 
-  // Search query for customer list
+  // Search query for customer list with deferred filtering for instant typing
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearch = useDeferredValue(searchQuery);
 
   // Selected customer state (URL synced ?custNo=)
   const custNoParam = searchParams.get('custNo');
@@ -66,21 +67,21 @@ export function CustomersMainView({
         }
       });
       const qs = params.toString();
-      router.push(qs ? `/customers?${qs}` : '/customers', { scroll: false });
+      router.replace(qs ? `/customers?${qs}` : '/customers', { scroll: false });
     });
   };
 
-  // Filtered customers in left list
+  // Filtered customers in left list (uses deferredSearch)
   const filteredCustomers = useMemo(() => {
-    if (!searchQuery.trim()) return initialCustomers;
-    const q = searchQuery.toLowerCase().trim();
+    if (!deferredSearch.trim()) return initialCustomers;
+    const q = deferredSearch.toLowerCase().trim();
     return initialCustomers.filter(
       (c) =>
         c.custName.toLowerCase().includes(q) ||
         String(c.custNo).includes(q) ||
         c.address.toLowerCase().includes(q)
     );
-  }, [initialCustomers, searchQuery]);
+  }, [initialCustomers, deferredSearch]);
 
   // Selected customer object
   const selectedCustomer = useMemo(() => {

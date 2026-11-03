@@ -1,12 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { formatPHP, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { EditCustomerModal } from './EditCustomerModal';
-import { RecordCustomerPaymentModal } from './RecordCustomerPaymentModal';
 import type { CustomerDetailData } from '@/lib/data/customers';
+
+const EditCustomerModal = dynamic(
+  () => import('./EditCustomerModal').then((mod) => mod.EditCustomerModal),
+  { ssr: false }
+);
+
+const RecordCustomerPaymentModal = dynamic(
+  () => import('./RecordCustomerPaymentModal').then((mod) => mod.RecordCustomerPaymentModal),
+  { ssr: false }
+);
 import {
   X,
   Plus,

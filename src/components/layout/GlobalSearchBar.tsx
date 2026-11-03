@@ -46,7 +46,7 @@ export function GlobalSearchBar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Debounced search
+  // Debounced search with race-condition prevention
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
@@ -55,19 +55,30 @@ export function GlobalSearchBar() {
     }
 
     setIsLoading(true);
+    let isCurrent = true;
+
     const timer = setTimeout(async () => {
       try {
         const data = await searchGlobalAction(query);
-        setResults(data);
-        setIsOpen(true);
+        if (isCurrent) {
+          setResults(data);
+          setIsOpen(true);
+        }
       } catch (err) {
-        console.error('Search error:', err);
+        if (isCurrent) {
+          console.error('Search error:', err);
+        }
       } finally {
-        setIsLoading(false);
+        if (isCurrent) {
+          setIsLoading(false);
+        }
       }
-    }, 200);
+    }, 250);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   const handleSelect = (url: string) => {

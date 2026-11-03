@@ -1,14 +1,27 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { formatPHP, formatDate } from '@/lib/utils';
 import { splitDescription, getFamilyLabel, formatPriceChange } from '@/lib/products';
 import { ProductPriceTrend } from './ProductPriceTrend';
-import { NewPriceModal } from './NewPriceModal';
-import { CorrectPriceModal } from './CorrectPriceModal';
-import { EditProductModal } from './EditProductModal';
 import { Button } from '@/components/ui/Button';
 import type { ProductDetailItem } from '@/lib/data/products';
+
+const NewPriceModal = dynamic(
+  () => import('./NewPriceModal').then((mod) => mod.NewPriceModal),
+  { ssr: false }
+);
+
+const CorrectPriceModal = dynamic(
+  () => import('./CorrectPriceModal').then((mod) => mod.CorrectPriceModal),
+  { ssr: false }
+);
+
+const EditProductModal = dynamic(
+  () => import('./EditProductModal').then((mod) => mod.EditProductModal),
+  { ssr: false }
+);
 import {
   X,
   Plus,

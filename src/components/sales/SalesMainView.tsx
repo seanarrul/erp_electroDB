@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useTransition } from 'react';
+import React, { useState, useMemo, useEffect, useTransition, useDeferredValue, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { SaleDetailPanel } from './SaleDetailPanel';
-import { NewSaleModal } from './NewSaleModal';
+
+const NewSaleModal = dynamic(
+  () => import('./NewSaleModal').then((mod) => mod.NewSaleModal),
+  { ssr: false }
+);
 import { formatPHP, formatDate } from '@/lib/utils';
 import type {
   SalesSummaryItem,
@@ -81,7 +86,23 @@ export function SalesMainView({
   const [isNewSaleOpen, setIsNewSaleOpen] = useState(initialOpenNewSale);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
-  // URL State Updater
+  // Local Search state for instant, zero-lag typing
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const deferredSearch = useDeferredValue(localSearch);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Synchronize local search state if URL updates externally
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
+  // URL State Updater (uses router.replace to avoid history pollution and full reload costs)
   const updateUrl = (updates: Record<string, string | null>) => {
     startTransition(() => {
       const params = new URLSearchParams(searchParams.toString());
@@ -92,11 +113,31 @@ export function SalesMainView({
           params.set(key, val);
         }
       });
-      router.push(`/sales?${params.toString()}`, { scroll: false });
+      router.replace(`/sales?${params.toString()}`, { scroll: false });
     });
   };
 
-  // 1. Filtered Sales
+  const handleSearchChange = (val: string) => {
+    setLocalSearch(val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      updateUrl({ q: val ? val : null, page: '1' });
+    }, 300);
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearch('');
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    updateUrl({ q: null, page: '1' });
+  };
+
+  const handleClearAllFilters = () => {
+    setLocalSearch('');
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    updateUrl({ q: null, period: null, dept: null, rep: null, page: '1' });
+  };
+
+  // 1. Filtered Sales (uses deferredSearch for non-blocking rendering)
   const filteredSales = useMemo(() => {
     const matchesPeriod = (dateStr: string) => {
       if (periodFilter === 'all') return true;
@@ -113,8 +154,8 @@ export function SalesMainView({
       if (deptFilter !== 'all' && s.deptCode !== deptFilter) return false;
       if (repFilter !== 0 && s.empNo !== repFilter) return false;
 
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase().trim();
+      if (deferredSearch) {
+        const q = deferredSearch.toLowerCase().trim();
         const matchesNo = String(s.transNo).includes(q);
         const matchesCust = s.custName.toLowerCase().includes(q) || String(s.custNo).includes(q);
         const matchesRep = s.repName.toLowerCase().includes(q);
@@ -124,7 +165,7 @@ export function SalesMainView({
 
       return true;
     });
-  }, [initialSales, periodFilter, deptFilter, repFilter, searchQuery]);
+  }, [initialSales, periodFilter, deptFilter, repFilter, deferredSearch]);
 
   // Set of matching transNos
   const matchingTransNos = useMemo(() => {
@@ -138,8 +179,8 @@ export function SalesMainView({
       if (!matchingTransNos.has(l.transNo)) return false;
 
       // Text query on product fields
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase().trim();
+      if (deferredSearch) {
+        const q = deferredSearch.toLowerCase().trim();
         const matchesProd =
           l.prodCode.toLowerCase().includes(q) ||
           l.description.toLowerCase().includes(q) ||
@@ -150,7 +191,7 @@ export function SalesMainView({
 
       return true;
     });
-  }, [initialLines, matchingTransNos, searchQuery]);
+  }, [initialLines, matchingTransNos, deferredSearch]);
 
   // 3. Sorting
   const sortedSales = useMemo(() => {
@@ -305,7 +346,7 @@ export function SalesMainView({
   };
 
   const isFilterActive =
-    searchQuery !== '' || periodFilter !== 'all' || deptFilter !== 'all' || repFilter !== 0;
+    localSearch !== '' || periodFilter !== 'all' || deptFilter !== 'all' || repFilter !== 0;
 
   return (
     <div className="space-y-6">
@@ -429,14 +470,15 @@ export function SalesMainView({
             <input
               type="text"
               placeholder="Search sale, customer, rep..."
-              value={searchQuery}
-              onChange={(e) => updateUrl({ q: e.target.value || null, page: '1' })}
+              value={localSearch}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full rounded-[2px] border border-black/15 bg-white pl-8 pr-7 py-1.5 text-xs text-[#041a24] placeholder:text-[#41555f]/60 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
             />
-            {searchQuery && (
+            {localSearch && (
               <button
                 type="button"
-                onClick={() => updateUrl({ q: null, page: '1' })}
+                onClick={handleClearSearch}
+                aria-label="Clear search query"
                 className="absolute right-2 top-2 text-black/40 hover:text-[#041a24]"
               >
                 <X className="h-3.5 w-3.5" />
@@ -489,7 +531,7 @@ export function SalesMainView({
           {isFilterActive && (
             <button
               type="button"
-              onClick={() => updateUrl({ q: null, period: null, dept: null, rep: null, page: '1' })}
+              onClick={handleClearAllFilters}
               className="text-xs text-[#41555f] hover:text-[#041a24] underline whitespace-nowrap ml-1 cursor-pointer"
             >
               Clear filters
@@ -553,7 +595,7 @@ export function SalesMainView({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateUrl({ q: null, period: null, dept: null, rep: null, page: '1' })}
+                    onClick={handleClearAllFilters}
                     className="rounded-[2px] border-black/15 text-xs"
                   >
                     Clear filters
@@ -668,7 +710,7 @@ export function SalesMainView({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateUrl({ q: null, period: null, dept: null, rep: null, page: '1' })}
+                    onClick={handleClearAllFilters}
                   >
                     Clear filters
                   </Button>
