@@ -16,6 +16,7 @@ import { formatPHP, formatDate } from '@/lib/utils';
 import {
   splitDescription,
   getFamilyLabel,
+  getProductFamily,
   formatPriceChange,
   FAMILY_LABELS,
 } from '@/lib/products';
@@ -388,7 +389,7 @@ export function ProductsMainView({
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs"
+            className="bg-white border border-black/15 hover:bg-black/5 text-[#0F172A] rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
           >
             <Download className="h-3.5 w-3.5 text-black/40" />
             <span>Export CSV</span>
@@ -400,7 +401,7 @@ export function ProductsMainView({
               variant="primary"
               size="sm"
               onClick={() => setIsAddProductOpen(true)}
-              className="bg-[#041a24] hover:bg-[#1c313b] text-white rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs cursor-pointer"
+              className="bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Product</span>
@@ -543,79 +544,95 @@ export function ProductsMainView({
                       <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('prodCode')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
                         >
                           <div className="flex items-center gap-1">
                             <span>Product Code</span>
-                            {sortCol === 'prodCode' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'prodCode' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                         <th
                           onClick={() => handleSort('description')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none min-w-[200px]"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none min-w-[200px]"
                         >
                           <div className="flex items-center gap-1">
                             <span>Description</span>
-                            {sortCol === 'description' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'description' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                         <th
                           onClick={() => handleSort('unit')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
                         >
                           <div className="flex items-center gap-1">
                             <span>Unit</span>
-                            {sortCol === 'unit' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'unit' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                         <th
                           onClick={() => handleSort('currentUnitPrice')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
                         >
                           <div className="flex items-center gap-1">
                             <span>Unit price</span>
-                            {sortCol === 'currentUnitPrice' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'currentUnitPrice' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black/5">
+                    <tbody className="group/tbody divide-y divide-black/5">
                       {paginatedProducts.map((p) => {
                         const { title, detail } = splitDescription(p.description);
-                        const familyName = getFamilyLabel(p.family);
+                        const family = getProductFamily(p.prodCode);
+                        const familyName = getFamilyLabel(family);
                         const isSelected = selectedCode?.toUpperCase() === p.prodCode.toUpperCase();
 
                         return (
                           <tr
                             key={p.prodCode}
                             onClick={() => updateUrl({ code: p.prodCode })}
-                            className={`cursor-pointer transition-colors ${
+                            className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                               isSelected
-                                ? 'bg-black/5 border-l-3 border-[#041a24] font-medium'
-                                : 'hover:bg-[#F4F4F0]/60'
+                                ? 'bg-black/5 !opacity-100 font-medium'
+                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE]'
                             }`}
                           >
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
-                              {p.prodCode}
+                            <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
+                              <div
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                  isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
+                                }`}
+                              />
+                              <span className="inline-block font-mono font-semibold text-[#0F172A] transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                                {p.prodCode}
+                              </span>
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#041a24] leading-tight">
+                              <div className="font-semibold text-[#0F172A] leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {title}
                               </div>
                               {detail && (
@@ -623,18 +640,20 @@ export function ProductsMainView({
                                   {detail}
                                 </div>
                               )}
-                              <span className="inline-block font-mono text-[9px] text-[#41555f] mt-0.5">
-                                {p.family} &bull; {familyName}
+                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] mt-0.5">
+                                {family} &bull; {familyName}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-mono text-xs text-[#41555f] whitespace-nowrap">
-                              {p.unit}
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-xs text-[#41555f] border border-transparent bg-transparent transition-[transform,background-color,border-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 group-hover/row:bg-white group-hover/row:border-[#CBD5E1] group-hover/row:shadow-2xs">
+                                {p.unit}
+                              </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               {p.currentUnitPrice !== null ? (
-                                <div className="font-mono font-bold tabular-nums text-[#041a24]">
-                                  {formatPHP(p.currentUnitPrice)}
-                                  <span className="font-normal font-sans text-[11px] text-[#41555f]">
+                                <div className="font-mono font-bold tabular-nums text-[#0F172A] inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
+                                  <span>{formatPHP(p.currentUnitPrice)}</span>
+                                  <span className="font-normal font-sans text-[11px] text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700">
                                     {' '}
                                     / {p.unit}
                                   </span>
@@ -672,92 +691,113 @@ export function ProductsMainView({
                       <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('effDate')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
                         >
                           <div className="flex items-center gap-1">
                             <span>Effective date</span>
-                            {sortCol === 'effDate' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'effDate' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                         <th
                           onClick={() => handleSort('prodCode')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
                         >
                           <div className="flex items-center gap-1">
                             <span>Product Code</span>
-                            {sortCol === 'prodCode' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'prodCode' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                         <th
                           onClick={() => handleSort('description')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none min-w-[200px]"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none min-w-[200px]"
                         >
                           <div className="flex items-center gap-1">
                             <span>Description</span>
-                            {sortCol === 'description' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'description' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                         <th
                           onClick={() => handleSort('unitPrice')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
                         >
                           <div className="flex items-center gap-1">
                             <span>Unit price</span>
-                            {sortCol === 'unitPrice' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'unitPrice' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                         <th
                           onClick={() => handleSort('status')}
-                          className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
+                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
                         >
                           <div className="flex items-center gap-1">
                             <span>Status</span>
-                            {sortCol === 'status' ? (
-                              sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
-                            )}
+                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
+                              {sortCol === 'status' ? (
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                              ) : (
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                              )}
+                            </span>
                           </div>
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black/5">
+                    <tbody className="group/tbody divide-y divide-black/5">
                       {paginatedPriceHistory.map((h, i) => {
                         const { title, detail } = splitDescription(h.description);
+                        const hFamily = getProductFamily(h.prodCode);
+                        const hFamilyName = getFamilyLabel(hFamily);
                         const isSelected = selectedCode?.toUpperCase() === h.prodCode.toUpperCase();
 
                         return (
                           <tr
                             key={`${h.prodCode}-${h.effDate}-${i}`}
                             onClick={() => updateUrl({ code: h.prodCode })}
-                            className={`cursor-pointer transition-colors ${
-                              isSelected ? 'bg-black/5 border-l-3 border-[#041a24] font-medium' : 'hover:bg-[#F4F4F0]/60'
+                            className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                              isSelected
+                                ? 'bg-black/5 !opacity-100 font-medium'
+                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE]'
                             }`}
                           >
-                            <td className="py-2.5 px-3 font-mono text-xs whitespace-nowrap text-[#041a24]">
-                              {formatDate(h.effDate)}
+                            <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
+                              <div
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                  isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
+                                }`}
+                              />
+                              <span className="inline-block font-mono text-xs text-[#0F172A] transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                                {formatDate(h.effDate)}
+                              </span>
                             </td>
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono font-semibold text-[#0F172A] whitespace-nowrap">
                               {h.prodCode}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#041a24] leading-tight">
+                              <div className="font-semibold text-[#0F172A] leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {title}
                               </div>
                               {detail && (
@@ -765,33 +805,40 @@ export function ProductsMainView({
                                   {detail}
                                 </div>
                               )}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono font-bold tabular-nums text-[#041a24] whitespace-nowrap">
-                              {formatPHP(h.unitPrice)}
-                              <span className="font-normal font-sans text-[11px] text-[#41555f]">
-                                {' '}
-                                / {h.unit}
+                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] mt-0.5">
+                                {hFamily} &bull; {hFamilyName}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
-                              {h.status === 'Current' && (
-                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#041a24] px-1.5 py-0.5 text-[10px] font-mono text-white">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  Current
+                              <div className="font-mono font-bold tabular-nums text-[#0F172A] inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
+                                <span>{formatPHP(h.unitPrice)}</span>
+                                <span className="font-normal font-sans text-[11px] text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700">
+                                  {' '}
+                                  / {h.unit}
                                 </span>
-                              )}
-                              {h.status === 'Past' && (
-                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 border border-black/10 px-1.5 py-0.5 text-[10px] font-mono text-[#41555f]">
-                                  <Clock className="h-3 w-3" />
-                                  Past
-                                </span>
-                              )}
-                              {h.status === 'Future-dated' && (
-                                <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#FEF08A]/80 border border-yellow-400/50 px-1.5 py-0.5 text-[10px] font-mono text-[#713F12]">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  Future-dated
-                                </span>
-                              )}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <span className="inline-flex transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5">
+                                {h.status === 'Current' && (
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#0F172A] px-1.5 py-0.5 text-[10px] font-mono text-white">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Current
+                                  </span>
+                                )}
+                                {h.status === 'Past' && (
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 border border-black/10 px-1.5 py-0.5 text-[10px] font-mono text-[#41555f]">
+                                    <Clock className="h-3 w-3" />
+                                    Past
+                                  </span>
+                                )}
+                                {h.status === 'Future-dated' && (
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#FEF08A]/80 border border-yellow-400/50 px-1.5 py-0.5 text-[10px] font-mono text-[#713F12]">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Future-dated
+                                  </span>
+                                )}
+                              </span>
                             </td>
                           </tr>
                         );
