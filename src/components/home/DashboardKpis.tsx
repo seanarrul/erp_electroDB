@@ -244,7 +244,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
       >
         <div className="space-y-4 font-sans text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white">
+            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-white/10">
               <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
                 Total Billed
               </div>
@@ -252,16 +252,16 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
                 {kpis.totalSalesFormatted}
               </div>
             </div>
-            <div className="p-3.5 rounded-[4px] bg-emerald-900/40 border border-emerald-500/30 text-white">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300">
+            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-emerald-500/40">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-medium">
                 Total Collected
               </div>
               <div className="text-lg font-bold font-mono text-emerald-400 mt-0.5">
                 {kpis.totalPaymentsFormatted}
               </div>
             </div>
-            <div className="p-3.5 rounded-[4px] bg-amber-900/30 border border-amber-500/30 text-white">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-amber-300">
+            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-amber-500/40">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-medium">
                 Outstanding Balance
               </div>
               <div className="text-lg font-bold font-mono text-amber-400 mt-0.5">
