@@ -7,7 +7,7 @@ interface TeamMember {
   role: string;
   name: string;
   handle: string;
-  avatar?: string;
+  initials: string;
 }
 
 const MEMBERS: TeamMember[] = [
@@ -15,31 +15,31 @@ const MEMBERS: TeamMember[] = [
     role: 'ScrumMaster',
     name: 'DE LEON, Sean Arrul',
     handle: '@seanarrul',
-    avatar: '/images/default-avatar.jpg',
+    initials: 'SD',
   },
   {
     role: 'DB Admin',
     name: 'DELA CRUZ, Veil',
     handle: '@veil',
-    avatar: '/images/default-avatar.jpg',
+    initials: 'VD',
   },
   {
     role: 'Tester',
     name: 'ECHAGUE, Arielle',
     handle: '@arielle',
-    avatar: '/images/default-avatar.jpg',
+    initials: 'AE',
   },
   {
     role: 'UI Designer',
     name: 'CASING, Christian Jay',
     handle: '@christianjay',
-    avatar: '/images/default-avatar.jpg',
+    initials: 'CC',
   },
   {
     role: 'Developer',
     name: 'Ildefonso, Jeptah Ashley',
     handle: '@jeptah',
-    avatar: '/images/default-avatar.jpg',
+    initials: 'JI',
   },
 ];
 
@@ -87,12 +87,8 @@ export function ProjectTeamCard() {
             >
               {/* Author Avatar & Badge Row */}
               <div className="flex items-center justify-between gap-2">
-                <div className="w-11 h-11 rounded-full ring-2 ring-border overflow-hidden select-none shrink-0 bg-surface-2 shadow-2xs">
-                  <img
-                    src={member.avatar || '/images/default-avatar.jpg'}
-                    alt={member.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                <div className="w-11 h-11 rounded-full ring-2 ring-border select-none shrink-0 bg-[#041a24] dark:bg-white text-white dark:text-[#041a24] flex items-center justify-center font-mono font-bold text-xs shadow-2xs group-hover:scale-105 transition-transform duration-300">
+                  <span>{member.initials}</span>
                 </div>
 
                 <span className="bg-primary-bg text-primary-fg text-[11px] px-2.5 py-1 rounded-lg font-semibold tracking-wide shadow-2xs">

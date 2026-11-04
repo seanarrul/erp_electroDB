@@ -135,12 +135,8 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
       {/* Bottom Profile matching JeptahzRepo */}
       <div className="pt-4 border-t border-border mt-auto flex items-center justify-between gap-2">
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-border shrink-0 shadow-xs bg-surface-2">
-            <img
-              src="/images/default-avatar.jpg"
-              alt={userName}
-              className="w-full h-full object-cover"
-            />
+          <div className="w-7 h-7 rounded-full ring-1 ring-border shrink-0 shadow-xs bg-[#041a24] dark:bg-white text-white dark:text-[#041a24] flex items-center justify-center font-mono font-bold text-[10px]">
+            {userName ? userName.slice(0, 2).toUpperCase() : 'ED'}
           </div>
           <div className="flex flex-col text-left min-w-0">
             <div className="flex items-center space-x-1">
