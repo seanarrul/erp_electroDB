@@ -48,4 +48,8 @@ auth.db*
 
 # scratch and temporary files
 scratch/
+
+# AI agent configurations
+.agent/
+.agents/
 scratch/chrome-profile/
