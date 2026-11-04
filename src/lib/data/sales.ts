@@ -115,7 +115,7 @@ export async function getSalesPageData(): Promise<{
         JOIN DEPARTMENT d ON d.deptCode = jh.deptCode 
         WHERE jh.empNo = s.empNo AND jh.effDate <= s.salesDate 
         ORDER BY jh.effDate DESC LIMIT 1
-      ), 'Retail Sales') AS deptName,
+      ), 'Sales') AS deptName,
       COALESCE(COUNT(sd.prodCode), 0) AS itemCount,
       COALESCE(SUM(l.lineAmount), 0.0) AS totalAmount
     FROM SALES s
@@ -238,7 +238,7 @@ export async function getSaleDetailData(transNo: string | number): Promise<SaleD
         JOIN DEPARTMENT d ON d.deptCode = jh.deptCode 
         WHERE jh.empNo = s.empNo AND jh.effDate <= s.salesDate 
         ORDER BY jh.effDate DESC LIMIT 1
-      ), 'Retail Sales') AS deptName,
+      ), 'Sales') AS deptName,
       COALESCE(COUNT(sd.prodCode), 0) AS itemCount,
       COALESCE(SUM(l.lineAmount), 0.0) AS totalAmount
     FROM SALES s
@@ -346,14 +346,17 @@ export async function getSaleCreationLookups(): Promise<SaleLookupData> {
       SELECT MAX(effDate) FROM JOBHISTORY WHERE empNo = e.empNo
     )
     JOIN DEPARTMENT d ON d.deptCode = jh.deptCode
-    WHERE d.deptName IN ('Wholesale Sales', 'Corporate Accounts', 'Retail Sales')
+    WHERE d.deptCode IN ('DEPT-SLS', 'DEPT-CRP', 'DEPT-WHL')
+       OR jh.jobCode IN ('JOB-REP', 'JOB-SUPV', 'JOB-AMGR')
+       OR d.deptName IN ('Sales', 'Corporate', 'Wholesale', 'Wholesale Sales', 'Corporate Accounts', 'Retail Sales')
     ORDER BY e.firstName ASC
   `).all() as any[];
 
   const departments = db.prepare(`
     SELECT deptCode, deptName 
     FROM DEPARTMENT 
-    WHERE deptName IN ('Wholesale Sales', 'Corporate Accounts', 'Retail Sales')
+    WHERE deptCode IN ('DEPT-SLS', 'DEPT-CRP', 'DEPT-WHL')
+       OR deptName IN ('Sales', 'Corporate', 'Wholesale', 'Wholesale Sales', 'Corporate Accounts', 'Retail Sales')
     ORDER BY deptName ASC
   `).all() as any[];
 

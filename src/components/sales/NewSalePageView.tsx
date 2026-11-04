@@ -293,11 +293,15 @@ export function NewSalePageView({
                     onChange={(e) => setEmpNo(e.target.value)}
                     className="w-full rounded-[4px] border border-[#CCD5CD] bg-white px-3 py-1.5 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-2 focus:ring-[#245B48]/20 focus:outline-none"
                   >
-                    {eligibleReps.map((e) => (
-                      <option key={e.empNo} value={e.empNo}>
-                        {e.fullName} (#{e.empNo})
-                      </option>
-                    ))}
+                    {eligibleReps.length === 0 ? (
+                      <option value="">No active sales reps</option>
+                    ) : (
+                      eligibleReps.map((e) => (
+                        <option key={e.empNo} value={e.empNo}>
+                          {e.fullName} (#{e.empNo})
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -306,7 +310,7 @@ export function NewSalePageView({
                     Department on sale date
                   </label>
                   <div className="rounded-[4px] border border-[#DDE3DE] bg-[#FAFBFA] px-3 py-1.5 text-xs text-[#17231F]">
-                    {selectedRep?.deptName || 'Retail Sales'}{' '}
+                    {selectedRep?.deptName || 'Sales'}{' '}
                     <span className="text-[10px] text-[#52615B] font-mono">
                       ({selectedRep?.deptCode || 'DEPT-SLS'})
                     </span>
