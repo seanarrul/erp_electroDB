@@ -188,7 +188,7 @@ export function EmployeesListView({
     });
 
     return result;
-  }, [initialEmployees, selectedDept, statusTab, searchQuery, sortField, sortDirection]);
+  }, [initialEmployees, selectedDept, statusTab, deferredSearch, sortField, sortDirection]);
 
   // Reset pagination on filter change
   useEffect(() => {
