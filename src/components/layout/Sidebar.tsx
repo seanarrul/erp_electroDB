@@ -67,7 +67,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
               ElectronDB
             </div>
             <div className="font-mono text-[10px] tracking-widest text-text-muted uppercase mt-1">
-              Blog Archive &bull; HopeERD
+              Monitoring &bull; HopeERD
             </div>
           </Link>
 
