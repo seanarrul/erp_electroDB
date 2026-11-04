@@ -10,7 +10,6 @@ import {
   PanelLeftClose,
   X,
 } from 'lucide-react';
-import { BRAND } from '@/lib/brand';
 import type { UserRole } from '@/lib/types';
 import { logoutAction } from '@/app/actions/auth';
 import { useSidebar } from '@/components/layout/SidebarContext';
@@ -57,17 +56,17 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
     <div className="flex h-full flex-col justify-between p-4 sm:p-5 overflow-y-auto font-sans">
       <div className="space-y-4">
         {/* Brand Section matching JeptahzRepo */}
-        <div className="flex items-start justify-between pb-5 border-b border-neutral-100">
+        <div className="flex items-start justify-between pb-5 border-b border-border">
           <Link
             href="/"
             onClick={closeMobileSidebar}
             className="group block select-none"
             aria-label="ElectronDB G4 HopeERD"
           >
-            <div className="font-editorial italic text-[25px] font-normal tracking-tight text-black group-hover:text-black/70 transition-colors leading-none">
+            <div className="font-editorial italic text-[25px] font-normal tracking-tight text-text group-hover:text-accent transition-colors leading-none">
               ElectronDB
             </div>
-            <div className="font-mono text-[10px] tracking-widest text-neutral-400 uppercase mt-1">
+            <div className="font-mono text-[10px] tracking-widest text-text-muted uppercase mt-1">
               Blog Archive &bull; HopeERD
             </div>
           </Link>
@@ -76,7 +75,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
           <button
             type="button"
             onClick={closeMobileSidebar}
-            className="p-1.5 rounded-[6px] text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-[6px] text-text-muted hover:text-text hover:bg-surface-2 transition-colors cursor-pointer"
             title="Toggle panel"
             aria-label="Toggle panel"
           >
@@ -85,11 +84,11 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
           </button>
         </div>
 
-        {/* Minimalist Flat Vertical Navigation Stream (Exact JeptahzRepo Text Sizing & Spacing) */}
+        {/* Minimalist Flat Vertical Navigation Stream */}
         <nav className="mt-5 space-y-4 pt-1" aria-label="Main Navigation">
           {navLinks.map((sec) => (
             <div key={sec.section} className="space-y-1">
-              <div className="px-1 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-400 select-none">
+              <div className="px-1 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-text-faint select-none">
                 {sec.section}
               </div>
 
@@ -107,10 +106,10 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
                       href={item.href}
                       onClick={closeMobileSidebar}
                       className={cn(
-                        'group flex items-center justify-between py-2 px-1 text-[15px] font-sans transition-colors cursor-pointer select-none',
+                        'group flex items-center justify-between py-2 px-1 text-[15px] font-sans transition-colors cursor-pointer select-none rounded-[2px]',
                         isActive
-                          ? 'font-bold text-black'
-                          : 'text-neutral-600 hover:text-black font-medium'
+                          ? 'font-bold text-text dark:text-accent'
+                          : 'text-text-muted hover:text-text hover:bg-surface-2/60 font-medium'
                       )}
                     >
                       <span className="tracking-tight truncate">{item.label}</span>
@@ -119,8 +118,8 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
                           className={cn(
                             'w-3.5 h-3.5 transition-colors stroke-[1.5]',
                             isActive
-                              ? 'text-black stroke-[2]'
-                              : 'text-neutral-300 group-hover:text-neutral-500'
+                              ? 'text-text dark:text-accent stroke-[2]'
+                              : 'text-text-faint group-hover:text-text-muted'
                           )}
                         />
                       )}
@@ -134,9 +133,9 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
       </div>
 
       {/* Bottom Profile matching JeptahzRepo */}
-      <div className="pt-4 border-t border-neutral-100 mt-auto flex items-center justify-between gap-2">
+      <div className="pt-4 border-t border-border mt-auto flex items-center justify-between gap-2">
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-black/10 shrink-0 shadow-xs bg-neutral-200">
+          <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-border shrink-0 shadow-xs bg-surface-2">
             <img
               src="/images/default-avatar.jpg"
               alt={userName}
@@ -145,12 +144,12 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
           </div>
           <div className="flex flex-col text-left min-w-0">
             <div className="flex items-center space-x-1">
-              <span className="font-editorial italic text-[15px] text-black leading-tight truncate">
+              <span className="font-editorial italic text-[15px] text-text leading-tight truncate">
                 {userName}
               </span>
               <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 fill-sky-500/20 shrink-0" />
             </div>
-            <span className="text-xs text-neutral-400 font-sans leading-tight truncate mt-0.5">
+            <span className="text-xs text-text-faint font-sans leading-tight truncate mt-0.5">
               @{userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'administrator'}
             </span>
           </div>
@@ -161,7 +160,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
             type="submit"
             title="Sign Out (Lock Session)"
             aria-label="Sign Out"
-            className="p-1.5 text-neutral-400 hover:text-black rounded-[4px] transition-colors cursor-pointer"
+            className="p-1.5 text-text-muted hover:text-text hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer"
           >
             <Lock className="w-3.5 h-3.5 stroke-[1.5]" />
           </button>
@@ -173,14 +172,14 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
   return (
     <>
       {/* 1. Desktop Persistent Sidebar */}
-      <aside className="hidden lg:flex w-[248px] h-screen flex-col bg-white/95 backdrop-blur-xs border-r border-black/10 shrink-0 select-none sticky top-0">
+      <aside className="hidden lg:flex w-[248px] h-screen flex-col bg-surface-1 border-r border-border shrink-0 select-none sticky top-0 transition-colors duration-150">
         {sidebarContent}
       </aside>
 
       {/* 2. Mobile Drawer Backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-[#041a24]/40 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
           onClick={closeMobileSidebar}
           aria-hidden="true"
         />
@@ -189,7 +188,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
       {/* 3. Mobile Responsive Drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-[280px] bg-white border-r border-black/10 shadow-xl flex flex-col lg:hidden transition-transform duration-200 ease-in-out',
+          'fixed inset-y-0 left-0 z-50 w-[280px] bg-surface-1 border-r border-border shadow-xl flex flex-col lg:hidden transition-transform duration-200 ease-in-out',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         aria-label="Mobile Navigation"

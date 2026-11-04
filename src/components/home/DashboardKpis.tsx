@@ -36,15 +36,15 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
       {cards.map((card) => (
         <div
           key={card.title}
-          className="rounded-[4px] border border-[#DDE3DE] hover:border-black/25 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all"
+          className="rounded-[4px] border border-border hover:border-border-control bg-surface-1 p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all"
         >
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-text-faint">
             {card.title}
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-text">
             {card.value}
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-text-muted">
             {card.subtext}
           </div>
         </div>

@@ -55,10 +55,10 @@ export function ProductPriceTrend({ records, unit }: ProductPriceTrendProps) {
   const lastDate = sorted[sorted.length - 1].effDate;
 
   return (
-    <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 space-y-2 shadow-2xs font-sans">
+    <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 space-y-2 shadow-2xs font-sans">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold text-[#17231F]">Price trend</span>
-        <span className="text-[11px] text-[#52615B] tabular-nums">
+        <span className="font-semibold text-[#17231F] dark:text-text">Price trend</span>
+        <span className="text-[11px] text-[#52615B] dark:text-text-muted tabular-nums">
           {sorted.length} price records ({unit})
         </span>
       </div>

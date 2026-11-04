@@ -389,9 +389,9 @@ export function ProductsMainView({
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="bg-white border border-black/15 hover:bg-black/5 text-[#0F172A] rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
+            className="bg-white dark:bg-surface-1 border border-black/15 dark:border-border hover:bg-black/5 dark:hover:bg-surface-2 text-[#0F172A] dark:text-text rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
           >
-            <Download className="h-3.5 w-3.5 text-black/40" />
+            <Download className="h-3.5 w-3.5 text-black/40 dark:text-text-faint" />
             <span>Export CSV</span>
           </Button>
 
@@ -401,7 +401,7 @@ export function ProductsMainView({
               variant="primary"
               size="sm"
               onClick={() => setIsAddProductOpen(true)}
-              className="bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
+              className="bg-[#0F172A] dark:bg-primary-bg hover:bg-[#1E293B] dark:hover:opacity-90 text-white dark:text-primary-fg rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Product</span>
@@ -413,22 +413,22 @@ export function ProductsMainView({
       {/* Filter and View Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
         {/* Left: View Tabs */}
-        <div className="inline-flex p-1 bg-[#F4F4F0] rounded-[2px] border border-black/10 gap-1 font-mono text-xs">
+        <div className="inline-flex p-1 bg-[#F4F4F0] dark:bg-surface-2 rounded-[2px] border border-black/10 dark:border-border gap-1 font-mono text-xs">
           <button
             type="button"
             onClick={() => updateUrl({ view: 'products', page: '1' })}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'products'
-                ? 'bg-[#041a24] text-white shadow-2xs'
-                : 'text-[#41555f] hover:text-[#041a24]'
+                ? 'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg shadow-2xs'
+                : 'text-[#41555f] dark:text-text-muted hover:text-[#041a24] dark:hover:text-text'
             }`}
           >
             <span>Products</span>
             <span
               className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
                 activeView === 'products'
-                  ? 'bg-white/20 text-white font-semibold'
-                  : 'bg-black/5 text-[#41555f]'
+                  ? 'bg-white/20 text-white dark:text-primary-fg font-semibold'
+                  : 'bg-black/5 dark:bg-surface-1 text-[#41555f] dark:text-text-muted'
               }`}
             >
               {filteredProducts.length}
@@ -439,8 +439,8 @@ export function ProductsMainView({
             onClick={() => updateUrl({ view: 'history', page: '1' })}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'history'
-                ? 'bg-[#041a24] text-white shadow-2xs'
-                : 'text-[#41555f] hover:text-[#041a24]'
+                ? 'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg shadow-2xs'
+                : 'text-[#41555f] dark:text-text-muted hover:text-[#041a24] dark:hover:text-text'
             }`}
           >
             <span>Price history</span>
@@ -466,14 +466,14 @@ export function ProductsMainView({
               placeholder="Search code or description..."
               value={localSearch}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full rounded-[2px] border border-black/15 bg-white pl-8 pr-7 py-1.5 text-xs text-[#041a24] placeholder:text-[#41555f]/60 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
+              className="w-full rounded-[2px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 pl-8 pr-7 py-1.5 text-xs text-[#041a24] dark:text-text placeholder:text-[#41555f]/60 dark:placeholder:text-text-muted/60 focus:border-[#041a24] dark:focus:border-border-control focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
             />
             {localSearch && (
               <button
                 type="button"
                 onClick={handleClearSearch}
                 aria-label="Clear search query"
-                className="absolute right-2 top-2 text-black/40 hover:text-[#041a24]"
+                className="absolute right-2 top-2 text-black/40 dark:text-text-faint hover:text-[#041a24] dark:hover:text-text"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -482,11 +482,11 @@ export function ProductsMainView({
 
           {/* Sales Activity Select */}
           <div className="flex items-center gap-1.5 font-mono text-xs">
-            <span className="text-[#41555f] whitespace-nowrap">Sales:</span>
+            <span className="text-[#41555f] dark:text-text-muted whitespace-nowrap">Sales:</span>
             <select
               value={soldFilter}
               onChange={(e) => updateUrl({ sold: e.target.value === 'all' ? null : e.target.value, page: '1' })}
-              className="rounded-[2px] border border-black/15 bg-white px-2 py-1.5 text-xs text-[#041a24] focus:border-[#041a24] focus:outline-none cursor-pointer"
+              className="rounded-[2px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 px-2 py-1.5 text-xs text-[#041a24] dark:text-text focus:border-[#041a24] dark:focus:border-border-control focus:outline-none cursor-pointer"
             >
               <option value="all">All</option>
               <option value="sold">Has sales</option>
@@ -498,7 +498,7 @@ export function ProductsMainView({
 
       {/* Unknown code warning */}
       {hasUnknownCode && (
-        <div className="rounded-[4px] border border-[rgba(134,37,37,0.3)] bg-[#FCECEC] p-3 text-xs text-[#862525] flex items-center justify-between">
+        <div className="rounded-[4px] border border-[rgba(134,37,37,0.3)] bg-[#FCECEC] dark:bg-danger-soft p-3 text-xs text-[#862525] dark:text-danger flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>That product was not found ({selectedCode}).</span>
@@ -506,7 +506,7 @@ export function ProductsMainView({
           <button
             type="button"
             onClick={() => updateUrl({ code: null })}
-            className="underline font-semibold hover:text-black"
+            className="underline font-semibold hover:text-black dark:hover:text-text"
           >
             Show all products
           </button>
@@ -522,12 +522,12 @@ export function ProductsMainView({
           }`}
         >
           {/* Card Container for Table */}
-          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs font-sans">
+          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 overflow-hidden shadow-2xs font-sans">
             {activeView === 'products' ? (
               // PRODUCTS VIEW (Section 9.4)
               paginatedProducts.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#41555f] space-y-2 font-mono">
-                  <p className="font-semibold text-[#041a24]">No products match your filters.</p>
+                <div className="p-8 text-center text-xs text-[#41555f] dark:text-text-muted space-y-2 font-mono">
+                  <p className="font-semibold text-[#041a24] dark:text-text">No products match your filters.</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -541,7 +541,7 @@ export function ProductsMainView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
+                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('prodCode')}
                           className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -604,7 +604,7 @@ export function ProductsMainView({
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="group/tbody divide-y divide-black/5">
+                    <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
                       {paginatedProducts.map((p) => {
                         const { title, detail } = splitDescription(p.description);
                         const family = getProductFamily(p.prodCode);
@@ -617,49 +617,49 @@ export function ProductsMainView({
                             onClick={() => updateUrl({ code: p.prodCode })}
                             className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                               isSelected
-                                ? 'bg-black/5 !opacity-100 font-medium'
-                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE]'
+                                ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
+                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
                             }`}
                           >
                             <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
                               <div
-                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-primary-bg origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
                                   isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
                                 }`}
                               />
-                              <span className="inline-block font-mono font-semibold text-[#0F172A] transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                              <span className="inline-block font-mono font-semibold text-[#0F172A] dark:text-text transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
                                 {p.prodCode}
                               </span>
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#0F172A] leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
+                              <div className="font-semibold text-[#0F172A] dark:text-text leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {title}
                               </div>
                               {detail && (
-                                <div className="text-[11px] text-[#41555f] leading-snug line-clamp-1 mt-0.5">
+                                <div className="text-[11px] text-[#41555f] dark:text-text-muted leading-snug line-clamp-1 mt-0.5">
                                   {detail}
                                 </div>
                               )}
-                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] mt-0.5">
+                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-text-muted mt-0.5">
                                 {family} &bull; {familyName}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-xs text-[#41555f] border border-transparent bg-transparent transition-[transform,background-color,border-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 group-hover/row:bg-white group-hover/row:border-[#CBD5E1] group-hover/row:shadow-2xs">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-xs text-[#41555f] dark:text-text-muted border border-transparent bg-transparent transition-[transform,background-color,border-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 group-hover/row:bg-white dark:group-hover/row:bg-surface-2 group-hover/row:border-[#CBD5E1] dark:group-hover/row:border-border-control group-hover/row:shadow-2xs">
                                 {p.unit}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               {p.currentUnitPrice !== null ? (
-                                <div className="font-mono font-bold tabular-nums text-[#0F172A] inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
+                                <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-text inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
                                   <span>{formatPHP(p.currentUnitPrice)}</span>
-                                  <span className="font-normal font-sans text-[11px] text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700">
+                                  <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-text-faint transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-text">
                                     {' '}
                                     / {p.unit}
                                   </span>
                                 </div>
                               ) : (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] font-mono text-[9px] bg-black/5 text-[#41555f] border border-black/10">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] font-mono text-[9px] bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-text-muted border border-black/10 dark:border-border">
                                   No price record
                                 </span>
                               )}
@@ -688,7 +688,7 @@ export function ProductsMainView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-sans">
                     <thead>
-                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
+                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('effDate')}
                           className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -697,7 +697,7 @@ export function ProductsMainView({
                             <span>Effective date</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'effDate' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
                               ) : (
                                 <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
                               )}
@@ -712,7 +712,7 @@ export function ProductsMainView({
                             <span>Product Code</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'prodCode' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
                               ) : (
                                 <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
                               )}
@@ -727,7 +727,7 @@ export function ProductsMainView({
                             <span>Description</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'description' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
                               ) : (
                                 <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
                               )}
@@ -742,7 +742,7 @@ export function ProductsMainView({
                             <span>Unit price</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'unitPrice' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
                               ) : (
                                 <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
                               )}
@@ -757,7 +757,7 @@ export function ProductsMainView({
                             <span>Status</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'status' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
                               ) : (
                                 <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
                               )}
@@ -766,7 +766,7 @@ export function ProductsMainView({
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="group/tbody divide-y divide-black/5">
+                    <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
                       {paginatedPriceHistory.map((h, i) => {
                         const { title, detail } = splitDescription(h.description);
                         const hFamily = getProductFamily(h.prodCode);
@@ -779,40 +779,40 @@ export function ProductsMainView({
                             onClick={() => updateUrl({ code: h.prodCode })}
                             className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                               isSelected
-                                ? 'bg-black/5 !opacity-100 font-medium'
-                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE]'
+                                ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
+                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
                             }`}
                           >
                             <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
                               <div
-                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-primary-bg origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
                                   isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
                                 }`}
                               />
-                              <span className="inline-block font-mono text-xs text-[#0F172A] transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                              <span className="inline-block font-mono text-xs text-[#0F172A] dark:text-text transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
                                 {formatDate(h.effDate)}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#0F172A] whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono font-semibold text-[#0F172A] dark:text-text whitespace-nowrap">
                               {h.prodCode}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#0F172A] leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
+                              <div className="font-semibold text-[#0F172A] dark:text-text leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {title}
                               </div>
                               {detail && (
-                                <div className="text-[11px] text-[#41555f] line-clamp-1 mt-0.5">
+                                <div className="text-[11px] text-[#41555f] dark:text-text-muted line-clamp-1 mt-0.5">
                                   {detail}
                                 </div>
                               )}
-                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] mt-0.5">
+                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-text-muted mt-0.5">
                                 {hFamily} &bull; {hFamilyName}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
-                              <div className="font-mono font-bold tabular-nums text-[#0F172A] inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
+                              <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-text inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
                                 <span>{formatPHP(h.unitPrice)}</span>
-                                <span className="font-normal font-sans text-[11px] text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700">
+                                <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-text-faint transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-text">
                                   {' '}
                                   / {h.unit}
                                 </span>
@@ -821,19 +821,19 @@ export function ProductsMainView({
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               <span className="inline-flex transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5">
                                 {h.status === 'Current' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#0F172A] px-1.5 py-0.5 text-[10px] font-mono text-white">
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#0F172A] dark:bg-primary-bg px-1.5 py-0.5 text-[10px] font-mono text-white dark:text-primary-fg">
                                     <CheckCircle2 className="h-3 w-3" />
                                     Current
                                   </span>
                                 )}
                                 {h.status === 'Past' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 border border-black/10 px-1.5 py-0.5 text-[10px] font-mono text-[#41555f]">
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 dark:bg-surface-2 border border-black/10 dark:border-border px-1.5 py-0.5 text-[10px] font-mono text-[#41555f] dark:text-text-muted">
                                     <Clock className="h-3 w-3" />
                                     Past
                                   </span>
                                 )}
                                 {h.status === 'Future-dated' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#FEF08A]/80 border border-yellow-400/50 px-1.5 py-0.5 text-[10px] font-mono text-[#713F12]">
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#FEF08A]/80 dark:bg-warning-soft border border-yellow-400/50 dark:border-warning px-1.5 py-0.5 text-[10px] font-mono text-[#713F12] dark:text-warning">
                                     <AlertTriangle className="h-3 w-3" />
                                     Future-dated
                                   </span>
@@ -851,18 +851,18 @@ export function ProductsMainView({
 
             {/* Pagination Controls */}
             {totalCount > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3.5 py-2.5 border-t border-[#DDE3DE] bg-[#FAFBFA] gap-2">
-                <span className="text-[11px] text-[#52615B]">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3.5 py-2.5 border-t border-[#DDE3DE] dark:border-border bg-[#FAFBFA] dark:bg-surface-2 gap-2">
+                <span className="text-[11px] text-[#52615B] dark:text-text-muted">
                   Showing {startIdx + 1}-{endIdx} of {totalCount}
                 </span>
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[#52615B]">Rows per page:</span>
+                    <span className="text-[11px] text-[#52615B] dark:text-text-muted">Rows per page:</span>
                     <select
                       value={pageSize}
                       onChange={(e) => updateUrl({ size: e.target.value, page: '1' })}
-                      className="rounded-[2px] border border-[#CCD5CD] bg-white px-1.5 py-0.5 text-[11px] text-[#17231F] focus:outline-none"
+                      className="rounded-[2px] border border-[#CCD5CD] dark:border-border bg-white dark:bg-surface-1 px-1.5 py-0.5 text-[11px] text-[#17231F] dark:text-text focus:outline-none"
                     >
                       <option value="10">10</option>
                       <option value="25">25</option>

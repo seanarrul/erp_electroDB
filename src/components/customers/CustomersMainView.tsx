@@ -144,11 +144,11 @@ export function CustomersMainView({
 
         {/* Top Right KPI Stat Boxes */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="rounded-[4px] border border-black/10 bg-white px-4 py-2 text-center min-w-[125px] shadow-2xs">
-            <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#41555f]">
+          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 px-4 py-2 text-center min-w-[125px] shadow-2xs">
+            <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#41555f] dark:text-text-muted">
               TOTAL DIRECTORY
             </span>
-            <span className="block font-sans text-base sm:text-lg font-bold text-[#041a24] mt-0.5 tabular-nums">
+            <span className="block font-sans text-base sm:text-lg font-bold text-[#041a24] dark:text-text mt-0.5 tabular-nums">
               {metrics?.totalCustomers || initialCustomers.length} Accounts
             </span>
           </div>
@@ -159,33 +159,33 @@ export function CustomersMainView({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* ── Left Column (Customer Index) ── */}
         <div className="lg:col-span-4 space-y-3">
-          <div className="rounded-[4px] border border-black/10 bg-white p-4 shadow-2xs space-y-3.5">
+          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 p-4 shadow-2xs space-y-3.5">
             {/* Header: Customer Index + Count badge + All registered */}
-            <div className="flex items-center justify-between pb-1 border-b border-black/5">
+            <div className="flex items-center justify-between pb-1 border-b border-black/5 dark:border-border">
               <div className="flex items-center gap-2">
-                <h2 className="font-editorial text-base sm:text-lg font-normal text-[#041a24]">
+                <h2 className="font-editorial text-base sm:text-lg font-normal text-[#041a24] dark:text-text">
                   Customer Index
                 </h2>
-                <span className="font-mono text-[10px] text-[#41555f] bg-black/5 border border-black/10 px-1.5 py-0.2 rounded-[2px]">
+                <span className="font-mono text-[10px] text-[#41555f] dark:text-text-muted bg-black/5 dark:bg-surface-2 border border-black/10 dark:border-border px-1.5 py-0.2 rounded-[2px]">
                   {filteredCustomers.length}
                 </span>
               </div>
-              <span className="font-mono text-[10px] text-[#41555f]">
+              <span className="font-mono text-[10px] text-[#41555f] dark:text-text-muted">
                 All registered
               </span>
             </div>
 
             {/* Inner Search Box with ENTER ↵ Badge */}
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 dark:text-text-faint" />
               <input
                 type="text"
                 placeholder="Globus Medical"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-8 pl-8 pr-16 text-xs rounded-[3px] border border-black/15 bg-white text-[#041a24] placeholder:text-[#41555f]/50 focus:border-[#041a24] focus:outline-none transition-all"
+                className="w-full h-8 pl-8 pr-16 text-xs rounded-[3px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 text-[#041a24] dark:text-text placeholder:text-[#41555f]/50 dark:placeholder:text-text-muted/50 focus:border-[#041a24] dark:focus:border-border-control focus:outline-none transition-all"
               />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[9px] text-black/40 select-none">
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[9px] text-black/40 dark:text-text-faint select-none">
                 ENTER &crarr;
               </span>
             </div>
@@ -266,11 +266,11 @@ export function CustomersMainView({
         {/* ── Right Column (Customer Dossier & Receipts Ledger) ── */}
         <div className="lg:col-span-8 space-y-4">
           {selectedCustomer ? (
-            <div className="rounded-[4px] border border-black/10 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
+            <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 p-5 sm:p-6 shadow-2xs space-y-5">
               {/* Header Badges & Actions */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-800 px-2 py-0.5 rounded-[2px] bg-emerald-50 border border-emerald-500/30">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-[2px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30">
                     ACTIVE ACCOUNT
                   </span>
                 </div>
@@ -282,7 +282,7 @@ export function CustomersMainView({
                       variant="primary"
                       size="sm"
                       onClick={() => setIsRecordPaymentOpen(true)}
-                      className="bg-[#041a24] hover:bg-[#1c313b] text-white rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      className="bg-[#041a24] dark:bg-primary-bg hover:bg-[#1c313b] dark:hover:opacity-90 text-white dark:text-primary-fg rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <Receipt className="h-3.5 w-3.5" />
                       <span>Record Payment</span>
@@ -295,10 +295,10 @@ export function CustomersMainView({
                       variant="outline"
                       size="sm"
                       onClick={handleExportPaymentsCSV}
-                      className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      className="bg-white dark:bg-surface-1 border border-black/15 dark:border-border hover:bg-black/5 dark:hover:bg-surface-2 text-[#041a24] dark:text-text rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <span>Export CSV</span>
-                      <ExternalLink className="h-3 w-3 text-black/50" />
+                      <ExternalLink className="h-3 w-3 text-black/50 dark:text-text-faint" />
                     </Button>
                   )}
                 </div>
@@ -306,52 +306,52 @@ export function CustomersMainView({
 
               {/* Customer Details */}
               <div className="space-y-2">
-                <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] tracking-tight leading-tight">
+                <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] dark:text-text tracking-tight leading-tight">
                   {selectedCustomer.custName}
                 </h2>
-                <div className="flex items-center gap-2 text-xs text-[#41555f] font-sans">
+                <div className="flex items-center gap-2 text-xs text-[#41555f] dark:text-text-muted font-sans">
                   <span>Customer ID:</span>
-                  <span className="font-mono font-bold text-[#041a24]">{selectedCustomer.custNo}</span>
+                  <span className="font-mono font-bold text-[#041a24] dark:text-text">{selectedCustomer.custNo}</span>
                   <span>&bull;</span>
                   <span>Payment terms:</span>
-                  <span className="font-mono font-semibold text-[#041a24]">{selectedCustomer.payTerms}</span>
+                  <span className="font-mono font-semibold text-[#041a24] dark:text-text">{selectedCustomer.payTerms}</span>
                 </div>
-                <div className="flex items-start gap-2 text-xs text-[#41555f] pt-0.5">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#41555f] shrink-0 mt-0.5">
+                <div className="flex items-start gap-2 text-xs text-[#41555f] dark:text-text-muted pt-0.5">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#41555f] dark:text-text-muted shrink-0 mt-0.5">
                     ADDRESS
                   </span>
-                  <span className="text-[#041a24] font-medium leading-relaxed">
+                  <span className="text-[#041a24] dark:text-text font-medium leading-relaxed">
                     {selectedCustomer.address}
                   </span>
                 </div>
               </div>
 
               {/* Broadsheet Rule Hairline Divider */}
-              <div className="border-t border-black/10" />
+              <div className="border-t border-black/10 dark:border-border" />
 
               {/* Payment History Sub-Header */}
               <div className="flex items-center justify-between">
-                <h3 className="font-editorial text-base sm:text-lg font-normal text-[#041a24]">
+                <h3 className="font-editorial text-base sm:text-lg font-normal text-[#041a24] dark:text-text">
                   Payment History
                 </h3>
-                <div className="border border-black/10 bg-[#F4F4F0]/60 px-2.5 py-1 rounded-[2px] font-mono text-xs font-semibold text-[#041a24] tabular-nums">
+                <div className="border border-black/10 dark:border-border bg-[#F4F4F0]/60 dark:bg-surface-2/60 px-2.5 py-1 rounded-[2px] font-mono text-xs font-semibold text-[#041a24] dark:text-text tabular-nums">
                   TOTAL SETTLED: {formatPHP(customerTotalPaid)}
                 </div>
               </div>
 
               {/* Receipts Table */}
               {customerPayments.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[#41555f] space-y-1 font-mono">
-                  <p className="font-semibold text-[#041a24]">No payments recorded for this customer.</p>
-                  <p className="text-[11px] text-[#41555f]">
+                <div className="py-12 text-center text-xs text-[#41555f] dark:text-text-muted space-y-1 font-mono">
+                  <p className="font-semibold text-[#041a24] dark:text-text">No payments recorded for this customer.</p>
+                  <p className="text-[11px] text-[#41555f] dark:text-text-muted">
                     Use the &ldquo;Record Payment&rdquo; button above to record an official receipt.
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-[3px] border border-black/10">
+                <div className="overflow-x-auto rounded-[3px] border border-black/10 dark:border-border">
                   <table className="w-full text-left text-xs font-sans">
                     <thead>
-                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
+                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
                         <th className="py-2.5 px-3 font-semibold whitespace-nowrap">OR #</th>
                         <th className="py-2.5 px-3 font-semibold whitespace-nowrap">DATE</th>
                         <th className="py-2.5 px-3 font-semibold whitespace-nowrap">SALE REF</th>
@@ -359,25 +359,25 @@ export function CustomersMainView({
                         <th className="py-2.5 px-3 font-semibold text-center whitespace-nowrap">ACTION</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black/5">
+                    <tbody className="divide-y divide-black/5 dark:divide-border">
                       {customerPayments.map((p) => (
-                        <tr key={p.orNo} className="hover:bg-[#F4F4F0]/60 transition-colors">
-                          <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
+                        <tr key={p.orNo} className="hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60 transition-colors">
+                          <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text whitespace-nowrap">
                             {p.orNo}
                           </td>
-                          <td className="py-2.5 px-3 font-mono text-xs text-[#41555f] whitespace-nowrap tabular-nums">
+                          <td className="py-2.5 px-3 font-mono text-xs text-[#41555f] dark:text-text-muted whitespace-nowrap tabular-nums">
                             {formatDate(p.payDate)}
                           </td>
-                          <td className="py-2.5 px-3 font-mono text-xs text-[#041a24] whitespace-nowrap">
+                          <td className="py-2.5 px-3 font-mono text-xs text-[#041a24] dark:text-text whitespace-nowrap">
                             <Link
                               href={`/sales/${p.transNo}`}
                               className="hover:underline inline-flex items-center gap-0.5"
                             >
                               <span>{p.transNo}</span>
-                              <ArrowUpRight className="w-3 h-3 text-black/40" />
+                              <ArrowUpRight className="w-3 h-3 text-black/40 dark:text-text-faint" />
                             </Link>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono tabular-nums font-bold text-[#041a24] whitespace-nowrap">
+                          <td className="py-2.5 px-3 text-right font-mono tabular-nums font-bold text-[#041a24] dark:text-text whitespace-nowrap">
                             {formatPHP(p.amount)}
                           </td>
                           <td className="py-2.5 px-3 text-center whitespace-nowrap">

@@ -372,28 +372,28 @@ export function SalesMainView({
               variant="outline"
               size="sm"
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs"
+              className="bg-white dark:bg-surface-1 border border-black/15 dark:border-border hover:bg-black/5 dark:hover:bg-surface-2 text-[#041a24] dark:text-text rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs"
             >
-              <Download className="h-3.5 w-3.5 text-black/40" />
+              <Download className="h-3.5 w-3.5 text-black/40 dark:text-text-faint" />
               <span>Export CSV</span>
             </Button>
 
             {isExportMenuOpen && (
-              <div className="absolute right-0 mt-1 w-48 rounded-[2px] border border-black/10 bg-white py-1 shadow-lg z-20 text-xs font-mono">
+              <div className="absolute right-0 mt-1 w-48 rounded-[2px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 py-1 shadow-lg z-20 text-xs font-mono">
                 <button
                   type="button"
                   onClick={handleExportSummaryCSV}
-                  className="w-full text-left px-3 py-2 text-[#041a24] hover:bg-[#F4F4F0] flex items-center gap-2 cursor-pointer"
+                  className="w-full text-left px-3 py-2 text-[#041a24] dark:text-text hover:bg-[#F4F4F0] dark:hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
                 >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-black/40" />
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-black/40 dark:text-text-faint" />
                   <span>Sales summary</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleExportLinesCSV}
-                  className="w-full text-left px-3 py-2 text-[#041a24] hover:bg-[#F4F4F0] flex items-center gap-2 border-t border-black/5 cursor-pointer"
+                  className="w-full text-left px-3 py-2 text-[#041a24] dark:text-text hover:bg-[#F4F4F0] dark:hover:bg-surface-2 flex items-center gap-2 border-t border-black/5 dark:border-border cursor-pointer"
                 >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-black/40" />
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-black/40 dark:text-text-faint" />
                   <span>Sales detail</span>
                 </button>
               </div>
@@ -586,12 +586,12 @@ export function SalesMainView({
             selectedSaleDetail && isDesktop ? 'xl:col-span-7 2xl:col-span-8' : 'xl:col-span-12'
           }`}
         >
-          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs">
+          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 overflow-hidden shadow-2xs">
             {activeView === 'sales' ? (
               // 7.4 SALES VIEW
               paginatedSales.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#41555f] space-y-2 font-mono">
-                  <p className="font-semibold text-[#041a24]">No sales match your filters.</p>
+                <div className="p-8 text-center text-xs text-[#41555f] dark:text-text-muted space-y-2 font-mono">
+                  <p className="font-semibold text-[#041a24] dark:text-text">No sales match your filters.</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -605,7 +605,7 @@ export function SalesMainView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-black/10 bg-[#F4F4F0]/70 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
+                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('transNo')}
                           className="py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -615,7 +615,7 @@ export function SalesMainView({
                             {sortCol === 'transNo' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30 dark:text-text-faint" />
                             )}
                           </div>
                         </th>
@@ -628,7 +628,7 @@ export function SalesMainView({
                             {sortCol === 'salesDate' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30 dark:text-text-faint" />
                             )}
                           </div>
                         </th>
@@ -641,7 +641,7 @@ export function SalesMainView({
                             {sortCol === 'custName' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30 dark:text-text-faint" />
                             )}
                           </div>
                         </th>
@@ -654,13 +654,13 @@ export function SalesMainView({
                             {sortCol === 'repName' ? (
                               sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                             ) : (
-                              <ArrowUpDown className="h-3 w-3 text-black/30" />
+                              <ArrowUpDown className="h-3 w-3 text-black/30 dark:text-text-faint" />
                             )}
                           </div>
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black/5">
+                    <tbody className="divide-y divide-black/5 dark:divide-border">
                       {paginatedSales.map((s) => {
                         const isSelected = selectedCode === String(s.transNo);
 
@@ -669,29 +669,29 @@ export function SalesMainView({
                             key={s.transNo}
                             onClick={() => updateUrl({ code: String(s.transNo) })}
                             className={`cursor-pointer transition-colors ${
-                              isSelected ? 'bg-black/5 border-l-3 border-[#041a24] font-medium' : 'hover:bg-[#F4F4F0]/60'
+                              isSelected ? 'bg-black/5 dark:bg-surface-2 border-l-3 border-[#041a24] dark:border-primary-bg font-medium' : 'hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60'
                             }`}
                           >
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text whitespace-nowrap">
                               {s.transNo}
                             </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap text-[#41555f] font-mono text-xs tabular-nums">
+                            <td className="py-2.5 px-3 whitespace-nowrap text-[#41555f] dark:text-text-muted font-mono text-xs tabular-nums">
                               {formatDate(s.salesDate)}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#041a24] leading-snug">
+                              <div className="font-semibold text-[#041a24] dark:text-text leading-snug">
                                 {s.custName}
                               </div>
-                              <div className="text-[10px] font-mono text-[#41555f] mt-0.5">
+                              <div className="text-[10px] font-mono text-[#41555f] dark:text-text-muted mt-0.5">
                                 Customer {s.custNo}
                               </div>
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-medium text-[#041a24]">
-                                <span className="font-mono text-[#41555f] mr-1.5 font-normal">#{s.empNo}</span>
+                              <div className="font-medium text-[#041a24] dark:text-text">
+                                <span className="font-mono text-[#41555f] dark:text-text-muted mr-1.5 font-normal">#{s.empNo}</span>
                                 {s.repName}
                               </div>
-                              <div className="text-[11px] text-[#52615B] mt-0.5">
+                              <div className="text-[11px] text-[#52615B] dark:text-text-muted mt-0.5">
                                 {s.deptName}
                               </div>
                             </td>

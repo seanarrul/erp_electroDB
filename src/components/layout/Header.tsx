@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Bell, ChevronDown, Menu, LogOut, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
 import { logoutAction } from '@/app/actions/auth';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import type { UserRole } from '@/lib/types';
 
 interface HeaderProps {
@@ -69,41 +70,44 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
   const roleLabel = roleLabels[userRole] || 'Staff Member';
 
   return (
-    <header className="h-14 bg-white/95 backdrop-blur-xs border-b border-black/10 px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 shrink-0 select-none relative z-30 font-sans">
+    <header className="h-14 bg-surface-1 border-b border-border px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 shrink-0 select-none relative z-30 font-sans transition-colors duration-150">
       {/* Left: Mobile Toggle + Breadcrumb (Stitch Style) */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={toggleMobileSidebar}
           aria-label="Open navigation menu"
-          className="lg:hidden p-1.5 text-[#041a24] hover:bg-black/5 rounded-[2px] transition-colors cursor-pointer shrink-0"
+          className="lg:hidden p-1.5 text-text hover:bg-surface-2 rounded-[2px] transition-colors cursor-pointer shrink-0"
         >
           <Menu className="w-4 h-4" />
         </button>
 
-        <nav className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-[#41555f] select-none">
+        <nav className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-text-muted select-none">
           <span>DATABASE</span>
-          <span className="text-black/25">/</span>
-          <span className="font-semibold text-[#041a24]">{breadcrumb}</span>
+          <span className="opacity-40">/</span>
+          <span className="font-semibold text-text">{breadcrumb}</span>
         </nav>
       </div>
 
-      {/* Right Controls: Live Status Pill, Notification Bell, User Name in Editorial Italic */}
-      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+      {/* Right Controls: Live Status Pill, Theme Toggle, Notification Bell, User Name in Editorial Italic */}
+      <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
         {/* Live Status Pill matching Stitch */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] border border-black/10 bg-white/90 shadow-2xs font-mono text-[10px] text-[#41555f]">
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] border border-border bg-surface-2 font-mono text-[10px] text-text-muted shadow-2xs">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold text-emerald-800">LIVE</span>
-          <span className="text-black/30">|</span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">LIVE</span>
+          <span className="opacity-30">|</span>
           <span>{dateString}</span>
         </div>
+
+        {/* Segmented Theme Toggle */}
+        <ThemeToggle variant="segmented" />
 
         {/* Notification Bell */}
         <button
           type="button"
           title="Notifications"
           aria-label="Notifications"
-          className="relative p-1 text-black/60 hover:text-[#041a24] hover:bg-black/5 rounded-[2px] transition-colors cursor-pointer"
+          className="relative p-1.5 text-text-muted hover:text-text hover:bg-surface-2 rounded-[2px] transition-colors cursor-pointer"
         >
           <Bell className="w-4 h-4" />
         </button>
@@ -117,28 +121,28 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
             aria-haspopup="true"
             className="flex items-center gap-1.5 pl-2 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
           >
-            <span className="font-editorial italic text-sm text-[#041a24] group-hover:text-black">
+            <span className="font-editorial italic text-sm text-text group-hover:text-accent">
               {userName}
             </span>
             <ChevronDown
-              className={`w-3.5 h-3.5 text-black/40 group-hover:text-[#041a24] transition-transform duration-200 ${
-                isMenuOpen ? 'rotate-180 text-[#041a24]' : ''
+              className={`w-3.5 h-3.5 text-text-muted group-hover:text-text transition-transform duration-200 ${
+                isMenuOpen ? 'rotate-180 text-text' : ''
               }`}
             />
           </button>
 
           {/* Interactive Dropdown Menu */}
           {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-[4px] shadow-sm border border-black/10 py-2 z-50 animate-in fade-in-50 duration-150 font-sans text-xs">
+            <div className="absolute right-0 mt-2 w-64 bg-surface-1 rounded-[4px] shadow-md border border-border py-2 z-50 animate-in fade-in-50 duration-150 font-sans text-xs">
               {/* User Header Info */}
-              <div className="px-4 py-3 border-b border-black/10">
+              <div className="px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#041a24] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 ring-1 ring-black/10">
+                  <div className="w-8 h-8 rounded-full bg-primary-bg text-primary-fg flex items-center justify-center font-mono font-bold text-xs shrink-0 ring-1 ring-border">
                     {userName.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-xs text-[#041a24] truncate">{userName}</p>
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] text-white bg-[#041a24] px-1.5 py-0.5 rounded-[2px] mt-1">
+                    <p className="font-semibold text-xs text-text truncate">{userName}</p>
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] text-primary-fg bg-primary-bg px-1.5 py-0.5 rounded-[2px] mt-1">
                       <ShieldCheck className="w-3 h-3" />
                       {roleLabel}
                     </span>
@@ -146,12 +150,17 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
                 </div>
               </div>
 
+              {/* Theme Selector Inside Dropdown */}
+              <div className="border-b border-border pb-1">
+                <ThemeToggle variant="menu-item" />
+              </div>
+
               {/* Actions Section */}
-              <div className="p-1">
+              <div className="p-1 pt-1.5">
                 <form action={logoutAction}>
                   <button
                     type="submit"
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50/70 rounded-[2px] transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-[2px] transition-colors cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5 text-red-500" />
                     <span>Sign Out</span>

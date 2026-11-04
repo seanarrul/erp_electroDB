@@ -10,15 +10,21 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, disabled, children, ...props }, ref) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-sans font-medium transition-all rounded-[2px] select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#041a24]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.99] gap-1.5 cursor-pointer';
+      'inline-flex items-center justify-center font-sans font-medium transition-colors duration-150 rounded-[2px] select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.99] gap-1.5 cursor-pointer';
 
     const variants = {
-      primary: 'bg-[#041a24] text-white hover:bg-[#1c313b] active:bg-black shadow-2xs border border-[#041a24]',
-      default: 'bg-[#041a24] text-white hover:bg-[#1c313b] active:bg-black shadow-2xs border border-[#041a24]',
-      secondary: 'bg-[#F4F4F0] text-[#041a24] hover:bg-[#EAEAE4] active:bg-[#DFDFD7] border border-black/10 shadow-2xs',
-      outline: 'border border-black/15 bg-white text-[#041a24] hover:bg-[#F4F4F0] hover:border-black/30 active:bg-[#EAEAE4] shadow-2xs',
-      ghost: 'bg-transparent text-[#41555f] hover:bg-black/5 hover:text-[#041a24] active:bg-black/10',
-      destructive: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-2xs border border-transparent',
+      primary:
+        'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg hover:bg-[#1c313b] dark:hover:bg-primary-bg/90 active:bg-black dark:active:bg-primary-bg/80 shadow-2xs border border-[#041a24] dark:border-primary-bg',
+      default:
+        'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg hover:bg-[#1c313b] dark:hover:bg-primary-bg/90 active:bg-black dark:active:bg-primary-bg/80 shadow-2xs border border-[#041a24] dark:border-primary-bg',
+      secondary:
+        'bg-surface-2 text-text hover:bg-surface-2/80 active:bg-surface-2/60 border border-border shadow-2xs',
+      outline:
+        'border border-border bg-surface-1 text-text hover:bg-surface-2 hover:border-border-control active:bg-surface-2/80 shadow-2xs',
+      ghost:
+        'bg-transparent text-text-muted hover:bg-surface-2 hover:text-text active:bg-surface-2/80',
+      destructive:
+        'bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-600 active:bg-red-800 shadow-2xs border border-transparent',
     };
 
     const sizes = {

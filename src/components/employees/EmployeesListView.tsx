@@ -342,12 +342,12 @@ export function EmployeesListView({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start font-sans">
         {/* 2. Department Sections (Left Column, Desktop) */}
         <div className="hidden lg:block lg:col-span-1">
-          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs">
-            <div className="p-3 border-b border-black/10 bg-[#F4F4F0]/70 flex items-center justify-between">
-              <span className="text-xs font-bold text-[#041a24] tracking-tight">
+          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 overflow-hidden shadow-2xs">
+            <div className="p-3 border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 flex items-center justify-between">
+              <span className="text-xs font-bold text-[#041a24] dark:text-text tracking-tight">
                 Departments
               </span>
-              <span className="text-[10px] font-mono text-[#41555f]">
+              <span className="text-[10px] font-mono text-[#41555f] dark:text-text-muted">
                 {departments.length} units
               </span>
             </div>
@@ -359,13 +359,13 @@ export function EmployeesListView({
                 onClick={() => handleSelectDept('ALL')}
                 className={`w-full flex items-center justify-between py-2 px-2.5 rounded-[2px] text-xs transition-colors text-left cursor-pointer ${
                   selectedDept === 'ALL'
-                    ? 'bg-black/5 text-[#041a24] font-semibold border-l-3 border-[#041a24]'
-                    : 'text-[#41555f] hover:text-[#041a24] hover:bg-[#F4F4F0]/60'
+                    ? 'bg-black/5 dark:bg-surface-2 text-[#041a24] dark:text-text font-semibold border-l-3 border-[#041a24] dark:border-primary-bg'
+                    : 'text-[#41555f] dark:text-text-muted hover:text-[#041a24] dark:hover:text-text hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60'
                 }`}
               >
                 <span className="truncate">All departments</span>
                 <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] ml-2 ${
-                  selectedDept === 'ALL' ? 'bg-[#041a24] text-white font-medium' : 'bg-black/5 text-[#41555f]'
+                  selectedDept === 'ALL' ? 'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg font-medium' : 'bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-text-muted'
                 }`}>
                   {totalActiveCount}
                 </span>
@@ -409,38 +409,38 @@ export function EmployeesListView({
 
         {/* 3. Table & Content (Right Column) */}
         <div className="lg:col-span-3 space-y-4">
-          <div className="rounded-[4px] border border-black/10 bg-white overflow-hidden shadow-2xs">
+          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 overflow-hidden shadow-2xs">
             {/* Selected Department Header */}
-            <div className="p-3.5 border-b border-black/10 bg-[#F4F4F0]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="p-3.5 border-b border-black/10 dark:border-border bg-[#F4F4F0]/40 dark:bg-surface-2/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <h2 className="text-sm font-semibold text-[#041a24] tracking-tight">
+                <h2 className="text-sm font-semibold text-[#041a24] dark:text-text tracking-tight">
                   {currentDeptMeta.title}
                   {currentDeptMeta.code && (
-                    <span className="ml-2 font-mono text-[10px] text-[#41555f] font-normal">
+                    <span className="ml-2 font-mono text-[10px] text-[#41555f] dark:text-text-muted font-normal">
                       ({currentDeptMeta.code})
                     </span>
                   )}
                 </h2>
-                <p className="text-[10px] font-mono text-[#41555f] mt-0.5">
+                <p className="text-[10px] font-mono text-[#41555f] dark:text-text-muted mt-0.5">
                   {currentDeptMeta.activeCount} active, {currentDeptMeta.separatedCount} separated
                 </p>
               </div>
 
               {/* Search Box */}
               <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 dark:text-text-faint" />
                 <input
                   type="text"
                   placeholder="Search name, emp no, job..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-8 pr-3 text-xs rounded-[2px] border border-black/15 bg-white text-[#041a24] placeholder:text-[#41555f]/60 focus:outline-none focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 transition-all"
+                  className="w-full h-8 pl-8 pr-3 text-xs rounded-[2px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 text-[#041a24] dark:text-text placeholder:text-[#41555f]/60 dark:placeholder:text-text-muted/60 focus:outline-none focus:border-[#041a24] dark:focus:border-border-control focus:ring-1 focus:ring-[#041a24]/15 transition-all"
                 />
               </div>
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 px-4 pt-2.5 border-b border-black/10 bg-white font-mono text-xs">
+            <div className="flex items-center gap-1 px-4 pt-2.5 border-b border-black/10 dark:border-border bg-white dark:bg-surface-1 font-mono text-xs">
               <button
                 type="button"
                 onClick={() => setStatusTab('ALL')}
@@ -479,7 +479,7 @@ export function EmployeesListView({
             {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-sans">
-                <thead className="bg-[#F4F4F0]/70 border-b border-black/10 text-[#41555f] font-mono text-[10px] uppercase tracking-wider">
+                <thead className="bg-[#F4F4F0]/70 dark:bg-surface-2/70 border-b border-black/10 dark:border-border text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
                   <tr>
                     <th
                       onClick={() => handleSort('empNo')}
@@ -558,26 +558,26 @@ export function EmployeesListView({
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-black/5">
+                <tbody className="divide-y divide-black/5 dark:divide-border">
                   {paginatedEmployees.length === 0 ? (
                     <tr>
                       <td
                         colSpan={selectedDept === 'ALL' ? 8 : 7}
-                        className="py-12 text-center text-[#41555f] font-mono text-xs"
+                        className="py-12 text-center text-[#41555f] dark:text-text-muted font-mono text-xs"
                       >
                         {searchQuery.trim() ? (
                           <div className="space-y-1">
-                            <p className="font-semibold text-[#041a24]">No employees match your search.</p>
-                            <p className="text-[11px] text-[#41555f]">Try searching for a different name, job, or ID.</p>
+                            <p className="font-semibold text-[#041a24] dark:text-text">No employees match your search.</p>
+                            <p className="text-[11px] text-[#41555f] dark:text-text-muted">Try searching for a different name, job, or ID.</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            <p className="font-semibold text-[#041a24]">No employees in this department yet.</p>
+                            <p className="font-semibold text-[#041a24] dark:text-text">No employees in this department yet.</p>
                             <Button
                               variant="primary"
                               size="sm"
                               onClick={() => setIsAddModalOpen(true)}
-                              className="bg-[#041a24] text-white rounded-[2px] text-xs px-3 py-1.5"
+                              className="bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg rounded-[2px] text-xs px-3 py-1.5"
                             >
                               <Plus className="w-3.5 h-3.5 mr-1" />
                               Add Employee
@@ -598,20 +598,20 @@ export function EmployeesListView({
                             router.push(`/employees/${emp.empNo}`);
                           }
                         }}
-                        className="hover:bg-[#F4F4F0]/60 cursor-pointer transition-colors focus:bg-black/5 focus:outline-none"
+                        className="hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60 cursor-pointer transition-colors focus:bg-black/5 dark:focus:bg-surface-2 focus:outline-none"
                       >
-                        <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24]">
+                        <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text">
                           {emp.empNo}
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-[#041a24]">
+                        <td className="py-2.5 px-3 font-semibold text-[#041a24] dark:text-text">
                           {emp.lastName}
                         </td>
-                        <td className="py-2.5 px-3 text-[#041a24]">
+                        <td className="py-2.5 px-3 text-[#041a24] dark:text-text">
                           {emp.firstName}
                         </td>
-                        <td className="py-2.5 px-3 text-[#041a24]">
+                        <td className="py-2.5 px-3 text-[#041a24] dark:text-text">
                           <div>{emp.jobDesc}</div>
-                          <div className="text-[10px] font-mono text-[#41555f]">
+                          <div className="text-[10px] font-mono text-[#41555f] dark:text-text-muted">
                             {emp.jobCode}
                           </div>
                         </td>

@@ -102,7 +102,7 @@ export function GlobalSearchBar() {
   return (
     <div ref={containerRef} className="relative w-72 sm:w-80 md:w-96 lg:w-[440px] font-sans">
       <div className="relative flex items-center">
-        <Search className="absolute left-3 h-3.5 w-3.5 text-black/40 pointer-events-none" />
+        <Search className="absolute left-3 h-3.5 w-3.5 text-text-faint pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -116,13 +116,13 @@ export function GlobalSearchBar() {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search records, customers, sales..."
-          className="w-full h-8 pl-8 pr-16 text-xs bg-white text-[#041a24] placeholder:text-[#41555f]/60 rounded-[2px] border border-black/15 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/15 transition-all outline-none"
+          className="w-full h-8 pl-8 pr-16 text-xs bg-surface-1 text-text placeholder:text-text-muted/60 rounded-[2px] border border-border focus:border-border-strong focus:ring-1 focus:ring-accent-soft transition-all outline-none"
         />
 
         {/* Keyboard cue pill */}
         <div className="absolute right-2.5 flex items-center gap-1 pointer-events-none select-none">
           {isLoading ? (
-            <Loader2 className="h-3.5 w-3.5 text-black/40 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 text-text-faint animate-spin" />
           ) : query ? (
             <button
               type="button"
@@ -131,12 +131,12 @@ export function GlobalSearchBar() {
                 setResults([]);
                 setIsOpen(false);
               }}
-              className="p-0.5 text-black/40 hover:text-[#041a24] rounded pointer-events-auto"
+              className="p-0.5 text-text-faint hover:text-text rounded pointer-events-auto"
             >
               <X className="h-3 w-3" />
             </button>
           ) : (
-            <kbd className="hidden sm:inline-block font-mono text-[9px] text-[#41555f] border border-black/15 bg-[#F4F4F0] px-1.5 py-0.5 rounded-[2px]">
+            <kbd className="hidden sm:inline-block font-mono text-[9px] text-text-muted border border-border bg-surface-2 px-1.5 py-0.5 rounded-[2px]">
               Ctrl+K
             </kbd>
           )}
@@ -145,38 +145,38 @@ export function GlobalSearchBar() {
 
       {/* Dropdown Results */}
       {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 mt-1.5 w-full min-w-[320px] bg-white rounded-[4px] border border-black/10 shadow-md overflow-hidden z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-1.5 w-full min-w-[320px] bg-surface-1 rounded-[4px] border border-border shadow-md overflow-hidden z-50 max-h-96 overflow-y-auto">
           {isLoading && results.length === 0 ? (
-            <div className="py-6 text-center font-mono text-xs text-[#41555f]">
-              <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-[#041a24]" />
+            <div className="py-6 text-center font-mono text-xs text-text-muted">
+              <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-text" />
               Searching archive...
             </div>
           ) : results.length === 0 ? (
-            <div className="py-6 px-4 text-center font-mono text-xs text-[#41555f]">
+            <div className="py-6 px-4 text-center font-mono text-xs text-text-muted">
               No archive records matching &ldquo;{query}&rdquo;
             </div>
           ) : (
-            <div className="divide-y divide-black/5 p-1">
+            <div className="divide-y divide-border p-1">
               {/* Customers Group */}
               {customers.length > 0 && (
                 <div className="p-1">
-                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
-                    <Users className="h-3 w-3 text-[#041a24]" /> Customers
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                    <Users className="h-3 w-3 text-text" /> Customers
                   </div>
                   {customers.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-surface-2 flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
+                        <div className="text-xs font-semibold text-text truncate">
                           {item.title}
                         </div>
-                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-text-muted truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-text-faint opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -185,23 +185,23 @@ export function GlobalSearchBar() {
               {/* Official Receipts Group */}
               {receipts.length > 0 && (
                 <div className="p-1">
-                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
-                    <Receipt className="h-3 w-3 text-[#041a24]" /> Official Receipts
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                    <Receipt className="h-3 w-3 text-text" /> Official Receipts
                   </div>
                   {receipts.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-surface-2 flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
+                        <div className="text-xs font-semibold text-text truncate">
                           {item.title}
                         </div>
-                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-text-muted truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-text-faint opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -210,23 +210,23 @@ export function GlobalSearchBar() {
               {/* Sales Transactions Group */}
               {sales.length > 0 && (
                 <div className="p-1">
-                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
-                    <ShoppingCart className="h-3 w-3 text-[#041a24]" /> Sales Transactions
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingCart className="h-3 w-3 text-text" /> Sales Transactions
                   </div>
                   {sales.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-surface-2 flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
+                        <div className="text-xs font-semibold text-text truncate">
                           {item.title}
                         </div>
-                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-text-muted truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-text-faint opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -235,23 +235,23 @@ export function GlobalSearchBar() {
               {/* Products Group */}
               {products.length > 0 && (
                 <div className="p-1">
-                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-[#41555f] uppercase tracking-wider flex items-center gap-1.5">
-                    <Package className="h-3 w-3 text-[#041a24]" /> Products
+                  <div className="px-2 py-1 font-mono text-[10px] font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                    <Package className="h-3 w-3 text-text" /> Products
                   </div>
                   {products.map((item) => (
                     <button
                       key={`${item.type}-${item.id}`}
                       type="button"
                       onClick={() => handleSelect(item.url)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-[#F4F4F0] flex items-center justify-between group transition-colors cursor-pointer"
+                      className="w-full text-left px-2.5 py-1.5 rounded-[2px] hover:bg-surface-2 flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="min-w-0 flex-1 pr-2">
-                        <div className="text-xs font-semibold text-[#041a24] group-hover:text-black truncate">
+                        <div className="text-xs font-semibold text-text truncate">
                           {item.title}
                         </div>
-                        <div className="font-mono text-[10px] text-[#41555f] truncate">{item.subtitle}</div>
+                        <div className="font-mono text-[10px] text-text-muted truncate">{item.subtitle}</div>
                       </div>
-                      <ArrowRight className="h-3 w-3 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <ArrowRight className="h-3 w-3 text-text-faint opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
                 </div>
