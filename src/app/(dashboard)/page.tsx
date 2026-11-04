@@ -83,7 +83,7 @@ export default async function HomePage({ searchParams }: PageProps) {
         </div>
 
         {/* Right-Side Portrait KPI Monitoring Panel */}
-        <aside className="w-full xl:w-[276px] shrink-0" aria-label="Key Performance Indicators">
+        <aside className="w-full xl:w-[248px] shrink-0" aria-label="Key Performance Indicators">
           {data?.kpis && <DashboardKpis kpis={data.kpis} />}
         </aside>
       </div>

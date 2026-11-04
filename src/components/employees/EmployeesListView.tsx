@@ -712,29 +712,29 @@ export function EmployeesListView({
         </div>
 
         {/* Right-Side Portrait KPI Monitoring Panel */}
-        <aside className="w-full xl:w-[276px] shrink-0">
+        <aside className="w-full xl:w-[248px] shrink-0">
           <RightSideKpiPanel
-            title="STAFFING METRICS"
+            title="Staff Stats Bar"
             cards={[
               {
                 id: 'total-employees',
                 title: 'TOTAL HEADCOUNT',
                 value: initialEmployees.length,
-                subtext: 'Staff members on record',
+                subtext: '10 total staff',
                 icon: Users,
               },
               {
                 id: 'active-staff',
                 title: 'ACTIVE EMPLOYEES',
                 value: totalActiveCount,
-                subtext: `${initialEmployees.length - totalActiveCount} separated staff`,
+                subtext: `${initialEmployees.length - totalActiveCount} separated`,
                 icon: UserCheck,
               },
               {
                 id: 'departments',
                 title: 'DEPARTMENTS',
                 value: departments.length,
-                subtext: 'Active operating units',
+                subtext: 'Operating departments',
                 icon: Building2,
               },
               {

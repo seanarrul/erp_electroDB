@@ -935,22 +935,22 @@ export function ProductsMainView({
       </div>
 
         {/* Right-Side Portrait KPI Monitoring Panel */}
-        <aside className="w-full xl:w-[276px] shrink-0">
+        <aside className="w-full xl:w-[248px] shrink-0">
           <RightSideKpiPanel
-            title="CATALOG METRICS"
+            title="Product Stats Bar"
             cards={[
               {
                 id: 'products',
                 title: 'PRODUCTS',
                 value: metrics.totalProducts,
-                subtext: `In ${metrics.totalFamilies} families`,
+                subtext: `${metrics.totalFamilies} families`,
                 icon: Package,
               },
               {
                 id: 'price-records',
                 title: 'PRICE RECORDS',
                 value: metrics.totalPriceRecords,
-                subtext: `${metrics.priceChangesRecorded} price changes recorded`,
+                subtext: `${metrics.priceChangesRecorded} price changes`,
                 icon: History,
               },
               {
@@ -958,14 +958,14 @@ export function ProductsMainView({
                 title: 'UNITS SOLD',
                 value: metrics.totalUnitsSold.toLocaleString(),
                 unit: 'pc',
-                subtext: 'From sale lines',
+                subtext: 'Catalog units sold',
                 icon: Layers,
               },
               {
                 id: 'sales-revenue',
                 title: 'SALES REVENUE',
                 value: formatPHP(metrics.totalSalesRevenue),
-                subtext: 'At the price on each sale date',
+                subtext: 'Historical revenue',
                 icon: DollarSign,
               },
             ]}

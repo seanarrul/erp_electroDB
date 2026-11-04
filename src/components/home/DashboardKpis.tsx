@@ -65,7 +65,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
   return (
     <>
       <RightSideKpiPanel
-        title="DATABASE METRICS"
+        title="Database Stats Bar"
         cards={cards}
       />
 

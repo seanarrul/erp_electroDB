@@ -426,15 +426,15 @@ export function CustomersMainView({
         </div>
 
         {/* Right-Side Portrait KPI Monitoring Panel */}
-        <aside className="w-full xl:w-[276px] shrink-0">
+        <aside className="w-full xl:w-[248px] shrink-0">
           <RightSideKpiPanel
-            title="CUSTOMER METRICS"
+            title="Customer Stats Bar"
             cards={[
               {
                 id: 'customers',
                 title: 'TOTAL DIRECTORY',
                 value: metrics?.totalCustomers || initialCustomers.length,
-                subtext: '5 registered accounts',
+                subtext: '5 client accounts',
                 icon: Users,
               },
               {
@@ -455,7 +455,7 @@ export function CustomersMainView({
                 id: 'terms',
                 title: 'PAYMENT TERMS',
                 value: metrics?.totalTermsCount || 4,
-                subtext: 'Active payment schedules',
+                subtext: 'Active credit terms',
                 icon: CreditCard,
               },
             ]}

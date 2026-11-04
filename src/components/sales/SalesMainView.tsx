@@ -901,15 +901,15 @@ export function SalesMainView({
       </div>
 
         {/* Right-Side Portrait KPI Monitoring Panel */}
-        <aside className="w-full xl:w-[276px] shrink-0">
+        <aside className="w-full xl:w-[248px] shrink-0">
           <RightSideKpiPanel
-            title="SALES METRICS"
+            title="Sales Stats Bar"
             cards={[
               {
                 id: 'sales',
                 title: 'SALES',
                 value: metrics.totalSales,
-                subtext: `Across ${metrics.totalCustomersCount} customers`,
+                subtext: `${metrics.totalCustomersCount} customer accounts`,
                 icon: ShoppingBag,
               },
               {
@@ -917,21 +917,21 @@ export function SalesMainView({
                 title: 'ITEMS SOLD',
                 value: metrics.totalItemsSold.toLocaleString(),
                 unit: 'pc',
-                subtext: `Across ${metrics.totalDistinctProducts} products`,
+                subtext: `${metrics.totalDistinctProducts} products`,
                 icon: Layers,
               },
               {
                 id: 'sales-revenue',
                 title: 'SALES REVENUE',
                 value: formatPHP(metrics.totalRevenue),
-                subtext: 'Sum of calculated line amounts',
+                subtext: 'Total revenue sum',
                 icon: DollarSign,
               },
               {
                 id: 'sales-reps',
                 title: 'SALES REPS',
                 value: metrics.activeRepsCount,
-                subtext: `In ${metrics.sellingDepartmentsCount} selling departments`,
+                subtext: `${metrics.sellingDepartmentsCount} departments`,
                 icon: Users,
               },
             ]}
