@@ -12,6 +12,7 @@ const AddProductModal = dynamic(
   () => import('./AddProductModal').then((mod) => mod.AddProductModal),
   { ssr: false }
 );
+import { Modal } from '@/components/ui/Modal';
 import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 import {
@@ -112,6 +113,20 @@ export function ProductsMainView({
 
   // Modal state
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+
+  // Stats Bar Audit Modals State
+  type ProductAuditType = 'products' | 'price-records' | 'units-sold' | 'sales-revenue' | null;
+  const [activeAudit, setActiveAudit] = useState<ProductAuditType>(null);
+
+  const unitsSoldAuditList = useMemo(
+    () => [...initialProducts].sort((a, b) => b.unitsSold - a.unitsSold),
+    [initialProducts]
+  );
+
+  const salesRevenueAuditList = useMemo(
+    () => [...initialProducts].sort((a, b) => b.salesRevenue - a.salesRevenue),
+    [initialProducts]
+  );
 
   // Local Search state for instant, zero-lag typing
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -945,6 +960,8 @@ export function ProductsMainView({
                 value: metrics.totalProducts,
                 subtext: `${metrics.totalFamilies} families`,
                 icon: Package,
+                onClick: () => setActiveAudit('products'),
+                clickable: true,
               },
               {
                 id: 'price-records',
@@ -952,6 +969,8 @@ export function ProductsMainView({
                 value: metrics.totalPriceRecords,
                 subtext: `${metrics.priceChangesRecorded} price changes`,
                 icon: History,
+                onClick: () => setActiveAudit('price-records'),
+                clickable: true,
               },
               {
                 id: 'units-sold',
@@ -960,6 +979,8 @@ export function ProductsMainView({
                 unit: 'pc',
                 subtext: 'Catalog units sold',
                 icon: Layers,
+                onClick: () => setActiveAudit('units-sold'),
+                clickable: true,
               },
               {
                 id: 'sales-revenue',
@@ -967,11 +988,270 @@ export function ProductsMainView({
                 value: formatPHP(metrics.totalSalesRevenue),
                 subtext: 'Historical revenue',
                 icon: DollarSign,
+                onClick: () => setActiveAudit('sales-revenue'),
+                clickable: true,
               },
             ]}
           />
         </aside>
       </div>
+      {/* 1. CATALOG PRODUCTS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'products'}
+        onClose={() => setActiveAudit(null)}
+        title="Catalog Products Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Active Catalog Inventory
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {metrics.totalProducts} Hardware SKUs
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Product Categories</div>
+              <div className="text-lg font-bold font-mono text-white">{metrics.totalFamilies} families</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Product Code</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3">Family</th>
+                    <th className="py-2 px-3 text-center">Unit</th>
+                    <th className="py-2 px-3 text-right">Current Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {initialProducts.map((p) => (
+                    <tr key={p.prodCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{p.prodCode}</td>
+                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.description}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{p.family}</td>
+                      <td className="py-2 px-3 text-center text-[#41555f] dark:text-slate-300">{p.unit}</td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
+                        {p.currentUnitPrice ? formatPHP(p.currentUnitPrice) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Catalog Size:</span>
+              <span className="text-[#041a24] dark:text-white text-sm">{metrics.totalProducts} Products across {metrics.totalFamilies} Families</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 2. PRICE RECORDS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'price-records'}
+        onClose={() => setActiveAudit(null)}
+        title="Price History Records Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Total Price Entries
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {metrics.totalPriceRecords} Recorded Prices
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Price Adjustments</div>
+              <div className="text-lg font-bold font-mono text-white">{metrics.priceChangesRecorded} changes logged</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Effective Date</th>
+                    <th className="py-2 px-3">Product Code</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-center">Status</th>
+                    <th className="py-2 px-3 text-right">Unit Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {initialPriceHistory.map((ph, idx) => (
+                    <tr key={`${ph.prodCode}-${ph.effDate}-${idx}`} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-mono text-[#041a24] dark:text-white">{ph.effDate}</td>
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{ph.prodCode}</td>
+                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{ph.description}</td>
+                      <td className="py-2 px-3 text-center">
+                        <span className={`px-1.5 py-0.5 rounded-[2px] text-[10px] font-semibold ${
+                          ph.status === 'Current'
+                            ? 'bg-[#041a24] text-white dark:bg-white dark:text-[#041a24]'
+                            : 'bg-black/5 dark:bg-surface-1 text-text-muted'
+                        }`}>
+                          {ph.status}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">
+                        {formatPHP(ph.unitPrice)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Historical Records:</span>
+              <span className="text-[#041a24] dark:text-white text-sm">{metrics.totalPriceRecords} Records in PriceHist</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 3. UNITS SOLD AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'units-sold'}
+        onClose={() => setActiveAudit(null)}
+        title="Catalog Units Sold Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Dispatched Quantity
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {metrics.totalUnitsSold.toLocaleString()} Units Sold
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Catalog SKUs</div>
+              <div className="text-lg font-bold font-mono text-white">{metrics.totalProducts} products</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Product Code</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-center">Unit</th>
+                    <th className="py-2 px-3 text-right">Units Sold</th>
+                    <th className="py-2 px-3 text-right">Revenue Generated</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {unitsSoldAuditList.map((p) => (
+                    <tr key={p.prodCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{p.prodCode}</td>
+                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.description}</td>
+                      <td className="py-2 px-3 text-center text-[#41555f] dark:text-slate-300">{p.unit}</td>
+                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">
+                        {p.unitsSold.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">
+                        {formatPHP(p.salesRevenue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Units Dispatched:</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{metrics.totalUnitsSold.toLocaleString()} pc</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 4. SALES REVENUE AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'sales-revenue'}
+        onClose={() => setActiveAudit(null)}
+        title="Catalog Revenue Attribution Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Total Catalog Revenue
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {formatPHP(metrics.totalSalesRevenue)}
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Catalog SKUs</div>
+              <div className="text-lg font-bold font-mono text-white">{metrics.totalProducts} products</div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-[4px] border border-black/10 dark:border-border bg-[#F8F9FA] dark:bg-surface-2 space-y-1">
+            <div className="text-[11px] font-mono font-semibold uppercase text-text">Formula Applied:</div>
+            <div className="font-mono text-[11px] text-[#041a24] dark:text-white bg-white dark:bg-surface-1 p-2 rounded border border-black/5 dark:border-border">
+              Product Revenue = SUM( SalesDetail.quantity &times; Historical PriceHist.unitPrice on Sale Date )
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Product Code</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-right">Units Sold</th>
+                    <th className="py-2 px-3 text-right">Revenue Share</th>
+                    <th className="py-2 px-3 text-right">Total Revenue</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {salesRevenueAuditList.map((p) => {
+                    const share = metrics.totalSalesRevenue > 0
+                      ? ((p.salesRevenue / metrics.totalSalesRevenue) * 100).toFixed(1)
+                      : '0.0';
+                    return (
+                      <tr key={p.prodCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                        <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{p.prodCode}</td>
+                        <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.description}</td>
+                        <td className="py-2 px-3 text-right text-[#41555f] dark:text-slate-300">
+                          {p.unitsSold.toLocaleString()} {p.unit}
+                        </td>
+                        <td className="py-2 px-3 text-right text-[#41555f] dark:text-slate-300 font-mono">
+                          {share}%
+                        </td>
+                        <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
+                          {formatPHP(p.salesRevenue)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Catalog Revenue:</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics.totalSalesRevenue)}</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* Add Product Modal (Admin only) */}
       {isAdmin && (

@@ -11,6 +11,7 @@ const NewSaleModal = dynamic(
   () => import('./NewSaleModal').then((mod) => mod.NewSaleModal),
   { ssr: false }
 );
+import { Modal } from '@/components/ui/Modal';
 import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 import type {
@@ -32,6 +33,7 @@ import {
   X,
   AlertCircle,
   FileSpreadsheet,
+  ArrowRight,
   ShoppingBag,
   Layers,
   DollarSign,
@@ -90,6 +92,67 @@ export function SalesMainView({
   // Modal state
   const [isNewSaleOpen, setIsNewSaleOpen] = useState(initialOpenNewSale);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+
+  // Stats Bar Audit Modals State
+  type SalesAuditType = 'sales' | 'items-sold' | 'sales-revenue' | 'sales-reps' | null;
+  const [activeAudit, setActiveAudit] = useState<SalesAuditType>(null);
+
+  // Audit Calculations
+  const salesAuditLedger = useMemo(() => {
+    const sorted = [...initialSales].sort((a, b) => Number(a.transNo) - Number(b.transNo));
+    let running = 0;
+    return sorted.map((s) => {
+      running += s.totalAmount;
+      return {
+        ...s,
+        runningTotal: running,
+        runningTotalFormatted: formatPHP(running),
+      };
+    });
+  }, [initialSales]);
+
+  const itemsSoldAudit = useMemo(() => {
+    const map = new Map<string, { prodCode: string; description: string; unit: string; totalQty: number; totalAmount: number; occurrences: number }>();
+    initialLines.forEach((l) => {
+      const existing = map.get(l.prodCode);
+      if (existing) {
+        existing.totalQty += l.quantity;
+        existing.totalAmount += l.lineAmount;
+        existing.occurrences += 1;
+      } else {
+        map.set(l.prodCode, {
+          prodCode: l.prodCode,
+          description: l.description,
+          unit: l.unit,
+          totalQty: l.quantity,
+          totalAmount: l.lineAmount,
+          occurrences: 1,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty);
+  }, [initialLines]);
+
+  const salesRepsAudit = useMemo(() => {
+    const map = new Map<number, { empNo: number; repName: string; deptName: string; count: number; totalRevenue: number }>();
+    initialSales.forEach((s) => {
+      const eNo = Number(s.empNo);
+      const existing = map.get(eNo);
+      if (existing) {
+        existing.count += 1;
+        existing.totalRevenue += s.totalAmount;
+      } else {
+        map.set(eNo, {
+          empNo: eNo,
+          repName: s.repName,
+          deptName: s.deptName,
+          count: 1,
+          totalRevenue: s.totalAmount,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.totalRevenue - a.totalRevenue);
+  }, [initialSales]);
 
   // Local Search state for instant, zero-lag typing
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -911,6 +974,8 @@ export function SalesMainView({
                 value: metrics.totalSales,
                 subtext: `${metrics.totalCustomersCount} customer accounts`,
                 icon: ShoppingBag,
+                onClick: () => setActiveAudit('sales'),
+                clickable: true,
               },
               {
                 id: 'items-sold',
@@ -919,6 +984,8 @@ export function SalesMainView({
                 unit: 'pc',
                 subtext: `${metrics.totalDistinctProducts} products`,
                 icon: Layers,
+                onClick: () => setActiveAudit('items-sold'),
+                clickable: true,
               },
               {
                 id: 'sales-revenue',
@@ -926,6 +993,8 @@ export function SalesMainView({
                 value: formatPHP(metrics.totalRevenue),
                 subtext: 'Total revenue sum',
                 icon: DollarSign,
+                onClick: () => setActiveAudit('sales-revenue'),
+                clickable: true,
               },
               {
                 id: 'sales-reps',
@@ -933,11 +1002,255 @@ export function SalesMainView({
                 value: metrics.activeRepsCount,
                 subtext: `${metrics.sellingDepartmentsCount} departments`,
                 icon: Users,
+                onClick: () => setActiveAudit('sales-reps'),
+                clickable: true,
               },
             ]}
           />
         </aside>
       </div>
+      {/* 1. SALES TRANSACTIONS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'sales'}
+        onClose={() => setActiveAudit(null)}
+        title="Sales Transactions Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Total Transactions Logged
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {metrics.totalSales} Transactions
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Total Billed</div>
+              <div className="text-lg font-bold font-mono text-white">{formatPHP(metrics.totalRevenue)}</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Trans #</th>
+                    <th className="py-2 px-3">Date</th>
+                    <th className="py-2 px-3">Customer</th>
+                    <th className="py-2 px-3">Sales Rep</th>
+                    <th className="py-2 px-3 text-right">Order Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {initialSales.map((s) => (
+                    <tr key={s.transNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{s.transNo}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{s.salesDate}</td>
+                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{s.custName}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{s.repName}</td>
+                      <td className="py-2 px-3 text-right text-[#041a24] dark:text-white font-semibold">
+                        {formatPHP(s.totalAmount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Volume ({metrics.totalSales} orders):</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics.totalRevenue)}</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 2. ITEMS SOLD AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'items-sold'}
+        onClose={() => setActiveAudit(null)}
+        title="Items Sold Breakdown"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Total Units Dispatched
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {metrics.totalItemsSold.toLocaleString()} Units
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Catalog SKUs</div>
+              <div className="text-lg font-bold font-mono text-white">{metrics.totalDistinctProducts} products</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Product Code</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-center">Unit</th>
+                    <th className="py-2 px-3 text-right">Units Sold</th>
+                    <th className="py-2 px-3 text-right">Total Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {itemsSoldAudit.map((item) => (
+                    <tr key={item.prodCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{item.prodCode}</td>
+                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{item.description}</td>
+                      <td className="py-2 px-3 text-center text-[#41555f] dark:text-slate-300">{item.unit}</td>
+                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">
+                        {item.totalQty.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">
+                        {formatPHP(item.totalAmount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Across All Products:</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{metrics.totalItemsSold.toLocaleString()} pc</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 3. SALES REVENUE AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'sales-revenue'}
+        onClose={() => setActiveAudit(null)}
+        title="Sales Revenue Calculation"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Total Sales Revenue
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {formatPHP(metrics.totalRevenue)}
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Total Transactions</div>
+              <div className="text-lg font-bold font-mono text-white">{metrics.totalSales} orders</div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-[4px] border border-black/10 dark:border-border bg-[#F8F9FA] dark:bg-surface-2 space-y-1">
+            <div className="text-[11px] font-mono font-semibold uppercase text-text">Formula Applied:</div>
+            <div className="font-mono text-[11px] text-[#041a24] dark:text-white bg-white dark:bg-surface-1 p-2 rounded border border-black/5 dark:border-border">
+              Total Sales = SUM( SalesDetail.quantity &times; (SELECT unitPrice FROM PriceHist WHERE effDate &le; Sales.salesDate ORDER BY effDate DESC LIMIT 1) )
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Trans #</th>
+                    <th className="py-2 px-3">Date</th>
+                    <th className="py-2 px-3">Customer</th>
+                    <th className="py-2 px-3 text-right">Order Amount</th>
+                    <th className="py-2 px-3 text-right">Running Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {salesAuditLedger.map((s) => (
+                    <tr key={s.transNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{s.transNo}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{s.salesDate}</td>
+                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{s.custName}</td>
+                      <td className="py-2 px-3 text-right text-[#041a24] dark:text-white font-semibold">
+                        {formatPHP(s.totalAmount)}
+                      </td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
+                        {s.runningTotalFormatted}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Revenue:</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics.totalRevenue)}</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 4. SALES REPS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'sales-reps'}
+        onClose={() => setActiveAudit(null)}
+        title="Sales Representatives Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Active Sales Representatives
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {metrics.activeRepsCount} Representatives
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Departments</div>
+              <div className="text-lg font-bold font-mono text-white">{metrics.sellingDepartmentsCount} units</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Rep ID</th>
+                    <th className="py-2 px-3">Representative Name</th>
+                    <th className="py-2 px-3">Department</th>
+                    <th className="py-2 px-3 text-center">Transactions</th>
+                    <th className="py-2 px-3 text-right">Total Volume</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {salesRepsAudit.map((rep) => (
+                    <tr key={rep.empNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{rep.empNo}</td>
+                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{rep.repName}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{rep.deptName}</td>
+                      <td className="py-2 px-3 text-center font-bold text-[#041a24] dark:text-white">{rep.count}</td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">
+                        {formatPHP(rep.totalRevenue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Sales Handled ({metrics.totalSales} orders):</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics.totalRevenue)}</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* New Sale Modal (Admin & Sales) */}
       {isSales && (

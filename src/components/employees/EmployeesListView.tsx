@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 
@@ -107,6 +108,15 @@ export function EmployeesListView({
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+
+  // Stats Bar Audit Modals State
+  type StaffAuditType = 'total-employees' | 'active-staff' | 'departments' | 'job-positions' | null;
+  const [activeAudit, setActiveAudit] = useState<StaffAuditType>(null);
+
+  const activeEmployeesList = useMemo(
+    () => initialEmployees.filter((e) => e.employmentStatus === 'Active'),
+    [initialEmployees]
+  );
 
   // Department metadata for the right pane header
   const currentDeptMeta = useMemo(() => {
@@ -722,6 +732,8 @@ export function EmployeesListView({
                 value: initialEmployees.length,
                 subtext: '10 total staff',
                 icon: Users,
+                onClick: () => setActiveAudit('total-employees'),
+                clickable: true,
               },
               {
                 id: 'active-staff',
@@ -729,6 +741,8 @@ export function EmployeesListView({
                 value: totalActiveCount,
                 subtext: `${initialEmployees.length - totalActiveCount} separated`,
                 icon: UserCheck,
+                onClick: () => setActiveAudit('active-staff'),
+                clickable: true,
               },
               {
                 id: 'departments',
@@ -736,6 +750,8 @@ export function EmployeesListView({
                 value: departments.length,
                 subtext: 'Operating departments',
                 icon: Building2,
+                onClick: () => setActiveAudit('departments'),
+                clickable: true,
               },
               {
                 id: 'job-positions',
@@ -743,11 +759,257 @@ export function EmployeesListView({
                 value: jobLookups.length,
                 subtext: 'Defined career roles',
                 icon: Briefcase,
+                onClick: () => setActiveAudit('job-positions'),
+                clickable: true,
               },
             ]}
           />
         </aside>
       </div>
+      {/* 1. TOTAL HEADCOUNT AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'total-employees'}
+        onClose={() => setActiveAudit(null)}
+        title="Total Headcount Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Registered Personnel Roster
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {initialEmployees.length} Total Employees
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Roster Status</div>
+              <div className="text-lg font-bold font-mono text-white">
+                {totalActiveCount} Active &bull; {initialEmployees.length - totalActiveCount} Separated
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Emp #</th>
+                    <th className="py-2 px-3">Employee Name</th>
+                    <th className="py-2 px-3">Department</th>
+                    <th className="py-2 px-3">Job Role</th>
+                    <th className="py-2 px-3">Hire Date</th>
+                    <th className="py-2 px-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {initialEmployees.map((e) => (
+                    <tr key={e.empNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{e.empNo}</td>
+                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{e.fullName}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.deptName}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.jobDesc}</td>
+                      <td className="py-2 px-3 font-mono text-[#41555f] dark:text-slate-300">{e.hireDate}</td>
+                      <td className="py-2 px-3 text-center">
+                        {e.employmentStatus === 'Active' ? (
+                          <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] font-semibold bg-[#041a24] text-white dark:bg-white dark:text-[#041a24]">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 border border-red-300 dark:border-red-800">
+                            Separated ({e.sepDate})
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Headcount:</span>
+              <span className="text-[#041a24] dark:text-white text-sm">{initialEmployees.length} Personnel Records</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 2. ACTIVE EMPLOYEES AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'active-staff'}
+        onClose={() => setActiveAudit(null)}
+        title="Active Personnel Roster Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Active Workforce on Payroll
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {totalActiveCount} Active Staff
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Operational Departments</div>
+              <div className="text-lg font-bold font-mono text-white">{departments.length} units</div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-[4px] border border-black/10 dark:border-border bg-[#F8F9FA] dark:bg-surface-2 space-y-1">
+            <div className="text-[11px] font-mono font-semibold uppercase text-text">Headcount Formula:</div>
+            <div className="font-mono text-[11px] text-[#041a24] dark:text-white bg-white dark:bg-surface-1 p-2 rounded border border-black/5 dark:border-border">
+              Active Workforce = Total Staff ({initialEmployees.length}) &minus; Separated ({initialEmployees.length - totalActiveCount}) = {totalActiveCount} Active
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Emp #</th>
+                    <th className="py-2 px-3">Employee Name</th>
+                    <th className="py-2 px-3">Department</th>
+                    <th className="py-2 px-3">Job Role</th>
+                    <th className="py-2 px-3">Hire Date</th>
+                    <th className="py-2 px-3 text-right">Tenure</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {activeEmployeesList.map((e) => (
+                    <tr key={e.empNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{e.empNo}</td>
+                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{e.fullName}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.deptName}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.jobDesc}</td>
+                      <td className="py-2 px-3 font-mono text-[#41555f] dark:text-slate-300">{e.hireDate}</td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{e.tenureText}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Active Headcount:</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{totalActiveCount} Active Employees</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 3. DEPARTMENTS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'departments'}
+        onClose={() => setActiveAudit(null)}
+        title="Operational Departments Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Operating Departments
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {departments.length} Units
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Total Staff Allocated</div>
+              <div className="text-lg font-bold font-mono text-white">{initialEmployees.length} personnel</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Dept Code</th>
+                    <th className="py-2 px-3">Department Name</th>
+                    <th className="py-2 px-3 text-center">Active Staff</th>
+                    <th className="py-2 px-3 text-center">Separated</th>
+                    <th className="py-2 px-3 text-right">Total Staff</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {departments.map((d) => (
+                    <tr key={d.deptCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{d.deptCode}</td>
+                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{d.deptName}</td>
+                      <td className="py-2 px-3 text-center font-bold text-emerald-700 dark:text-emerald-400">{d.activeCount}</td>
+                      <td className="py-2 px-3 text-center text-[#41555f] dark:text-slate-300">{d.separatedCount}</td>
+                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">{d.totalCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Operating Units:</span>
+              <span className="text-[#041a24] dark:text-white text-sm">{departments.length} Departments ({totalActiveCount} Active Staff)</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 4. JOB POSITIONS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'job-positions'}
+        onClose={() => setActiveAudit(null)}
+        title="Job Classifications & Roles Audit"
+        maxWidth="2xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Career Role Classifications
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {jobLookups.length} Standard Roles
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Framework</div>
+              <div className="text-lg font-bold font-mono text-white">Active Catalog</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Job Code</th>
+                    <th className="py-2 px-3">Role Description</th>
+                    <th className="py-2 px-3 text-right">Active Assignments</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {jobLookups.map((j) => (
+                    <tr key={j.jobCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{j.jobCode}</td>
+                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{j.jobDesc}</td>
+                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">
+                        {j.activeCount ?? initialEmployees.filter((e) => e.jobCode === j.jobCode && e.employmentStatus === 'Active').length}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Defined Career Roles:</span>
+              <span className="text-[#041a24] dark:text-white text-sm">{jobLookups.length} Standard Positions</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modals */}
       <AddEmployeeModal

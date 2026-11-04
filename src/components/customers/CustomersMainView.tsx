@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { RecordPaymentDialog } from '@/components/payments/RecordPaymentDialog';
+import { Modal } from '@/components/ui/Modal';
 import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 import type {
@@ -57,6 +58,41 @@ export function CustomersMainView({
 
   // Modal state
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+
+  // Stats Bar Audit Modals State
+  type CustomerAuditType = 'customers' | 'payments' | 'collected' | 'terms' | null;
+  const [activeAudit, setActiveAudit] = useState<CustomerAuditType>(null);
+
+  const paymentsRunningLedger = useMemo(() => {
+    let running = 0;
+    return initialPayments.map((p) => {
+      running += p.amount;
+      return {
+        ...p,
+        runningTotal: running,
+        runningTotalFormatted: formatPHP(running),
+      };
+    });
+  }, [initialPayments]);
+
+  const termsAuditList = useMemo(() => {
+    const map = new Map<string, { term: string; count: number; customers: string[] }>();
+    initialCustomers.forEach((c) => {
+      const term = c.payTerms || 'Standard';
+      const existing = map.get(term);
+      if (existing) {
+        existing.count += 1;
+        existing.customers.push(c.custName);
+      } else {
+        map.set(term, {
+          term,
+          count: 1,
+          customers: [c.custName],
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [initialCustomers]);
 
   // Update URL helper (removes any 'tab' parameter and manages 'custNo')
   const updateUrl = (updates: Record<string, string | null>) => {
@@ -436,6 +472,8 @@ export function CustomersMainView({
                 value: metrics?.totalCustomers || initialCustomers.length,
                 subtext: '5 client accounts',
                 icon: Users,
+                onClick: () => setActiveAudit('customers'),
+                clickable: true,
               },
               {
                 id: 'payments',
@@ -443,6 +481,8 @@ export function CustomersMainView({
                 value: metrics?.totalPayments || initialPayments.length,
                 subtext: '14 receipts recorded',
                 icon: Receipt,
+                onClick: () => setActiveAudit('payments'),
+                clickable: true,
               },
               {
                 id: 'collected',
@@ -450,6 +490,8 @@ export function CustomersMainView({
                 value: formatPHP(metrics?.totalCollected || customerTotalPaid),
                 subtext: 'Settled receipts sum',
                 icon: DollarSign,
+                onClick: () => setActiveAudit('collected'),
+                clickable: true,
               },
               {
                 id: 'terms',
@@ -457,11 +499,254 @@ export function CustomersMainView({
                 value: metrics?.totalTermsCount || 4,
                 subtext: 'Active credit terms',
                 icon: CreditCard,
+                onClick: () => setActiveAudit('terms'),
+                clickable: true,
               },
             ]}
           />
         </aside>
       </div>
+      {/* 1. CUSTOMER DIRECTORY AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'customers'}
+        onClose={() => setActiveAudit(null)}
+        title="Customer Directory Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Registered Commercial Accounts
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {initialCustomers.length} Commercial Clients
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Transactions Handled</div>
+              <div className="text-lg font-bold font-mono text-white">15 orders across 5 accounts</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Cust #</th>
+                    <th className="py-2 px-3">Company Name</th>
+                    <th className="py-2 px-3">Billing Address</th>
+                    <th className="py-2 px-3">Terms</th>
+                    <th className="py-2 px-3 text-center">Orders</th>
+                    <th className="py-2 px-3 text-right">Total Remitted</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {initialCustomers.map((c) => (
+                    <tr key={c.custNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{c.custNo}</td>
+                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{c.custName}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 truncate max-w-[160px]">{c.address}</td>
+                      <td className="py-2 px-3 font-mono text-[#41555f] dark:text-slate-300">{c.payTerms}</td>
+                      <td className="py-2 px-3 text-center font-bold text-[#041a24] dark:text-white">{c.ordersPlaced}</td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
+                        {formatPHP(c.totalPaid)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Commercial Accounts:</span>
+              <span className="text-[#041a24] dark:text-white text-sm">{initialCustomers.length} Enterprise Clients</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 2. PAYMENT RECEIPTS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'payments'}
+        onClose={() => setActiveAudit(null)}
+        title="Payment Receipts Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Recorded Official Receipts
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {initialPayments.length} Official Receipts
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Total Remitted</div>
+              <div className="text-lg font-bold font-mono text-white">{formatPHP(metrics?.totalCollected || 1140470)}</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Receipt OR #</th>
+                    <th className="py-2 px-3">Payment Date</th>
+                    <th className="py-2 px-3">Customer Entity</th>
+                    <th className="py-2 px-3">Applied To Sale</th>
+                    <th className="py-2 px-3 text-right">Amount Paid</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {initialPayments.map((p) => (
+                    <tr key={p.orNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">OR#{p.orNo}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 font-mono">{p.payDate}</td>
+                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.custName || 'Direct Client'}</td>
+                      <td className="py-2 px-3 text-[#041a24] dark:text-white">Sale #{p.transNo}</td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
+                        {formatPHP(p.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Receipts Collected:</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics?.totalCollected || 1140470)}</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 3. TOTAL COLLECTED AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'collected'}
+        onClose={() => setActiveAudit(null)}
+        title="Collections & Receivables Audit"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-white/10">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
+                Total Billed
+              </div>
+              <div className="text-lg font-bold font-mono text-white mt-0.5">
+                ₱1,620,950.00
+              </div>
+            </div>
+            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-emerald-500/40">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-medium">
+                Total Collected
+              </div>
+              <div className="text-lg font-bold font-mono text-emerald-400 mt-0.5">
+                {formatPHP(metrics?.totalCollected || 1140470)}
+              </div>
+            </div>
+            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-amber-500/40">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-medium">
+                Outstanding Balance
+              </div>
+              <div className="text-lg font-bold font-mono text-amber-400 mt-0.5">
+                ₱480,480.00
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-60 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Receipt OR #</th>
+                    <th className="py-2 px-3">Payment Date</th>
+                    <th className="py-2 px-3">Applied To Trans</th>
+                    <th className="py-2 px-3 text-right">Amount Paid</th>
+                    <th className="py-2 px-3 text-right">Running Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {paymentsRunningLedger.map((p) => (
+                    <tr key={p.orNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">OR#{p.orNo}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 font-mono">{p.payDate}</td>
+                      <td className="py-2 px-3 text-[#041a24] dark:text-white">Sale #{p.transNo}</td>
+                      <td className="py-2 px-3 text-right text-[#041a24] dark:text-white font-semibold">
+                        {formatPHP(p.amount)}
+                      </td>
+                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
+                        {p.runningTotalFormatted}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Settled:</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics?.totalCollected || 1140470)}</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 4. PAYMENT TERMS AUDIT MODAL */}
+      <Modal
+        isOpen={activeAudit === 'terms'}
+        onClose={() => setActiveAudit(null)}
+        title="Payment Terms Schedule Audit"
+        maxWidth="2xl"
+      >
+        <div className="space-y-4 font-sans text-xs">
+          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                Payment Terms Policies
+              </div>
+              <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                {termsAuditList.length} Defined Terms
+              </div>
+            </div>
+            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
+              <div className="text-[11px] font-mono text-slate-300">Accounts Bound</div>
+              <div className="text-lg font-bold font-mono text-white">{initialCustomers.length} accounts</div>
+            </div>
+          </div>
+
+          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
+                  <tr>
+                    <th className="py-2 px-3">Terms Schedule</th>
+                    <th className="py-2 px-3 text-center">Accounts</th>
+                    <th className="py-2 px-3">Associated Customers</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
+                  {termsAuditList.map((t) => (
+                    <tr key={t.term} className="hover:bg-black/5 dark:hover:bg-surface-2">
+                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white font-mono">{t.term}</td>
+                      <td className="py-2 px-3 text-center font-bold text-[#041a24] dark:text-white">{t.count}</td>
+                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 font-sans">{t.customers.join(', ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
+              <span>Total Terms Policies:</span>
+              <span className="text-[#041a24] dark:text-white text-sm">{termsAuditList.length} Active Credit Terms</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* Shared Record Payment Dialog */}
       {isRecordPaymentOpen && selectedCustomer && (
