@@ -191,9 +191,9 @@ export function CustomersMainView({
             </div>
 
             {/* Customer List Stream */}
-            <div className="divide-y divide-black/5 max-h-[580px] overflow-y-auto -mx-1 px-1">
+            <div className="group/stream divide-y divide-black/5 dark:divide-border max-h-[580px] overflow-y-auto -mx-1 px-1">
               {filteredCustomers.length === 0 ? (
-                <div className="p-6 text-center font-mono text-xs text-[#41555f]">
+                <div className="p-6 text-center font-mono text-xs text-[#41555f] dark:text-text-muted">
                   No customers found.
                 </div>
               ) : (
@@ -204,28 +204,33 @@ export function CustomersMainView({
                       key={c.custNo}
                       type="button"
                       onClick={() => updateUrl({ custNo: String(c.custNo) })}
-                      className={`w-full text-left px-3 py-2.5 transition-all flex items-center justify-between cursor-pointer rounded-[2px] ${
+                      className={`relative overflow-hidden group/row w-full text-left px-3 py-2.5 transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center justify-between cursor-pointer rounded-[2px] ${
                         isSelected
-                          ? 'bg-black/5 border-l-3 border-[#041a24]'
-                          : 'hover:bg-[#F4F4F0]/60'
+                          ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
+                          : 'group-hover/stream:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
                       }`}
                     >
-                      <div className="min-w-0 pr-2">
-                        <p className={`text-xs leading-snug truncate ${isSelected ? 'font-bold text-[#041a24]' : 'font-medium text-[#041a24]'}`}>
+                      <div
+                        className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                          isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
+                        }`}
+                      />
+                      <div className="min-w-0 pr-2 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                        <p className={`text-xs leading-snug truncate ${isSelected ? 'font-bold text-[#041a24] dark:text-text' : 'font-medium text-[#041a24] dark:text-text'}`}>
                           {c.custName}
                         </p>
-                        <p className="font-mono text-[10px] text-[#41555f] mt-0.5">
+                        <p className="font-mono text-[10px] text-[#41555f] dark:text-text-muted mt-0.5">
                           {c.custNo}
                         </p>
                       </div>
 
                       {/* Payment Terms Tag */}
-                      <div className="shrink-0">
+                      <div className="shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5">
                         <span
                           className={`font-mono text-[9px] px-1.5 py-0.5 rounded-[2px] ${
                             isSelected
-                              ? 'bg-[#041a24] text-white font-medium'
-                              : 'bg-black/5 text-[#41555f] border border-black/10'
+                              ? 'bg-[#041a24] dark:bg-white text-white dark:text-[#041a24] font-medium'
+                              : 'bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-slate-300 border border-black/10 dark:border-border'
                           }`}
                         >
                           {c.payTerms}
@@ -359,11 +364,17 @@ export function CustomersMainView({
                         <th className="py-2.5 px-3 font-semibold text-center whitespace-nowrap">ACTION</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black/5 dark:divide-border">
+                    <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
                       {customerPayments.map((p) => (
-                        <tr key={p.orNo} className="hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60 transition-colors">
-                          <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text whitespace-nowrap">
-                            {p.orNo}
+                        <tr
+                          key={p.orNo}
+                          className="group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2"
+                        >
+                          <td className="relative py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text whitespace-nowrap overflow-hidden">
+                            <div className="absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none scale-y-0 group-hover/row:scale-y-100" />
+                            <span className="inline-block transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                              {p.orNo}
+                            </span>
                           </td>
                           <td className="py-2.5 px-3 font-mono text-xs text-[#41555f] dark:text-text-muted whitespace-nowrap tabular-nums">
                             {formatDate(p.payDate)}

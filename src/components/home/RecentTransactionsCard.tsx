@@ -44,14 +44,15 @@ export function RecentTransactionsCard({ transactions }: RecentTransactionsCardP
               <th className="py-2.5 px-5 sm:px-6">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/60">
+          <tbody className="group/tbody divide-y divide-border/60">
             {transactions.map((tx) => (
               <tr
                 key={tx.transNo}
-                className="hover:bg-surface-2/60 transition-colors group cursor-pointer"
+                className="group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2"
               >
-                <td className="py-3 px-5 sm:px-6 font-mono font-semibold text-text whitespace-nowrap">
-                  <Link href={`/sales/${tx.transNo}`} className="hover:underline">
+                <td className="relative py-3 px-5 sm:px-6 font-mono font-semibold text-text whitespace-nowrap overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none scale-y-0 group-hover/row:scale-y-100" />
+                  <Link href={`/sales/${tx.transNo}`} className="inline-block hover:underline transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
                     {tx.transNo}
                   </Link>
                 </td>
@@ -59,7 +60,9 @@ export function RecentTransactionsCard({ transactions }: RecentTransactionsCardP
                   {tx.date}
                 </td>
                 <td className="py-3 px-4 font-medium text-text whitespace-nowrap">
-                  {tx.customer}
+                  <span className="inline-block transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
+                    {tx.customer}
+                  </span>
                 </td>
                 <td className="py-3 px-4 text-text-muted whitespace-nowrap">
                   {tx.employee}

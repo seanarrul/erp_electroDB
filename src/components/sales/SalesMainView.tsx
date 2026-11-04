@@ -660,7 +660,7 @@ export function SalesMainView({
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black/5 dark:divide-border">
+                    <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
                       {paginatedSales.map((s) => {
                         const isSelected = selectedCode === String(s.transNo);
 
@@ -668,18 +668,27 @@ export function SalesMainView({
                           <tr
                             key={s.transNo}
                             onClick={() => updateUrl({ code: String(s.transNo) })}
-                            className={`cursor-pointer transition-colors ${
-                              isSelected ? 'bg-black/5 dark:bg-surface-2 border-l-3 border-[#041a24] dark:border-primary-bg font-medium' : 'hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60'
+                            className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                              isSelected
+                                ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
+                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
                             }`}
                           >
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text whitespace-nowrap">
-                              {s.transNo}
+                            <td className="relative py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text whitespace-nowrap overflow-hidden">
+                              <div
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                  isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
+                                }`}
+                              />
+                              <span className="inline-block transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                                {s.transNo}
+                              </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap text-[#41555f] dark:text-text-muted font-mono text-xs tabular-nums">
                               {formatDate(s.salesDate)}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#041a24] dark:text-text leading-snug">
+                              <div className="font-semibold text-[#041a24] dark:text-text leading-snug transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {s.custName}
                               </div>
                               <div className="text-[10px] font-mono text-[#41555f] dark:text-text-muted mt-0.5">
@@ -761,7 +770,7 @@ export function SalesMainView({
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E9EDEA]">
+                    <tbody className="group/tbody divide-y divide-[#E9EDEA] dark:divide-border">
                       {paginatedLines.map((l, idx) => {
                         const isSelected = selectedCode === String(l.transNo);
 
@@ -769,22 +778,31 @@ export function SalesMainView({
                           <tr
                             key={`${l.transNo}-${l.prodCode}-${idx}`}
                             onClick={() => updateUrl({ code: String(l.transNo) })}
-                            className={`cursor-pointer transition-colors ${
-                              isSelected ? 'bg-[#EAF2ED]/60 font-medium' : 'hover:bg-[#F5F6F4]/70'
+                            className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                              isSelected
+                                ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
+                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
                             }`}
                           >
-                            <td className="py-2.5 px-3 font-mono font-medium text-[#17231F] whitespace-nowrap">
-                              {l.transNo}
+                            <td className="relative py-2.5 px-3 font-mono font-medium text-[#17231F] dark:text-text whitespace-nowrap overflow-hidden">
+                              <div
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                  isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
+                                }`}
+                              />
+                              <span className="inline-block transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                                {l.transNo}
+                              </span>
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-mono font-medium text-[#17231F]">
+                              <div className="font-mono font-medium text-[#17231F] dark:text-text transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {l.prodCode}
                               </div>
-                              <div className="text-[11px] text-[#52615B] mt-0.5 line-clamp-1">
+                              <div className="text-[11px] text-[#52615B] dark:text-text-muted mt-0.5 line-clamp-1">
                                 {l.description}
                               </div>
                             </td>
-                            <td className="py-2.5 px-3 text-right font-mono tabular-nums font-semibold text-[#17231F] whitespace-nowrap">
+                            <td className="py-2.5 px-3 text-right font-mono tabular-nums font-semibold text-[#17231F] dark:text-text whitespace-nowrap">
                               {l.quantity}
                             </td>
                           </tr>

@@ -558,7 +558,7 @@ export function EmployeesListView({
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-black/5 dark:divide-border">
+                <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
                   {paginatedEmployees.length === 0 ? (
                     <tr>
                       <td
@@ -598,13 +598,18 @@ export function EmployeesListView({
                             router.push(`/employees/${emp.empNo}`);
                           }
                         }}
-                        className="hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60 cursor-pointer transition-colors focus:bg-black/5 dark:focus:bg-surface-2 focus:outline-none"
+                        className="group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2 focus:bg-black/5 dark:focus:bg-surface-2 focus:outline-none"
                       >
-                        <td className="py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text">
-                          {emp.empNo}
+                        <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
+                          <div className="absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none scale-y-0 group-hover/row:scale-y-100" />
+                          <span className="inline-block font-mono font-semibold text-[#041a24] dark:text-text transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                            {emp.empNo}
+                          </span>
                         </td>
                         <td className="py-2.5 px-3 font-semibold text-[#041a24] dark:text-text">
-                          {emp.lastName}
+                          <span className="inline-block transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
+                            {emp.lastName}
+                          </span>
                         </td>
                         <td className="py-2.5 px-3 text-[#041a24] dark:text-text">
                           {emp.firstName}
@@ -616,28 +621,28 @@ export function EmployeesListView({
                           </div>
                         </td>
                         {selectedDept === 'ALL' && (
-                          <td className="py-2.5 px-3 text-[#041a24]">
+                          <td className="py-2.5 px-3 text-[#041a24] dark:text-text">
                             <div>{emp.deptName}</div>
-                            <div className="text-[10px] font-mono text-[#41555f]">
+                            <div className="text-[10px] font-mono text-[#41555f] dark:text-text-muted">
                               {emp.deptCode}
                             </div>
                           </td>
                         )}
-                        <td className="py-2.5 px-3 text-[#41555f] font-mono text-xs tabular-nums">
+                        <td className="py-2.5 px-3 text-[#41555f] dark:text-text-muted font-mono text-xs tabular-nums">
                           {formatDate(emp.hireDate)}
                         </td>
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           <span
-                            className={`inline-block px-1.5 py-0.5 rounded-[2px] text-[9px] font-mono font-medium uppercase tracking-wider ${
+                            className={`inline-block px-1.5 py-0.5 rounded-[2px] text-[9px] font-mono font-medium uppercase tracking-wider transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 ${
                               emp.employmentStatus === 'Active'
-                                ? 'bg-[#041a24] text-white'
-                                : 'bg-black/5 text-[#41555f] border border-black/10'
+                                ? 'bg-[#041a24] dark:bg-white text-white dark:text-[#041a24]'
+                                : 'bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-slate-300 border border-black/10 dark:border-border'
                             }`}
                           >
                             {emp.employmentStatus}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold tabular-nums text-[#041a24]">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold tabular-nums text-[#041a24] dark:text-text">
                           {emp.salary != null ? formatPHP(emp.salary) : '—'}
                         </td>
                       </tr>
