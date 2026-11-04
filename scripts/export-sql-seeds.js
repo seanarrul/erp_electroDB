@@ -89,8 +89,8 @@ sql += `-- 10. PAYMENT (${payments.length} rows from PartialHOPEDB payment)\n`;
 sql += 'INSERT INTO PAYMENT (ORNo, payDate, amount, transNo) VALUES\n';
 sql += payments.map((p) => `(${escapeStr(p.ORNo)}, ${escapeStr(p.payDate)}, ${p.amount}, ${escapeStr(p.transNo)})`).join(',\n') + ';\n\n';
 
-fs.writeFileSync('database/archive/03_seed_data.sql', sql);
-console.log('Successfully wrote database/archive/03_seed_data.sql');
+fs.writeFileSync('database/seeds/01_coursework_official_seed.sql', sql);
+console.log('Successfully wrote database/seeds/01_coursework_official_seed.sql');
 
 // Also write a combined PostgreSQL setup script
 const masterSql = `-- ========================================================================
