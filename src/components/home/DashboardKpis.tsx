@@ -8,9 +8,6 @@ import type { HomeKPIData } from '@/lib/data/home';
 import { RightSideKpiPanel, type KpiCardItem } from '@/components/ui/RightSideKpiPanel';
 import {
   Calculator,
-  ExternalLink,
-  CheckCircle2,
-  AlertCircle,
   ArrowRight,
   Receipt,
   Users,
@@ -31,7 +28,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
       id: 'sales',
       title: 'TOTAL SALES',
       value: kpis.totalSalesFormatted,
-      subtext: 'Sum of 15 transactions • Click to audit',
+      subtext: 'Sum of 15 transactions',
       icon: ShoppingBag,
       onClick: () => setActiveAudit('sales'),
       clickable: true,
@@ -40,7 +37,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
       id: 'transactions',
       title: 'TOTAL TRANSACTIONS',
       value: kpis.totalTransactions.toLocaleString(),
-      subtext: 'Across 5 registered customers',
+      subtext: 'Across 5 customers',
       icon: Calculator,
       onClick: () => setActiveAudit('transactions'),
       clickable: true,
@@ -69,7 +66,6 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
     <>
       <RightSideKpiPanel
         title="DATABASE METRICS"
-        subtitle="100% AUDITED"
         cards={cards}
       />
 
@@ -77,8 +73,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
       <Modal
         isOpen={activeAudit === 'sales'}
         onClose={() => setActiveAudit(null)}
-        title="Total Sales Calculation & Audit"
-        description="Point-in-time calculation proof for all 15 transactions"
+        title="Total Sales Calculation"
         maxWidth="3xl"
       >
         <div className="space-y-4 font-sans text-xs">
@@ -86,7 +81,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
           <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Verified Grand Total Revenue
+                Total Sales Revenue
               </div>
               <div className="text-2xl font-bold font-mono text-white mt-0.5">
                 {kpis.totalSalesFormatted}
@@ -98,35 +93,16 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
             </div>
           </div>
 
-          {/* Explanation Alert: Why Page 1 is ~906k */}
-          <div className="p-3.5 rounded-[4px] border border-amber-200 dark:border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/20 text-[#78350F] dark:text-amber-200">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-              <div className="space-y-1">
-                <div className="font-semibold text-xs text-amber-900 dark:text-amber-300">
-                  Why does the Sales table show ~₱906k on first view?
-                </div>
-                <div className="text-[11px] leading-relaxed">
-                  The table on the <strong>/sales</strong> page defaults to <strong>10 rows per page</strong>. The 10 visible rows on <strong>Page 1</strong> (Trans 5015 down to 5006) sum to <strong>₱906,510.00</strong>. The remaining 5 transactions reside on <strong>Page 2</strong> (Trans 5005 down to 5001) and sum to <strong>₱714,440.00</strong>. Together, Page 1 + Page 2 equal exactly <strong>₱1,620,950.00</strong>.
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Mathematical Proof Box */}
           <div className="p-3 rounded-[4px] border border-black/10 dark:border-border bg-[#F8F9FA] dark:bg-surface-2 space-y-1">
             <div className="text-[11px] font-mono font-semibold uppercase text-text">Formula Applied:</div>
             <div className="font-mono text-[11px] text-[#041a24] dark:text-white bg-white dark:bg-surface-1 p-2 rounded border border-black/5 dark:border-border">
-              Total Sales = SUM( SalesDetail.quantity × (SELECT unitPrice FROM PriceHist WHERE effDate &le; Sales.salesDate ORDER BY effDate DESC LIMIT 1) )
+              Total Sales = SUM( SalesDetail.quantity &times; (SELECT unitPrice FROM PriceHist WHERE effDate &le; Sales.salesDate ORDER BY effDate DESC LIMIT 1) )
             </div>
           </div>
 
-          {/* Complete 15 Rows Ledger Table */}
+          {/* 15 Rows Ledger Table */}
           <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="px-3 py-2 bg-[#F4F4F0] dark:bg-surface-2 font-mono text-[11px] font-semibold text-text flex items-center justify-between border-b border-black/10 dark:border-border">
-              <span>Itemized Sales Ledger (All 15 Orders)</span>
-              <span>100% Reconciled</span>
-            </div>
             <div className="max-h-64 overflow-y-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
@@ -140,7 +116,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
                   {kpis.salesAudit && kpis.salesAudit.length > 0 ? (
-                    kpis.salesAudit.map((s, idx) => (
+                    kpis.salesAudit.map((s) => (
                       <tr key={s.transNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
                         <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">
                           #{s.transNo}
@@ -166,7 +142,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
               </table>
             </div>
             <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Final Verified Total:</span>
+              <span>Total Revenue:</span>
               <span className="text-emerald-700 dark:text-emerald-400 text-sm">{kpis.totalSalesFormatted}</span>
             </div>
           </div>
@@ -189,7 +165,6 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
         isOpen={activeAudit === 'transactions'}
         onClose={() => setActiveAudit(null)}
         title="Total Transactions Audit"
-        description="Distribution of 15 orders across 5 commercial accounts"
         maxWidth="2xl"
       >
         <div className="space-y-4 font-sans text-xs">
@@ -202,18 +177,9 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
                 {kpis.totalTransactions} Orders
               </div>
             </div>
-            <div className="text-right">
-              <span className="inline-flex items-center gap-1 text-emerald-400 font-mono text-xs">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Zero Orphan Records</span>
-              </span>
-            </div>
           </div>
 
           <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="px-3 py-2 bg-[#F4F4F0] dark:bg-surface-2 font-mono text-[11px] font-semibold text-text border-b border-black/10 dark:border-border">
-              Customer Order Breakdown
-            </div>
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-[#FAFAFA] dark:bg-surface-2 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
                 <tr>
@@ -247,7 +213,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
               </tbody>
               <tfoot className="bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border font-mono font-bold text-xs">
                 <tr>
-                  <td className="py-2 px-3">Total Across Registered Accounts:</td>
+                  <td className="py-2 px-3">Total:</td>
                   <td className="py-2 px-3 text-center">{kpis.totalTransactions}</td>
                   <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400">
                     {kpis.totalSalesFormatted}
@@ -273,8 +239,7 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
       <Modal
         isOpen={activeAudit === 'payments'}
         onClose={() => setActiveAudit(null)}
-        title="Total Collections & Receivables Audit"
-        description="Reconciliation of 14 Official Receipts against billed sales"
+        title="Total Collections Audit"
         maxWidth="3xl"
       >
         <div className="space-y-4 font-sans text-xs">
@@ -306,10 +271,6 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
           </div>
 
           <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="px-3 py-2 bg-[#F4F4F0] dark:bg-surface-2 font-mono text-[11px] font-semibold text-text flex items-center justify-between border-b border-black/10 dark:border-border">
-              <span>Official Receipts Ledger (All 14 Receipts)</span>
-              <span>100% Reconciled</span>
-            </div>
             <div className="max-h-60 overflow-y-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
@@ -367,30 +328,21 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
         isOpen={activeAudit === 'employees'}
         onClose={() => setActiveAudit(null)}
         title="Personnel & Headcount Audit"
-        description="Verification of 8 active employees and 2 separated personnel"
         maxWidth="3xl"
       >
         <div className="space-y-4 font-sans text-xs">
           <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex items-center justify-between">
             <div>
               <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Active Staff Formula
+                Active Staff
               </div>
               <div className="text-xl font-bold font-mono text-white mt-0.5">
                 10 Total Staff &minus; 2 Separations = 8 Active
               </div>
             </div>
-            <div className="text-right">
-              <span className="font-mono text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-[2px]">
-                100% Staff Accounted
-              </span>
-            </div>
           </div>
 
           <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="px-3 py-2 bg-[#F4F4F0] dark:bg-surface-2 font-mono text-[11px] font-semibold text-text border-b border-black/10 dark:border-border">
-              Staff Directory Verification
-            </div>
             <div className="max-h-60 overflow-y-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
