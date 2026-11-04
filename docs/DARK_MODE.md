@@ -186,6 +186,16 @@ The primary top-bar navigation toggle features a modern, tactile pill capsule to
    - ARIA: `role="switch"`, `aria-checked={isDark}`, `aria-label="Switch to light/dark mode"`.
    - Keyboard: Interactive via `Space`, `Enter`, and `ArrowLeft` (Light) / `ArrowRight` (Dark).
 
+### 4.6 Pure White High-Contrast Typography & Surface Inversion
+To resolve arbitrary color contrast issues where legacy utility classes (e.g. `text-[#041a24]`, `text-[#0F172A]`, `text-[#17231F]`) remained dark in dark mode:
+1. **Tailwind Color Definition:** Added `text: 'var(--text)'` to `tailwind.config.ts` so `dark:text-text` compiles into valid CSS.
+2. **Global High-Contrast Overrides in `globals.css`:**
+   - **Headings & Titles:** `:root[data-theme="dark"] h1, h2, h3, .text-[#041a24], .text-[#0F172A], .text-[#17231F], .text-slate-900` are forced to pure white `#FFFFFF !important` (Contrast ratio **19.5:1** on `#0B1117`).
+   - **Secondary & Muted Copy:** `.text-[#41555f], .text-[#52615B], .text-slate-500` are forced to crisp light slate `#CBD5E1 !important` (Contrast ratio **8.8:1**).
+   - **Table Headers:** Replaced the light-beige bar (`bg-[#F4F4F0]/70`) with solid `var(--surface-2)` (`#1B2430`) and pure white column labels.
+   - **Action Buttons & Inputs:** Outline buttons (`Export CSV`), search inputs, and dropdowns inherit `var(--surface-1)` / `var(--surface-2)` with crisp `#FFFFFF` text and visible border hairlines (`rgba(255, 255, 255, 0.25)`).
+   - **Primary Action Buttons (`+ Add Product`):** Render as crisp inverted white pills (`bg-white text-slate-900`) for maximum visual pop.
+
 ---
 
 ## 5. Build & Typecheck Certification

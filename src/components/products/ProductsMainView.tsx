@@ -369,15 +369,15 @@ export function ProductsMainView({
   return (
     <div className="space-y-6">
       {/* 9.1 Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-black/10 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-black/10 dark:border-border pb-4">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#41555f] block">
+          <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#41555f] dark:text-slate-400 block">
             ElectronDB G4 HopeERD &bull; Products
           </span>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-normal tracking-tight text-[#041a24] mt-0.5">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-normal tracking-tight text-[#041a24] dark:text-white mt-0.5">
             Products &amp; Pricing
           </h1>
-          <p className="text-xs text-[#41555f] mt-0.5 font-sans">
+          <p className="text-xs text-[#41555f] dark:text-slate-300 mt-0.5 font-sans">
             PC hardware catalog, unit prices, and historical price adjustments.
           </p>
         </div>
@@ -389,9 +389,9 @@ export function ProductsMainView({
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="bg-white dark:bg-surface-1 border border-black/15 dark:border-border hover:bg-black/5 dark:hover:bg-surface-2 text-[#0F172A] dark:text-text rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
+            className="bg-white dark:bg-surface-2 border border-black/15 dark:border-white/20 hover:bg-black/5 dark:hover:bg-surface-3 text-[#0F172A] dark:text-white rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
           >
-            <Download className="h-3.5 w-3.5 text-black/40 dark:text-text-faint" />
+            <Download className="h-3.5 w-3.5 text-black/60 dark:text-white" />
             <span>Export CSV</span>
           </Button>
 
@@ -401,7 +401,7 @@ export function ProductsMainView({
               variant="primary"
               size="sm"
               onClick={() => setIsAddProductOpen(true)}
-              className="bg-[#0F172A] dark:bg-primary-bg hover:bg-[#1E293B] dark:hover:opacity-90 text-white dark:text-primary-fg rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
+              className="bg-[#0F172A] dark:bg-white hover:bg-[#1E293B] dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5 font-semibold"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Product</span>
@@ -413,22 +413,22 @@ export function ProductsMainView({
       {/* Filter and View Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
         {/* Left: View Tabs */}
-        <div className="inline-flex p-1 bg-[#F4F4F0] dark:bg-surface-2 rounded-[2px] border border-black/10 dark:border-border gap-1 font-mono text-xs">
+        <div className="inline-flex p-1 bg-[#F4F4F0] dark:bg-surface-2 rounded-[2px] border border-black/10 dark:border-white/15 gap-1 font-mono text-xs">
           <button
             type="button"
             onClick={() => updateUrl({ view: 'products', page: '1' })}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'products'
-                ? 'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg shadow-2xs'
-                : 'text-[#41555f] dark:text-text-muted hover:text-[#041a24] dark:hover:text-text'
+                ? 'bg-[#041a24] dark:bg-white text-white dark:text-slate-900 shadow-2xs font-semibold'
+                : 'text-[#41555f] dark:text-slate-300 hover:text-[#041a24] dark:hover:text-white'
             }`}
           >
             <span>Products</span>
             <span
               className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
                 activeView === 'products'
-                  ? 'bg-white/20 text-white dark:text-primary-fg font-semibold'
-                  : 'bg-black/5 dark:bg-surface-1 text-[#41555f] dark:text-text-muted'
+                  ? 'bg-white/20 dark:bg-slate-900/15 text-white dark:text-slate-900 font-semibold'
+                  : 'bg-black/5 dark:bg-surface-1 text-[#41555f] dark:text-slate-300'
               }`}
             >
               {filteredProducts.length}
@@ -439,16 +439,16 @@ export function ProductsMainView({
             onClick={() => updateUrl({ view: 'history', page: '1' })}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
               activeView === 'history'
-                ? 'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg shadow-2xs'
-                : 'text-[#41555f] dark:text-text-muted hover:text-[#041a24] dark:hover:text-text'
+                ? 'bg-[#041a24] dark:bg-white text-white dark:text-slate-900 shadow-2xs font-semibold'
+                : 'text-[#41555f] dark:text-slate-300 hover:text-[#041a24] dark:hover:text-white'
             }`}
           >
             <span>Price history</span>
             <span
               className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
                 activeView === 'history'
-                  ? 'bg-white/20 text-white font-semibold'
-                  : 'bg-black/5 text-[#41555f]'
+                  ? 'bg-white/20 dark:bg-slate-900/15 text-white dark:text-slate-900 font-semibold'
+                  : 'bg-black/5 dark:bg-surface-1 text-[#41555f] dark:text-slate-300'
               }`}
             >
               {filteredPriceHistory.length}
@@ -460,20 +460,20 @@ export function ProductsMainView({
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           {/* Search Box */}
           <div className="relative min-w-[240px] sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-black/40" />
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-black/40 dark:text-slate-400" />
             <input
               type="text"
               placeholder="Search code or description..."
               value={localSearch}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full rounded-[2px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 pl-8 pr-7 py-1.5 text-xs text-[#041a24] dark:text-text placeholder:text-[#41555f]/60 dark:placeholder:text-text-muted/60 focus:border-[#041a24] dark:focus:border-border-control focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
+              className="w-full rounded-[2px] border border-black/15 dark:border-white/20 bg-white dark:bg-surface-1 pl-8 pr-7 py-1.5 text-xs text-[#041a24] dark:text-white placeholder:text-[#41555f]/60 dark:placeholder:text-slate-400 focus:border-[#041a24] dark:focus:border-white focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
             />
             {localSearch && (
               <button
                 type="button"
                 onClick={handleClearSearch}
                 aria-label="Clear search query"
-                className="absolute right-2 top-2 text-black/40 dark:text-text-faint hover:text-[#041a24] dark:hover:text-text"
+                className="absolute right-2 top-2 text-black/40 dark:text-slate-400 hover:text-[#041a24] dark:hover:text-white"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -482,11 +482,11 @@ export function ProductsMainView({
 
           {/* Sales Activity Select */}
           <div className="flex items-center gap-1.5 font-mono text-xs">
-            <span className="text-[#41555f] dark:text-text-muted whitespace-nowrap">Sales:</span>
+            <span className="text-[#41555f] dark:text-slate-300 whitespace-nowrap">Sales:</span>
             <select
               value={soldFilter}
               onChange={(e) => updateUrl({ sold: e.target.value === 'all' ? null : e.target.value, page: '1' })}
-              className="rounded-[2px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 px-2 py-1.5 text-xs text-[#041a24] dark:text-text focus:border-[#041a24] dark:focus:border-border-control focus:outline-none cursor-pointer"
+              className="rounded-[2px] border border-black/15 dark:border-white/20 bg-white dark:bg-surface-1 px-2 py-1.5 text-xs text-[#041a24] dark:text-white focus:border-[#041a24] dark:focus:border-white focus:outline-none cursor-pointer"
             >
               <option value="all">All</option>
               <option value="sold">Has sales</option>
@@ -526,13 +526,13 @@ export function ProductsMainView({
             {activeView === 'products' ? (
               // PRODUCTS VIEW (Section 9.4)
               paginatedProducts.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#41555f] dark:text-text-muted space-y-2 font-mono">
-                  <p className="font-semibold text-[#041a24] dark:text-text">No products match your filters.</p>
+                <div className="p-8 text-center text-xs text-[#41555f] dark:text-slate-300 space-y-2 font-mono">
+                  <p className="font-semibold text-[#041a24] dark:text-white">No products match your filters.</p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleClearAllFilters}
-                    className="rounded-[2px] border-black/15 text-xs"
+                    className="rounded-[2px] border-black/15 dark:border-white/20 text-xs dark:text-white"
                   >
                     Clear filters
                   </Button>
@@ -541,7 +541,7 @@ export function ProductsMainView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
+                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2 text-[#41555f] dark:text-white font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('prodCode')}
                           className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -550,9 +550,9 @@ export function ProductsMainView({
                             <span>Product Code</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'prodCode' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -565,9 +565,9 @@ export function ProductsMainView({
                             <span>Description</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'description' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -580,9 +580,9 @@ export function ProductsMainView({
                             <span>Unit</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'unit' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -595,9 +595,9 @@ export function ProductsMainView({
                             <span>Unit price</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'currentUnitPrice' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900" /> : <ArrowDown className="h-3 w-3 text-slate-900" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -623,43 +623,43 @@ export function ProductsMainView({
                           >
                             <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
                               <div
-                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-primary-bg origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
                                   isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
                                 }`}
                               />
-                              <span className="inline-block font-mono font-semibold text-[#0F172A] dark:text-text transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                              <span className="inline-block font-mono font-semibold text-[#0F172A] dark:text-white transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
                                 {p.prodCode}
                               </span>
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#0F172A] dark:text-text leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
+                              <div className="font-semibold text-[#0F172A] dark:text-white leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {title}
                               </div>
                               {detail && (
-                                <div className="text-[11px] text-[#41555f] dark:text-text-muted leading-snug line-clamp-1 mt-0.5">
+                                <div className="text-[11px] text-[#41555f] dark:text-slate-300 leading-snug line-clamp-1 mt-0.5">
                                   {detail}
                                 </div>
                               )}
-                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-text-muted mt-0.5">
+                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-slate-400 mt-0.5">
                                 {family} &bull; {familyName}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-xs text-[#41555f] dark:text-text-muted border border-transparent bg-transparent transition-[transform,background-color,border-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 group-hover/row:bg-white dark:group-hover/row:bg-surface-2 group-hover/row:border-[#CBD5E1] dark:group-hover/row:border-border-control group-hover/row:shadow-2xs">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-xs text-[#41555f] dark:text-slate-200 border border-transparent bg-transparent transition-[transform,background-color,border-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 group-hover/row:bg-white dark:group-hover/row:bg-surface-3 group-hover/row:border-[#CBD5E1] dark:group-hover/row:border-white/30 group-hover/row:shadow-2xs">
                                 {p.unit}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               {p.currentUnitPrice !== null ? (
-                                <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-text inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
+                                <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-white inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
                                   <span>{formatPHP(p.currentUnitPrice)}</span>
-                                  <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-text-faint transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-text">
+                                  <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-white">
                                     {' '}
                                     / {p.unit}
                                   </span>
                                 </div>
                               ) : (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] font-mono text-[9px] bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-text-muted border border-black/10 dark:border-border">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] font-mono text-[9px] bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-slate-300 border border-black/10 dark:border-border">
                                   No price record
                                 </span>
                               )}
@@ -674,12 +674,13 @@ export function ProductsMainView({
             ) : (
               // PRICE HISTORY VIEW (Section 9.4)
               paginatedPriceHistory.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#52615B] space-y-2">
-                  <p className="font-semibold text-[#17231F]">No price records match your filters.</p>
+                <div className="p-8 text-center text-xs text-[#52615B] dark:text-slate-300 space-y-2">
+                  <p className="font-semibold text-[#17231F] dark:text-white">No price records match your filters.</p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleClearAllFilters}
+                    className="rounded-[2px] border-black/15 dark:border-white/20 text-xs dark:text-white"
                   >
                     Clear filters
                   </Button>
@@ -688,7 +689,7 @@ export function ProductsMainView({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-sans">
                     <thead>
-                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
+                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2 text-[#41555f] dark:text-white font-mono text-[10px] uppercase tracking-wider">
                         <th
                           onClick={() => handleSort('effDate')}
                           className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
@@ -697,9 +698,9 @@ export function ProductsMainView({
                             <span>Effective date</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'effDate' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -712,9 +713,9 @@ export function ProductsMainView({
                             <span>Product Code</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'prodCode' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -727,9 +728,9 @@ export function ProductsMainView({
                             <span>Description</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'description' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -742,9 +743,9 @@ export function ProductsMainView({
                             <span>Unit price</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'unitPrice' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -757,9 +758,9 @@ export function ProductsMainView({
                             <span>Status</span>
                             <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
                               {sortCol === 'status' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-text" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-text" />
+                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500" />
+                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
                               )}
                             </span>
                           </div>
@@ -785,34 +786,34 @@ export function ProductsMainView({
                           >
                             <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
                               <div
-                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-primary-bg origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
+                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
                                   isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
                                 }`}
                               />
-                              <span className="inline-block font-mono text-xs text-[#0F172A] dark:text-text transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
+                              <span className="inline-block font-mono text-xs text-[#0F172A] dark:text-white transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
                                 {formatDate(h.effDate)}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#0F172A] dark:text-text whitespace-nowrap">
+                            <td className="py-2.5 px-3 font-mono font-semibold text-[#0F172A] dark:text-white whitespace-nowrap">
                               {h.prodCode}
                             </td>
                             <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#0F172A] dark:text-text leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
+                              <div className="font-semibold text-[#0F172A] dark:text-white leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
                                 {title}
                               </div>
                               {detail && (
-                                <div className="text-[11px] text-[#41555f] dark:text-text-muted line-clamp-1 mt-0.5">
+                                <div className="text-[11px] text-[#41555f] dark:text-slate-300 line-clamp-1 mt-0.5">
                                   {detail}
                                 </div>
                               )}
-                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-text-muted mt-0.5">
+                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-slate-400 mt-0.5">
                                 {hFamily} &bull; {hFamilyName}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
-                              <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-text inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
+                              <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-white inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
                                 <span>{formatPHP(h.unitPrice)}</span>
-                                <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-text-faint transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-text">
+                                <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-white">
                                   {' '}
                                   / {h.unit}
                                 </span>
@@ -821,13 +822,13 @@ export function ProductsMainView({
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               <span className="inline-flex transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5">
                                 {h.status === 'Current' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#0F172A] dark:bg-primary-bg px-1.5 py-0.5 text-[10px] font-mono text-white dark:text-primary-fg">
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#0F172A] dark:bg-white px-1.5 py-0.5 text-[10px] font-mono text-white dark:text-slate-900 font-semibold">
                                     <CheckCircle2 className="h-3 w-3" />
                                     Current
                                   </span>
                                 )}
                                 {h.status === 'Past' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 dark:bg-surface-2 border border-black/10 dark:border-border px-1.5 py-0.5 text-[10px] font-mono text-[#41555f] dark:text-text-muted">
+                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 dark:bg-surface-2 border border-black/10 dark:border-border px-1.5 py-0.5 text-[10px] font-mono text-[#41555f] dark:text-slate-300">
                                     <Clock className="h-3 w-3" />
                                     Past
                                   </span>
@@ -858,11 +859,11 @@ export function ProductsMainView({
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[#52615B] dark:text-text-muted">Rows per page:</span>
+                    <span className="text-[11px] text-[#52615B] dark:text-slate-400">Rows per page:</span>
                     <select
                       value={pageSize}
                       onChange={(e) => updateUrl({ size: e.target.value, page: '1' })}
-                      className="rounded-[2px] border border-[#CCD5CD] dark:border-border bg-white dark:bg-surface-1 px-1.5 py-0.5 text-[11px] text-[#17231F] dark:text-text focus:outline-none"
+                      className="rounded-[2px] border border-[#CCD5CD] dark:border-border bg-white dark:bg-surface-1 px-1.5 py-0.5 text-[11px] text-[#17231F] dark:text-white focus:outline-none"
                     >
                       <option value="10">10</option>
                       <option value="25">25</option>
@@ -870,7 +871,7 @@ export function ProductsMainView({
                     </select>
                   </div>
 
-                  <span className="text-[11px] text-[#52615B]">
+                  <span className="text-[11px] text-[#52615B] dark:text-slate-400">
                     {safePage} / {totalPages}
                   </span>
 
@@ -880,7 +881,7 @@ export function ProductsMainView({
                       size="sm"
                       onClick={() => updateUrl({ page: String(safePage - 1) })}
                       disabled={safePage <= 1}
-                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px]"
+                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px] dark:border-border dark:text-white"
                       aria-label="Previous page"
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
@@ -890,7 +891,7 @@ export function ProductsMainView({
                       size="sm"
                       onClick={() => updateUrl({ page: String(safePage + 1) })}
                       disabled={safePage >= totalPages}
-                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px]"
+                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px] dark:border-border dark:text-white"
                       aria-label="Next page"
                     >
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -928,51 +929,51 @@ export function ProductsMainView({
       )}
 
       {/* 9.7 Slim Bottom Summary KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[#DDE3DE] font-sans">
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[#DDE3DE] dark:border-border font-sans">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Products
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
             {metrics.totalProducts}
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             in {metrics.totalFamilies} families
           </div>
         </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Price records
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
             {metrics.totalPriceRecords}
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             {metrics.priceChangesRecorded} price changes recorded
           </div>
         </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Units sold
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
-            {metrics.totalUnitsSold.toLocaleString()} <span className="text-base font-normal text-[#52615B]">pc</span>
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
+            {metrics.totalUnitsSold.toLocaleString()} <span className="text-base font-normal text-[#52615B] dark:text-slate-400">pc</span>
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             from sale lines
           </div>
         </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Sales revenue
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
             {formatPHP(metrics.totalSalesRevenue)}
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             at the price on each sale date
           </div>
         </div>

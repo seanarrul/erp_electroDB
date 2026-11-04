@@ -351,15 +351,15 @@ export function SalesMainView({
   return (
     <div className="space-y-6">
       {/* 7.1 Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-black/10 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-black/10 dark:border-border pb-4">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#41555f] block">
+          <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#41555f] dark:text-slate-400 block">
             ElectronDB G4 HopeERD &bull; Sales
           </span>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-normal tracking-tight text-[#041a24] mt-0.5">
+          <h1 className="font-editorial text-2xl sm:text-3xl font-normal tracking-tight text-[#041a24] dark:text-white mt-0.5">
             Sales &amp; Orders
           </h1>
-          <p className="text-xs text-[#41555f] mt-0.5 font-sans">
+          <p className="text-xs text-[#41555f] dark:text-slate-300 mt-0.5 font-sans">
             Operational sales transactions, order summaries, and line item details.
           </p>
         </div>

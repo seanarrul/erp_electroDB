@@ -22,6 +22,7 @@ const config: Config = {
         fg: 'var(--fg)',
         'fg-muted': 'var(--fg-muted)',
         'fg-subtle': 'var(--fg-subtle)',
+        text: 'var(--text)',
         'text-primary': 'var(--text)',
         'text-muted': 'var(--text-muted)',
         'text-faint': 'var(--text-faint)',

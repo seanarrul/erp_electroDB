@@ -68,25 +68,25 @@
   --surface-2: #1B2430;       /* Table header, row hover, inputs */
   --surface-3: #242E3D;       /* Popovers, menus, modals */
 
-  /* Foreground Ink Tones (Crisp WCAG AA contrast) */
-  --fg: #E6EDF3;              /* Primary text (15.5:1 on --bg) */
-  --fg-muted: #CBD5E1;        /* Secondary reading text (8.8:1) */
-  --fg-subtle: #94A3B8;       /* Metadata, timestamps, captions (6.4:1) */
-  --text: #E6EDF3;
-  --text-muted: #94A3B8;
-  --text-faint: #64748B;
+  /* Foreground Ink Tones (Pure White & High-Contrast Slates) */
+  --fg: #FFFFFF;              /* Pure white primary text */
+  --fg-muted: #E2E8F0;        /* Secondary reading text */
+  --fg-subtle: #94A3B8;       /* Metadata, timestamps, captions */
+  --text: #FFFFFF;            /* Pure white primary text */
+  --text-muted: #CBD5E1;       /* Crisp light slate */
+  --text-faint: #94A3B8;       /* Legible muted captions */
 
   /* Brand, Primary & Accents (Lightened for dark contrast) */
   --accent: #58A6FF;
   --accent-dim: rgba(88, 166, 255, 0.12);
   --accent-soft: rgba(88, 166, 255, 0.16);
-  --primary-bg: #E6EDF3;      /* Inverted: light button on dark */
+  --primary-bg: #FFFFFF;      /* Inverted: pure white button on dark */
   --primary-fg: #0B1117;      /* Dark ink text on light button */
 
   /* Hairlines & Borders */
-  --border: rgba(255, 255, 255, 0.12);
-  --border-control: #4B5A6D;  /* Control outline: passes 3:1 on all surfaces */
-  --border-strong: #E6EDF3;
+  --border: rgba(255, 255, 255, 0.16);
+  --border-control: rgba(255, 255, 255, 0.28);  /* Control outline: passes 3:1 on all surfaces */
+  --border-strong: #FFFFFF;
   --border-hover: #58A6FF;
 
   /* Status Colors (Calm & Tuned for Dark Backgrounds) */
@@ -108,6 +108,62 @@
   --module-products: rgba(34, 197, 94, 0.25);
   --module-customers: rgba(234, 179, 8, 0.25);
   --module-sales: rgba(239, 68, 68, 0.25);
+}
+
+/* ============================================================================
+   HIGH-CONTRAST DARK MODE OVERRIDES
+   Guarantees pure white headings, crisp text, visible inputs, and dark table headers
+   ============================================================================ */
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] .text-\[\#041a24\],
+:root[data-theme="dark"] .text-\[\#0F172A\],
+:root[data-theme="dark"] .text-\[\#17231F\],
+:root[data-theme="dark"] .text-\[\#0C1418\],
+:root[data-theme="dark"] .text-slate-900,
+:root[data-theme="dark"] .text-black,
+:root[data-theme="dark"] .text-text {
+  color: #FFFFFF !important;
+}
+
+:root[data-theme="dark"] .text-\[\#41555f\],
+:root[data-theme="dark"] .text-\[\#52615B\],
+:root[data-theme="dark"] .text-\[\#7A8781\],
+:root[data-theme="dark"] .text-slate-500,
+:root[data-theme="dark"] .text-text-muted {
+  color: #CBD5E1 !important;
+}
+
+:root[data-theme="dark"] thead tr,
+:root[data-theme="dark"] thead th,
+:root[data-theme="dark"] .bg-\[\#F4F4F0\],
+:root[data-theme="dark"] .bg-\[\#F4F4F0\]\/70,
+:root[data-theme="dark"] .bg-\[\#F3F2EE\],
+:root[data-theme="dark"] .bg-\[\#F4F4F5\] {
+  background-color: var(--surface-2) !important;
+  color: #FFFFFF !important;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background-color: var(--surface-1) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+:root[data-theme="dark"] button.bg-white,
+:root[data-theme="dark"] button[class*="border-black/15"],
+:root[data-theme="dark"] button[class*="border-black/10"] {
+  background-color: var(--surface-2) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
 * {

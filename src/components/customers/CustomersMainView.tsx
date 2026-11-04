@@ -132,12 +132,12 @@ export function CustomersMainView({
   return (
     <div className="space-y-6 font-sans">
       {/* ── Stitch Masthead (Matching Screen 3bd9ff66a0d8417dbe2cfcd0abe72180) ── */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 border-b border-black/10 pb-5">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 border-b border-black/10 dark:border-border pb-5">
         <div className="space-y-1.5 max-w-2xl">
-          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#041a24] tracking-tight leading-tight">
+          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#041a24] dark:text-white tracking-tight leading-tight">
             Customers &amp; Payments
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-[#41555f] leading-relaxed">
+          <p className="font-sans text-xs sm:text-sm text-[#41555f] dark:text-slate-300 leading-relaxed">
             Directory of accounts, structured credit limits, payment schedules, and verified official receipt settlements.
           </p>
         </div>

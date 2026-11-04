@@ -73,9 +73,9 @@ export function ProductDetailPanel({
 
   if (!product) {
     return (
-      <div className="rounded-[4px] border border-[rgba(4,26,36,0.14)] bg-white p-8 text-center text-xs text-[#41555f] space-y-2">
-        <Boxes className="h-8 w-8 mx-auto text-[rgba(4,26,36,0.3)]" />
-        <p className="font-semibold text-[#17231F]">No product selected</p>
+      <div className="rounded-[4px] border border-[rgba(4,26,36,0.14)] dark:border-border bg-white dark:bg-surface-1 p-8 text-center text-xs text-[#41555f] dark:text-slate-300 space-y-2">
+        <Boxes className="h-8 w-8 mx-auto text-[rgba(4,26,36,0.3)] dark:text-slate-500" />
+        <p className="font-semibold text-[#17231F] dark:text-white">No product selected</p>
         <p>Select a product to see its price history and sales summary.</p>
       </div>
     );
