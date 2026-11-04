@@ -43,6 +43,13 @@ export function resolveTheme(pref: ThemePref): 'light' | 'dark' {
 }
 
 /**
+ * Returns the currently active resolved theme ('light' | 'dark').
+ */
+export function getResolvedTheme(): 'light' | 'dark' {
+  return resolveTheme(getPref());
+}
+
+/**
  * Temporarily disables CSS transitions across all elements during theme swap
  * to prevent unsightly color-fading lag, then restores them on next frame.
  */

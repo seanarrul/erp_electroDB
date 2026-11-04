@@ -154,6 +154,38 @@ Invoices and receipts must always print on clean white paper with pure black ink
 }
 ```
 
+### 4.5 Modern Pill Capsule Toggle Switch (Shutterstock Reference)
+The primary top-bar navigation toggle features a modern, tactile pill capsule toggle switch matching the modern dual-icon design pattern:
+
+```
+[ Light Mode State ]
+┌───────────────────────────────┐
+│  ( ☀️ )                 🌙   │  <-- Track: #E2E8F0 | Thumb: Pure white circle (#FFF) over Sun
+└───────────────────────────────┘
+
+[ Dark Mode State ]
+┌───────────────────────────────┐
+│     ☀️                 ( 🌙 ) │  <-- Track: #0A1017 | Thumb: Dark slate circle (#243040) over Moon
+└───────────────────────────────┘
+```
+
+#### Anatomical Breakdown & Geometry:
+1. **Outer Capsule Track:**
+   - Pill dimensions: `h-8 w-[60px] rounded-full p-1`.
+   - **Light Mode Track:** `bg-[#E2E8F0] border border-black/10`.
+   - **Dark Mode Track:** `bg-[#0A1017] border border-white/10`.
+2. **Dual-Icon Fixed Matrix:**
+   - Left Slot: Sun icon (`<Sun className="h-3.5 w-3.5 stroke-[2]" />`), dark ink (`text-[#0F172A]`) when active, muted slate (`text-slate-500`) when inactive.
+   - Right Slot: Moon icon (`<Moon className="h-3.5 w-3.5 stroke-[2]" />`), crisp white (`text-[#E6EDF3]`) when active, muted slate (`text-slate-400`) when inactive.
+3. **Sliding Indicator Thumb (GPU-Composited):**
+   - Circle dimensions: `h-6 w-6 rounded-full`.
+   - Sliding translation: `translate-x-0` (Light) $\leftrightarrow$ `translate-x-[28px]` (Dark).
+   - Easing curve: `transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]`.
+   - Tactile feedback: `active:scale-95` on click or press.
+4. **Accessibility:**
+   - ARIA: `role="switch"`, `aria-checked={isDark}`, `aria-label="Switch to light/dark mode"`.
+   - Keyboard: Interactive via `Space`, `Enter`, and `ArrowLeft` (Light) / `ArrowRight` (Dark).
+
 ---
 
 ## 5. Build & Typecheck Certification

@@ -99,8 +99,8 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
           <span>{dateString}</span>
         </div>
 
-        {/* Segmented Theme Toggle */}
-        <ThemeToggle variant="segmented" />
+        {/* Modern Pill Capsule Theme Toggle */}
+        <ThemeToggle variant="pill" />
 
         {/* Notification Bell */}
         <button
