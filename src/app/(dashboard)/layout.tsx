@@ -28,13 +28,13 @@ export default async function DashboardLayout({
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg">
           <Header userRole={user.role} userName={displayName} />
           <main className="flex-1 overflow-y-auto flex flex-col justify-between scroll-smooth">
-            <div className="max-w-[1240px] mx-auto w-full p-4 sm:p-6 md:p-8 flex-1">
+            <div className="max-w-[1440px] mx-auto w-full p-4 sm:p-6 md:p-8 flex-1">
               {children}
             </div>
 
             {/* Global Broadsheet Footer */}
             <footer className="w-full mt-auto bg-[#041a24] dark:bg-surface-1 text-white/80 dark:text-text-muted border-t border-[#041a24] dark:border-border select-none shrink-0 transition-colors duration-150">
-              <div className="max-w-[1240px] mx-auto px-4 sm:px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
+              <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
                 <div className="flex items-center space-x-2.5">
                   <span className="font-editorial italic text-base text-white dark:text-text font-normal">
                     ElectronDB

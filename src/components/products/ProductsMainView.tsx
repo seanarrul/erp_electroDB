@@ -12,6 +12,7 @@ const AddProductModal = dynamic(
   () => import('./AddProductModal').then((mod) => mod.AddProductModal),
   { ssr: false }
 );
+import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 import {
   splitDescription,
@@ -410,7 +411,10 @@ export function ProductsMainView({
         </div>
       </div>
 
-      {/* Filter and View Controls Bar */}
+      {/* 2-Column Desktop Layout: Main Content (Left) + Right-Side Portrait KPI Panel (Right) */}
+      <div className="flex flex-col xl:flex-row items-start gap-6">
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Filter and View Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
         {/* Left: View Tabs */}
         <div className="inline-flex p-1 bg-[#F4F4F0] dark:bg-surface-2 rounded-[2px] border border-black/10 dark:border-white/15 gap-1 font-mono text-xs">
@@ -928,55 +932,45 @@ export function ProductsMainView({
         />
       )}
 
-      {/* 9.7 Slim Bottom Summary KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[#DDE3DE] dark:border-border font-sans">
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Products
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {metrics.totalProducts}
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            in {metrics.totalFamilies} families
-          </div>
-        </div>
+      </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Price records
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {metrics.totalPriceRecords}
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            {metrics.priceChangesRecorded} price changes recorded
-          </div>
-        </div>
-
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Units sold
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {metrics.totalUnitsSold.toLocaleString()} <span className="text-base font-normal text-[#52615B] dark:text-slate-400">pc</span>
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            from sale lines
-          </div>
-        </div>
-
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Sales revenue
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {formatPHP(metrics.totalSalesRevenue)}
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            at the price on each sale date
-          </div>
-        </div>
+        {/* Right-Side Portrait KPI Monitoring Panel */}
+        <aside className="w-full xl:w-[276px] shrink-0">
+          <RightSideKpiPanel
+            title="CATALOG METRICS"
+            cards={[
+              {
+                id: 'products',
+                title: 'PRODUCTS',
+                value: metrics.totalProducts,
+                subtext: `In ${metrics.totalFamilies} families`,
+                icon: Package,
+              },
+              {
+                id: 'price-records',
+                title: 'PRICE RECORDS',
+                value: metrics.totalPriceRecords,
+                subtext: `${metrics.priceChangesRecorded} price changes recorded`,
+                icon: History,
+              },
+              {
+                id: 'units-sold',
+                title: 'UNITS SOLD',
+                value: metrics.totalUnitsSold.toLocaleString(),
+                unit: 'pc',
+                subtext: 'From sale lines',
+                icon: Layers,
+              },
+              {
+                id: 'sales-revenue',
+                title: 'SALES REVENUE',
+                value: formatPHP(metrics.totalSalesRevenue),
+                subtext: 'At the price on each sale date',
+                icon: DollarSign,
+              },
+            ]}
+          />
+        </aside>
       </div>
 
       {/* Add Product Modal (Admin only) */}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Modal } from '@/components/ui/Modal';
 import { formatPHP } from '@/lib/utils';
 import type { HomeKPIData } from '@/lib/data/home';
+import { RightSideKpiPanel, type KpiCardItem } from '@/components/ui/RightSideKpiPanel';
 import {
   Calculator,
   ExternalLink,
@@ -25,69 +26,52 @@ type AuditCardType = 'sales' | 'transactions' | 'payments' | 'employees' | null;
 export function DashboardKpis({ kpis }: DashboardKpisProps) {
   const [activeAudit, setActiveAudit] = useState<AuditCardType>(null);
 
-  const cards = [
+  const cards: KpiCardItem[] = [
     {
-      id: 'sales' as const,
+      id: 'sales',
       title: 'TOTAL SALES',
       value: kpis.totalSalesFormatted,
-      subtext: kpis.salesGrowth || 'Sum of 15 transactions • Click to audit',
+      subtext: 'Sum of 15 transactions • Click to audit',
       icon: ShoppingBag,
+      onClick: () => setActiveAudit('sales'),
+      clickable: true,
     },
     {
-      id: 'transactions' as const,
+      id: 'transactions',
       title: 'TOTAL TRANSACTIONS',
       value: kpis.totalTransactions.toLocaleString(),
-      subtext: kpis.transactionsGrowth || 'Across 5 registered customers',
+      subtext: 'Across 5 registered customers',
       icon: Calculator,
+      onClick: () => setActiveAudit('transactions'),
+      clickable: true,
     },
     {
-      id: 'payments' as const,
+      id: 'payments',
       title: 'TOTAL PAYMENTS',
       value: kpis.totalPaymentsFormatted,
-      subtext: kpis.paymentsGrowth || '14 receipts • ₱480k open balance',
+      subtext: '14 receipts recorded',
       icon: Receipt,
+      onClick: () => setActiveAudit('payments'),
+      clickable: true,
     },
     {
-      id: 'employees' as const,
+      id: 'employees',
       title: 'ACTIVE EMPLOYEES',
       value: kpis.activeEmployees.toString(),
-      subtext: kpis.employeesGrowth || '8 active of 10 staff (2 separated)',
+      subtext: '8 active staff members',
       icon: Users,
+      onClick: () => setActiveAudit('employees'),
+      clickable: true,
     },
   ];
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 font-sans">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <button
-              key={card.id}
-              type="button"
-              onClick={() => setActiveAudit(card.id)}
-              className="text-left group relative rounded-[4px] border border-border hover:border-black/30 dark:hover:border-white/40 bg-surface-1 hover:bg-[#FAFAFA] dark:hover:bg-surface-2 p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
-              title="Click to view full calculation breakdown and SQL audit"
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-text-faint group-hover:text-text transition-colors">
-                  {card.title}
-                </div>
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono text-[#041a24] dark:text-white flex items-center gap-1 bg-black/5 dark:bg-surface-3 px-1.5 py-0.5 rounded-[2px]">
-                  <span>Audit</span>
-                  <ExternalLink className="w-2.5 h-2.5" />
-                </span>
-              </div>
-              <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-text group-hover:translate-x-0.5 transition-transform">
-                {card.value}
-              </div>
-              <div className="mt-1 text-xs text-text-muted flex items-center justify-between">
-                <span className="truncate">{card.subtext}</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      <RightSideKpiPanel
+        title="DATABASE METRICS"
+        subtitle="100% AUDITED"
+        cards={cards}
+      />
 
       {/* 1. TOTAL SALES AUDIT MODAL */}
       <Modal

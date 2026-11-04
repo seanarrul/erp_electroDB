@@ -11,6 +11,7 @@ const NewSaleModal = dynamic(
   () => import('./NewSaleModal').then((mod) => mod.NewSaleModal),
   { ssr: false }
 );
+import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 import type {
   SalesSummaryItem,
@@ -31,6 +32,10 @@ import {
   X,
   AlertCircle,
   FileSpreadsheet,
+  ShoppingBag,
+  Layers,
+  DollarSign,
+  Users,
 } from 'lucide-react';
 
 interface SalesMainViewProps {
@@ -415,7 +420,10 @@ export function SalesMainView({
         </div>
       </div>
 
-      {/* View Tabs & Search Filters Bar */}
+      {/* 2-Column Desktop Layout: Main Content (Left) + Right-Side Portrait KPI Panel (Right) */}
+      <div className="flex flex-col xl:flex-row items-start gap-6">
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* View Tabs & Search Filters Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
         {/* Left: View Tabs */}
         <div className="inline-flex p-1 bg-[#F4F4F0] rounded-[2px] border border-black/10 gap-1 font-mono text-xs">
@@ -890,55 +898,45 @@ export function SalesMainView({
         />
       )}
 
-      {/* Slim Bottom Summary KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[#DDE3DE] dark:border-border font-sans">
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Sales
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {metrics.totalSales}
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            across {metrics.totalCustomersCount} customers
-          </div>
-        </div>
+      </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Items sold
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {metrics.totalItemsSold.toLocaleString()} <span className="text-base font-normal text-[#52615B] dark:text-slate-400">pc</span>
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            across {metrics.totalDistinctProducts} products
-          </div>
-        </div>
-
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Sales revenue
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {formatPHP(metrics.totalRevenue)}
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            sum of calculated line amounts
-          </div>
-        </div>
-
-        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
-            Sales reps
-          </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
-            {metrics.activeRepsCount}
-          </div>
-          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
-            in {metrics.sellingDepartmentsCount} selling departments
-          </div>
-        </div>
+        {/* Right-Side Portrait KPI Monitoring Panel */}
+        <aside className="w-full xl:w-[276px] shrink-0">
+          <RightSideKpiPanel
+            title="SALES METRICS"
+            cards={[
+              {
+                id: 'sales',
+                title: 'SALES',
+                value: metrics.totalSales,
+                subtext: `Across ${metrics.totalCustomersCount} customers`,
+                icon: ShoppingBag,
+              },
+              {
+                id: 'items-sold',
+                title: 'ITEMS SOLD',
+                value: metrics.totalItemsSold.toLocaleString(),
+                unit: 'pc',
+                subtext: `Across ${metrics.totalDistinctProducts} products`,
+                icon: Layers,
+              },
+              {
+                id: 'sales-revenue',
+                title: 'SALES REVENUE',
+                value: formatPHP(metrics.totalRevenue),
+                subtext: 'Sum of calculated line amounts',
+                icon: DollarSign,
+              },
+              {
+                id: 'sales-reps',
+                title: 'SALES REPS',
+                value: metrics.activeRepsCount,
+                subtext: `In ${metrics.sellingDepartmentsCount} selling departments`,
+                icon: Users,
+              },
+            ]}
+          />
+        </aside>
       </div>
 
       {/* New Sale Modal (Admin & Sales) */}

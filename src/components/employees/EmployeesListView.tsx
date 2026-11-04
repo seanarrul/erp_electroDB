@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 
 const AddEmployeeModal = dynamic(
@@ -33,6 +34,8 @@ import {
   ArrowUp,
   ArrowDown,
   Users,
+  UserCheck,
+  Briefcase,
 } from 'lucide-react';
 
 interface EmployeesListViewProps {
@@ -338,7 +341,10 @@ export function EmployeesListView({
         </select>
       </div>
 
-      {/* Main Two-Column Layout */}
+      {/* 2-Column Desktop Layout: Main Content (Left) + Right-Side Portrait KPI Panel (Right) */}
+      <div className="flex flex-col xl:flex-row items-start gap-6">
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Main Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start font-sans">
         {/* 2. Department Sections (Left Column, Desktop) */}
         <div className="hidden lg:block lg:col-span-1">
@@ -701,6 +707,46 @@ export function EmployeesListView({
             )}
           </div>
         </div>
+      </div>
+
+        </div>
+
+        {/* Right-Side Portrait KPI Monitoring Panel */}
+        <aside className="w-full xl:w-[276px] shrink-0">
+          <RightSideKpiPanel
+            title="STAFFING METRICS"
+            cards={[
+              {
+                id: 'total-employees',
+                title: 'TOTAL HEADCOUNT',
+                value: initialEmployees.length,
+                subtext: 'Staff members on record',
+                icon: Users,
+              },
+              {
+                id: 'active-staff',
+                title: 'ACTIVE EMPLOYEES',
+                value: totalActiveCount,
+                subtext: `${initialEmployees.length - totalActiveCount} separated staff`,
+                icon: UserCheck,
+              },
+              {
+                id: 'departments',
+                title: 'DEPARTMENTS',
+                value: departments.length,
+                subtext: 'Active operating units',
+                icon: Building2,
+              },
+              {
+                id: 'job-positions',
+                title: 'JOB POSITIONS',
+                value: jobLookups.length,
+                subtext: 'Defined career roles',
+                icon: Briefcase,
+              },
+            ]}
+          />
+        </aside>
       </div>
 
       {/* Modals */}

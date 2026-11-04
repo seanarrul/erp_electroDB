@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { RecordPaymentDialog } from '@/components/payments/RecordPaymentDialog';
+import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
 import { formatPHP, formatDate } from '@/lib/utils';
 import type {
   CustomerOverviewItem,
@@ -17,6 +18,9 @@ import {
   Receipt,
   ExternalLink,
   ArrowUpRight,
+  Users,
+  DollarSign,
+  CreditCard,
 } from 'lucide-react';
 
 interface CustomersMainViewProps {
@@ -141,21 +145,12 @@ export function CustomersMainView({
             Directory of accounts, structured credit limits, payment schedules, and verified official receipt settlements.
           </p>
         </div>
-
-        {/* Top Right KPI Stat Boxes */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 px-4 py-2 text-center min-w-[125px] shadow-2xs">
-            <span className="block font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-[#41555f] dark:text-text-muted">
-              TOTAL DIRECTORY
-            </span>
-            <span className="block font-sans text-base sm:text-lg font-bold text-[#041a24] dark:text-text mt-0.5 tabular-nums">
-              {metrics?.totalCustomers || initialCustomers.length} Accounts
-            </span>
-          </div>
-        </div>
       </div>
 
-      {/* ── Master-Detail Grid Layout ── */}
+      {/* 2-Column Desktop Layout: Main Master-Detail Area (Left) + Right-Side Portrait KPI Panel (Right) */}
+      <div className="flex flex-col xl:flex-row items-start gap-6">
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* ── Master-Detail Grid Layout ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* ── Left Column (Customer Index) ── */}
         <div className="lg:col-span-4 space-y-3">
@@ -426,6 +421,46 @@ export function CustomersMainView({
             </div>
           )}
         </div>
+      </div>
+
+        </div>
+
+        {/* Right-Side Portrait KPI Monitoring Panel */}
+        <aside className="w-full xl:w-[276px] shrink-0">
+          <RightSideKpiPanel
+            title="CUSTOMER METRICS"
+            cards={[
+              {
+                id: 'customers',
+                title: 'TOTAL DIRECTORY',
+                value: metrics?.totalCustomers || initialCustomers.length,
+                subtext: '5 registered accounts',
+                icon: Users,
+              },
+              {
+                id: 'payments',
+                title: 'TOTAL PAYMENTS',
+                value: metrics?.totalPayments || initialPayments.length,
+                subtext: '14 receipts recorded',
+                icon: Receipt,
+              },
+              {
+                id: 'collected',
+                title: 'TOTAL COLLECTED',
+                value: formatPHP(metrics?.totalCollected || customerTotalPaid),
+                subtext: 'Settled receipts sum',
+                icon: DollarSign,
+              },
+              {
+                id: 'terms',
+                title: 'PAYMENT TERMS',
+                value: metrics?.totalTermsCount || 4,
+                subtext: 'Active payment schedules',
+                icon: CreditCard,
+              },
+            ]}
+          />
+        </aside>
       </div>
 
       {/* Shared Record Payment Dialog */}
