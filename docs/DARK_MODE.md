@@ -196,6 +196,21 @@ To resolve arbitrary color contrast issues where legacy utility classes (e.g. `t
    - **Action Buttons & Inputs:** Outline buttons (`Export CSV`), search inputs, and dropdowns inherit `var(--surface-1)` / `var(--surface-2)` with crisp `#FFFFFF` text and visible border hairlines (`rgba(255, 255, 255, 0.25)`).
    - **Primary Action Buttons (`+ Add Product`):** Render as crisp inverted white pills (`bg-white text-slate-900`) for maximum visual pop.
 
+### 4.7 Pagination Bars, KPI Cards & ERD Schema Surface Containment
+To fix residual light surface leaks in complex views:
+1. **Pagination Footers (`EmployeesListView`, `SalesMainView`, `ProductsMainView`):**
+   - Transformed previously bright white footers (`bg-[#FAFBFA]`) into dark inset surface bars (`dark:bg-surface-2` / `#1B2430`).
+   - High-contrast text: Page indices and counters render in readable silver (`#CBD5E1`), dropdown selects render in dark surface (`dark:bg-surface-1`) with pure white text.
+2. **Bottom KPI Summary Strips (`/products` & `/sales`):**
+   - Inverted hardcoded cards (`border-[#DDE3DE] bg-white`) to dark surface cards (`dark:bg-surface-1 dark:border-border`).
+   - Metric numerals render in pure white (`#FFFFFF`) with secondary descriptions in light slate (`#CBD5E1`).
+3. **Canonical Relational ERD Architecture Card (`/` route):**
+   - Card wrapper: Upgraded from static `bg-white` to `dark:bg-surface-1 dark:border-border`.
+   - SVG Table Nodes: Node bodies fill with `var(--surface-1)` with pure white attribute labels (`dark:fill-white`) and vivid key indicators (`dark:fill-[#3ECF8E]`).
+   - Cardinality Notations: Crow's foot marks and circles render with dark stroke (`dark:stroke-slate-300`) and hollow inset fills (`dark:fill-surface-1`).
+4. **Global Container Catch-All:**
+   - `:root[data-theme="dark"] .bg-white:not(button):not([class*="dark:bg-white"])` guarantees that any nested panel or card without explicit dark classes automatically absorbs `var(--surface-1)`.
+
 ---
 
 ## 5. Build & Typecheck Certification

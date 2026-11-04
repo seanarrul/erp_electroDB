@@ -205,22 +205,22 @@ function renderCardinalityMark(
   if (dir === 'left') {
     if (type === 'zero_many') {
       return (
-        <g stroke="#17231F" strokeWidth="1.5" fill="none">
-          <circle cx={x - 14} cy={y} r="3" fill="#ffffff" />
+        <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
+          <circle cx={x - 14} cy={y} r="3" className="fill-white dark:fill-surface-1" />
           <path d={`M ${x - 9} ${y} L ${x} ${y - 6} M ${x - 9} ${y} L ${x} ${y + 6}`} />
         </g>
       );
     }
     if (type === 'one_many') {
       return (
-        <g stroke="#17231F" strokeWidth="1.5" fill="none">
+        <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
           <line x1={x - 14} y1={y - 5} x2={x - 14} y2={y + 5} />
           <path d={`M ${x - 9} ${y} L ${x} ${y - 6} M ${x - 9} ${y} L ${x} ${y + 6}`} />
         </g>
       );
     }
     return (
-      <g stroke="#17231F" strokeWidth="1.5">
+      <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5">
         <line x1={x + 5} y1={y - 5} x2={x + 5} y2={y + 5} />
         <line x1={x + 10} y1={y - 5} x2={x + 10} y2={y + 5} />
       </g>
@@ -230,22 +230,22 @@ function renderCardinalityMark(
   if (dir === 'right') {
     if (type === 'zero_many') {
       return (
-        <g stroke="#17231F" strokeWidth="1.5" fill="none">
-          <circle cx={x + 14} cy={y} r="3" fill="#ffffff" />
+        <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
+          <circle cx={x + 14} cy={y} r="3" className="fill-white dark:fill-surface-1" />
           <path d={`M ${x + 9} ${y} L ${x} ${y - 6} M ${x + 9} ${y} L ${x} ${y + 6}`} />
         </g>
       );
     }
     if (type === 'one_many') {
       return (
-        <g stroke="#17231F" strokeWidth="1.5" fill="none">
+        <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
           <line x1={x + 14} y1={y - 5} x2={x + 14} y2={y + 5} />
           <path d={`M ${x + 9} ${y} L ${x} ${y - 6} M ${x + 9} ${y} L ${x} ${y + 6}`} />
         </g>
       );
     }
     return (
-      <g stroke="#17231F" strokeWidth="1.5">
+      <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5">
         <line x1={x - 5} y1={y - 5} x2={x - 5} y2={y + 5} />
         <line x1={x - 10} y1={y - 5} x2={x - 10} y2={y + 5} />
       </g>
@@ -255,22 +255,22 @@ function renderCardinalityMark(
   if (dir === 'bottom') {
     if (type === 'zero_many') {
       return (
-        <g stroke="#17231F" strokeWidth="1.5" fill="none">
-          <circle cx={x} cy={y + 14} r="3" fill="#ffffff" />
+        <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
+          <circle cx={x} cy={y + 14} r="3" className="fill-white dark:fill-surface-1" />
           <path d={`M ${x} ${y + 9} L ${x - 6} ${y} M ${x} ${y + 9} L ${x + 6} ${y}`} />
         </g>
       );
     }
     if (type === 'one_many') {
       return (
-        <g stroke="#17231F" strokeWidth="1.5" fill="none">
+        <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
           <line x1={x - 5} y1={y + 14} x2={x + 5} y2={y + 14} />
           <path d={`M ${x} ${y + 9} L ${x - 6} ${y} M ${x} ${y + 9} L ${x + 6} ${y}`} />
         </g>
       );
     }
     return (
-      <g stroke="#17231F" strokeWidth="1.5">
+      <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5">
         <line x1={x - 5} y1={y - 5} x2={x + 5} y2={y - 5} />
         <line x1={x - 5} y1={y - 10} x2={x + 5} y2={y - 10} />
       </g>
@@ -280,22 +280,22 @@ function renderCardinalityMark(
   // dir === 'top'
   if (type === 'zero_many') {
     return (
-      <g stroke="#17231F" strokeWidth="1.5" fill="none">
-        <circle cx={x} cy={y - 14} r="3" fill="#ffffff" />
+      <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
+        <circle cx={x} cy={y - 14} r="3" className="fill-white dark:fill-surface-1" />
         <path d={`M ${x} ${y - 9} L ${x - 6} ${y} M ${x} ${y - 9} L ${x + 6} ${y}`} />
       </g>
     );
   }
   if (type === 'one_many') {
     return (
-      <g stroke="#17231F" strokeWidth="1.5" fill="none">
+      <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5" fill="none">
         <line x1={x - 5} y1={y - 14} x2={x + 5} y2={y - 14} />
         <path d={`M ${x} ${y - 9} L ${x - 6} ${y} M ${x} ${y - 9} L ${x + 6} ${y}`} />
       </g>
     );
   }
   return (
-    <g stroke="#17231F" strokeWidth="1.5">
+    <g className="stroke-[#17231F] dark:stroke-slate-300" strokeWidth="1.5">
       <line x1={x - 5} y1={y + 5} x2={x + 5} y2={y + 5} />
       <line x1={x - 5} y1={y + 10} x2={x + 5} y2={y + 10} />
     </g>
@@ -395,7 +395,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
                     <path
                       d={rel.d}
                       fill="none"
-                      stroke={isActive ? '#166B52' : '#9CA3AF'}
+                      className={isActive ? 'stroke-[#166B52] dark:stroke-[#3ECF8E]' : 'stroke-[#9CA3AF] dark:stroke-slate-500'}
                       strokeWidth={isActive ? '2' : '1.25'}
                     />
 
@@ -422,8 +422,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
                         y="-10"
                         width="92"
                         height="17"
-                        fill="#FFFFFF"
-                        stroke="#DDE3DE"
+                        className="fill-white dark:fill-surface-2 stroke-[#DDE3DE] dark:stroke-border"
                         strokeWidth="1"
                         rx="2"
                       />
@@ -431,7 +430,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
                         x="0"
                         y="2"
                         textAnchor="middle"
-                        className="font-sans text-[10px] fill-[#17231F] font-medium"
+                        className="font-sans text-[10px] fill-[#17231F] dark:fill-white font-medium"
                       >
                         {rel.label}
                       </text>
@@ -489,7 +488,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
                       y="0"
                       width={geom.width}
                       height={geom.height}
-                      fill="#FFFFFF"
+                      className="fill-white dark:fill-surface-1"
                       stroke={isActive ? colors.border : '#E5E7EB'}
                       strokeWidth={isActive ? '2.5' : '1'}
                       rx="6"
@@ -553,7 +552,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
                           <text
                             x="10"
                             y={yPos}
-                            className={`font-sans text-[11px] fill-[#17231F] ${
+                            className={`font-sans text-[11px] fill-[#17231F] dark:fill-white ${
                               isPk ? 'font-bold underline' : 'font-normal'
                             }`}
                           >
@@ -566,7 +565,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
                             y={yPos}
                             textAnchor="end"
                             className={`font-mono text-[9px] ${
-                              tag ? 'fill-[#166B52] font-bold' : 'fill-[#6B7280]'
+                              tag ? 'fill-[#166B52] dark:fill-[#3ECF8E] font-bold' : 'fill-[#6B7280] dark:fill-slate-400'
                             }`}
                           >
                             {tag || col.type.toLowerCase()}
@@ -600,28 +599,28 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
       )}
 
       {/* 3. Legend & Accompanying Narrative */}
-      <div className="pt-4 border-t border-[#E9EDEA] space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-6 text-xs text-[#17231F]">
+      <div className="pt-4 border-t border-[#E9EDEA] dark:border-border space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-6 text-xs text-[#17231F] dark:text-white">
           {/* Notation Symbols */}
           <div className="flex items-center gap-4">
-            <span className="font-semibold text-[#17231F]">Notation:</span>
-            <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#52615B]">
-              <span className="font-bold text-[#17231F]">||</span>
+            <span className="font-semibold text-[#17231F] dark:text-white">Notation:</span>
+            <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#52615B] dark:text-slate-300">
+              <span className="font-bold text-[#17231F] dark:text-white">||</span>
               <span className="font-sans text-xs">Exactly one</span>
             </div>
-            <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#52615B]">
-              <span className="font-bold text-[#17231F]">O&lt;</span>
+            <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#52615B] dark:text-slate-300">
+              <span className="font-bold text-[#17231F] dark:text-white">O&lt;</span>
               <span className="font-sans text-xs">Zero or many</span>
             </div>
-            <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#52615B]">
-              <span className="font-bold text-[#17231F]">|&lt;</span>
+            <div className="flex items-center gap-1.5 font-mono text-[11px] text-[#52615B] dark:text-slate-300">
+              <span className="font-bold text-[#17231F] dark:text-white">|&lt;</span>
               <span className="font-sans text-xs">One or many</span>
             </div>
           </div>
 
           {/* Module Color Swatches */}
           <div className="flex items-center gap-4">
-            <span className="font-semibold text-[#17231F]">Sections:</span>
+            <span className="font-semibold text-[#17231F] dark:text-white">Sections:</span>
             {ERD_MODULES.map((mod) => {
               const col = MODULE_COLORS[mod.id];
               return (
@@ -630,7 +629,7 @@ export function ErdDiagram({ counts, userRole = 'admin' }: ErdDiagramProps) {
                     className="w-3.5 h-3.5 rounded-[3px] border shadow-2xs"
                     style={{ backgroundColor: col.bg, borderColor: col.border }}
                   />
-                  <span className="text-xs font-semibold text-[#374151]">{mod.name}</span>
+                  <span className="text-xs font-semibold text-[#374151] dark:text-slate-200">{mod.name}</span>
                 </div>
               );
             })}

@@ -798,18 +798,18 @@ export function SalesMainView({
 
             {/* Pagination Controls */}
             {totalCount > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3.5 py-2.5 border-t border-[#DDE3DE] bg-[#FAFBFA] gap-2">
-                <span className="text-[11px] text-[#52615B]">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3.5 py-2.5 border-t border-[#DDE3DE] dark:border-border bg-[#FAFBFA] dark:bg-surface-2 gap-2">
+                <span className="text-[11px] text-[#52615B] dark:text-slate-300">
                   Showing {startIdx + 1}-{endIdx} of {totalCount}
                 </span>
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[#52615B]">Rows per page:</span>
+                    <span className="text-[11px] text-[#52615B] dark:text-slate-400">Rows per page:</span>
                     <select
                       value={pageSize}
                       onChange={(e) => updateUrl({ size: e.target.value, page: '1' })}
-                      className="rounded-[2px] border border-[#CCD5CD] bg-white px-1.5 py-0.5 text-[11px] text-[#17231F] focus:outline-none"
+                      className="rounded-[2px] border border-[#CCD5CD] dark:border-border bg-white dark:bg-surface-1 px-1.5 py-0.5 text-[11px] text-[#17231F] dark:text-white focus:outline-none"
                     >
                       <option value="10">10</option>
                       <option value="25">25</option>
@@ -817,7 +817,7 @@ export function SalesMainView({
                     </select>
                   </div>
 
-                  <span className="text-[11px] text-[#52615B]">
+                  <span className="text-[11px] text-[#52615B] dark:text-slate-400">
                     {safePage} / {totalPages}
                   </span>
 
@@ -827,7 +827,7 @@ export function SalesMainView({
                       size="sm"
                       onClick={() => updateUrl({ page: String(safePage - 1) })}
                       disabled={safePage <= 1}
-                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px]"
+                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px] dark:border-border dark:text-white"
                       aria-label="Previous page"
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
@@ -837,7 +837,7 @@ export function SalesMainView({
                       size="sm"
                       onClick={() => updateUrl({ page: String(safePage + 1) })}
                       disabled={safePage >= totalPages}
-                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px]"
+                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px] dark:border-border dark:text-white"
                       aria-label="Next page"
                     >
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -873,51 +873,51 @@ export function SalesMainView({
       )}
 
       {/* Slim Bottom Summary KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[#DDE3DE] font-sans">
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-[#DDE3DE] dark:border-border font-sans">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Sales
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
             {metrics.totalSales}
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             across {metrics.totalCustomersCount} customers
           </div>
         </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Items sold
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
-            {metrics.totalItemsSold.toLocaleString()} <span className="text-base font-normal text-[#52615B]">pc</span>
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
+            {metrics.totalItemsSold.toLocaleString()} <span className="text-base font-normal text-[#52615B] dark:text-slate-400">pc</span>
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             across {metrics.totalDistinctProducts} products
           </div>
         </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Sales revenue
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
             {formatPHP(metrics.totalRevenue)}
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             sum of calculated line amounts
           </div>
         </div>
 
-        <div className="rounded-[4px] border border-[#DDE3DE] bg-white p-3.5 shadow-xs">
-          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781]">
+        <div className="rounded-[4px] border border-[#DDE3DE] dark:border-border bg-white dark:bg-surface-1 p-3.5 shadow-xs">
+          <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#7A8781] dark:text-slate-400">
             Sales reps
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F]">
+          <div className="mt-1 text-2xl font-bold font-mono tabular-nums text-[#17231F] dark:text-white">
             {metrics.activeRepsCount}
           </div>
-          <div className="mt-0.5 text-xs text-[#52615B]">
+          <div className="mt-0.5 text-xs text-[#52615B] dark:text-slate-300">
             in {metrics.sellingDepartmentsCount} selling departments
           </div>
         </div>

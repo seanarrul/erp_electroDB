@@ -139,10 +139,31 @@
 :root[data-theme="dark"] thead th,
 :root[data-theme="dark"] .bg-\[\#F4F4F0\],
 :root[data-theme="dark"] .bg-\[\#F4F4F0\]\/70,
+:root[data-theme="dark"] .bg-\[\#F4F4F0\]\/60,
 :root[data-theme="dark"] .bg-\[\#F3F2EE\],
-:root[data-theme="dark"] .bg-\[\#F4F4F5\] {
+:root[data-theme="dark"] .bg-\[\#F4F4F5\],
+:root[data-theme="dark"] .bg-\[\#FAFBFA\],
+:root[data-theme="dark"] .bg-\[\#FAFAFA\],
+:root[data-theme="dark"] .bg-\[\#F9FAFB\],
+:root[data-theme="dark"] .bg-\[\#F5F6F4\],
+:root[data-theme="dark"] .bg-\[\#F5F6F4\]\/70,
+:root[data-theme="dark"] .bg-\[\#F0F3F0\] {
   background-color: var(--surface-2) !important;
   color: #FFFFFF !important;
+}
+
+/* Hairline dividers and borders across all pages */
+:root[data-theme="dark"] .border-\[\#DDE3DE\],
+:root[data-theme="dark"] .border-\[\#CCD5CD\],
+:root[data-theme="dark"] .border-\[\#E9EDEA\],
+:root[data-theme="dark"] .border-black\/10,
+:root[data-theme="dark"] .border-black\/15 {
+  border-color: var(--border) !important;
+}
+
+/* Standalone White Cards, Panels, and Containers */
+:root[data-theme="dark"] .bg-white:not(button):not([class*="dark:bg-white"]):not(.keep-white) {
+  background-color: var(--surface-1) !important;
 }
 
 :root[data-theme="dark"] input,

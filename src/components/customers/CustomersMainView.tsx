@@ -238,23 +238,23 @@ export function CustomersMainView({
             </div>
 
             {/* Pagination Controls */}
-            <div className="pt-2.5 border-t border-black/10 flex items-center justify-between text-xs font-mono">
-              <span className="text-[10px] text-[#41555f]">
+            <div className="pt-2.5 border-t border-black/10 dark:border-border flex items-center justify-between text-xs font-mono">
+              <span className="text-[10px] text-[#41555f] dark:text-slate-400">
                 1-{Math.min(10, filteredCustomers.length)} OF {filteredCustomers.length}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 rounded-[2px] text-black/40 hover:text-black hover:bg-black/5 cursor-pointer"
+                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 dark:border-border rounded-[2px] text-black/40 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-surface-2 cursor-pointer"
                 >
                   PREV
                 </button>
-                <span className="w-5 h-5 flex items-center justify-center text-[10px] font-mono border border-black/15 bg-white text-[#041a24] rounded-[2px] font-semibold">
+                <span className="w-5 h-5 flex items-center justify-center text-[10px] font-mono border border-black/15 dark:border-border bg-white dark:bg-surface-2 text-[#041a24] dark:text-white rounded-[2px] font-semibold">
                   1
                 </span>
                 <button
                   type="button"
-                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 rounded-[2px] text-black/40 hover:text-black hover:bg-black/5 cursor-pointer"
+                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 dark:border-border rounded-[2px] text-black/40 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-surface-2 cursor-pointer"
                 >
                   NEXT
                 </button>

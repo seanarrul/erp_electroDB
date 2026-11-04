@@ -649,18 +649,18 @@ export function EmployeesListView({
 
             {/* Pagination Controls */}
             {totalItems > 0 && (
-              <div className="p-2.5 border-t border-[#DDE3DE] bg-[#FAFBFA] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-[#52615B]">
+              <div className="p-2.5 border-t border-[#DDE3DE] dark:border-border bg-[#FAFBFA] dark:bg-surface-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-[#52615B] dark:text-slate-300">
                 <div className="flex items-center gap-3">
                   <span className="text-[11px]">
                     Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)}-
                     {Math.min(currentPage * pageSize, totalItems)} of {totalItems}
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[#7A8781]">Rows per page:</span>
+                    <span className="text-[11px] text-[#7A8781] dark:text-slate-400">Rows per page:</span>
                     <select
                       value={pageSize}
                       onChange={(e) => setPageSize(Number(e.target.value))}
-                      className="h-6 px-1.5 text-[11px] rounded border border-[#CCD5CD] bg-white text-[#17231F] focus:outline-none focus:border-[#245B48]"
+                      className="h-6 px-1.5 text-[11px] rounded border border-[#CCD5CD] dark:border-border bg-white dark:bg-surface-1 text-[#17231F] dark:text-white focus:outline-none focus:border-[#245B48] dark:focus:border-border-control"
                     >
                       <option value={10}>10</option>
                       <option value={25}>25</option>
@@ -673,19 +673,19 @@ export function EmployeesListView({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-6 px-2 text-[10px]"
+                    className="h-6 px-2 text-[10px] dark:border-border dark:text-white"
                     disabled={currentPage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   >
                     Previous
                   </Button>
-                  <span className="px-2 text-[11px] font-mono text-neutral-400">
+                  <span className="px-2 text-[11px] font-mono text-neutral-400 dark:text-slate-400">
                     {currentPage} / {totalPages}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-6 px-2 text-[10px]"
+                    className="h-6 px-2 text-[10px] dark:border-border dark:text-white"
                     disabled={currentPage >= totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   >
