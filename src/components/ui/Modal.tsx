@@ -57,30 +57,30 @@ export function Modal({
       {/* Modal Dialog */}
       <div
         className={cn(
-          'relative w-full rounded-[4px] bg-white shadow-xl border border-black/10 z-10 overflow-hidden font-sans',
+          'relative w-full rounded-[4px] bg-white dark:bg-surface-1 shadow-xl border border-black/10 dark:border-border z-10 overflow-hidden font-sans',
           maxWidths[maxWidth]
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-black/10 bg-white px-5 py-4">
+        <div className="flex items-center justify-between border-b border-black/10 dark:border-border bg-white dark:bg-surface-1 px-5 py-4">
           <div>
-            <h2 className="font-editorial text-lg sm:text-xl font-normal text-[#041a24] tracking-tight">{title}</h2>
+            <h2 className="font-editorial text-lg sm:text-xl font-normal text-[#041a24] dark:text-white tracking-tight">{title}</h2>
             {description && (
-              <p className="font-sans text-xs text-[#41555f] mt-0.5">{description}</p>
+              <p className="font-sans text-xs text-[#41555f] dark:text-slate-300 mt-0.5">{description}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-[2px] p-1 text-black/40 hover:bg-black/5 hover:text-[#041a24] transition-colors cursor-pointer"
+            className="rounded-[2px] p-1 text-black/40 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-surface-2 hover:text-[#041a24] dark:hover:text-white transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 max-h-[82vh] overflow-y-auto bg-white text-[#041a24]">{children}</div>
+        <div className="p-5 max-h-[82vh] overflow-y-auto bg-white dark:bg-surface-1 text-[#041a24] dark:text-white">{children}</div>
       </div>
     </div>
   );
