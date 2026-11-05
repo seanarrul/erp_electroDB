@@ -4,160 +4,116 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
-import { createClient } from '@/lib/supabase/server';
+import fs from 'node:fs';
 import { getCurrentUser } from './auth';
 
-const saleItemSchema = z.object({
-  prodCode: z.string().min(1, 'Product code is required'),
-  quantity: z
-    .number()
-    .int('Quantity must be an integer')
-    .min(1, 'Quantity must be at least 1')
-    .max(9999, 'Quantity cannot exceed 9,999 (R-04)'),
-});
-
-const createSaleSchema = z.object({
-  custNo: z.union([
-    z.string().min(1, 'Customer is required (R-01)'),
-    z.number().int().positive('Customer is required (R-01)'),
-  ]),
-  empNo: z.union([
-    z.string().min(1, 'Sales Representative is required (R-01)'),
-    z.number().int().positive('Sales Representative is required (R-01)'),
-  ]),
-  salesDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid date (YYYY-MM-DD) is required'),
-  items: z
-    .array(saleItemSchema)
-    .min(1, 'Add at least one product to this sale (R-02)')
-    .max(50, 'A sale cannot exceed 50 line items'),
-});
-
-export type CreateSaleInput = {
-  custNo: string | number;
-  empNo: string | number;
-  salesDate: string;
-  items: z.infer<typeof saleItemSchema>[];
-};
-
-export async function createSaleAction(input: CreateSaleInput) {
-  try {
-    // 1. Validate input schema with Zod
-    const validated = createSaleSchema.parse(input);
-
-    // 2. Enforce role: only Admin and Sales can create sales (Section 5)
-    const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'sales')) {
-      return { error: 'Access denied: Only sales representatives or administrators can create sales.' };
-    }
-
-    // 3. R-03: No duplicate products per sale
-    const seenProds = new Set<string>();
-    for (const item of validated.items) {
-      if (seenProds.has(item.prodCode.toUpperCase())) {
-        return { error: `Rule R-03 violation: ${item.prodCode} is already on this sale.` };
-      }
-      seenProds.add(item.prodCode.toUpperCase());
-    }
-
-    // 4. Date validation (R-07): not in future (Manila time)
-    const todayManila = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-    if (validated.salesDate > todayManila) {
-      return { error: 'Rule R-07 violation: The sale date cannot be in the future.' };
-    }
-
-    const isSupabaseConfigured =
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-project') &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('your-anon');
-
-    if (isSupabaseConfigured) {
-      try {
-        const supabase = await createClient();
-        const { data, error } = await supabase.rpc('create_sale', {
-          p_custno: validated.custNo,
-          p_empno: validated.empNo,
-          p_salesdate: validated.salesDate,
-          p_items: validated.items.map((i) => ({
-            prodCode: i.prodCode,
-            qty: i.quantity,
-          })),
-        });
-
-        if (error) {
-          return { error: error.message };
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
         }
-
-        revalidatePath('/sales');
-        revalidatePath('/');
-        revalidatePath('/customers');
-        return { success: true, transNo: data };
-      } catch (err: any) {
-        return { error: err?.message || 'Database error creating sale' };
       }
     }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
+}
 
-    // SQLite atomic fallback
-    const dbPath = path.join(process.cwd(), 'hope.db');
-    const db = new DatabaseSync(dbPath);
+function getSqliteDb(): DatabaseSync {
+  const dbPath = getHopeDbPath();
+  return new DatabaseSync(dbPath);
+}
 
-    // Check latest sale date (R-07)
-    const maxSaleRow = db.prepare('SELECT MAX(salesDate) AS maxDate FROM SALES').get() as any;
-    if (maxSaleRow?.maxDate && validated.salesDate < maxSaleRow.maxDate) {
-      return {
-        error: `Rule R-07 violation: The sale date cannot be earlier than the latest sale (${maxSaleRow.maxDate}) or in the future.`,
-      };
-    }
+function getStampString(action: 'CREATED' | 'EDITED' | 'DELETED' | 'RESTORED', byUser = 'system'): string {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
+  return `${action} ${byUser} ${dateStr} ${timeStr}`;
+}
 
-    // Normalize customer and employee numbers
-    const rawCust = String(validated.custNo).trim();
-    const custNo = rawCust.startsWith('C') ? rawCust : (/^\d+$/.test(rawCust) ? `C${rawCust.padStart(4, '0')}` : rawCust);
+async function ensureStaff() {
+  const user = await getCurrentUser();
+  const role = (user?.role || '').toLowerCase();
+  if (!user || (!['admin', 'superadmin', 'sales'].includes(role))) {
+    throw new Error('Access denied. Staff privileges required.');
+  }
+  return user?.fullName || user?.email?.split('@')[0] || role;
+}
 
-    const rawEmp = String(validated.empNo).trim();
-    const empNo = /^\d+$/.test(rawEmp) ? rawEmp.padStart(5, '0') : rawEmp;
+function logAudit(
+  db: DatabaseSync,
+  tableName: string,
+  action: string,
+  recordKey: string,
+  oldValues: any,
+  newValues: any,
+  actionBy: string
+) {
+  try {
+    db.prepare(`
+      INSERT INTO audit_log (table_name, action, record_key, old_values, new_values, action_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      tableName,
+      action,
+      recordKey,
+      oldValues ? JSON.stringify(oldValues) : null,
+      newValues ? JSON.stringify(newValues) : null,
+      actionBy
+    );
+  } catch {
+    // Non-blocking
+  }
+}
 
-    // Validate Customer exists (R-01)
-    const custExists = db.prepare('SELECT custNo FROM CUSTOMER WHERE custNo = ? OR custNo = ?').get(custNo, rawCust);
-    if (!custExists) {
-      return { error: `Rule R-01 violation: Customer ${validated.custNo} does not exist.` };
-    }
+// ========================================================================
+// SCHEMAS
+// ========================================================================
 
-    // Validate Sales Rep (R-06)
-    const emp = db.prepare('SELECT hireDate, sepDate FROM EMPLOYEE WHERE empNo = ? OR empNo = ?').get(empNo, rawEmp) as any;
-    if (!emp) {
-      return { error: `Rule R-01 violation: Employee ${validated.empNo} not found.` };
-    }
-    if (emp.hireDate > validated.salesDate) {
-      return { error: `Rule R-06 violation: Sales rep was not yet hired on ${validated.salesDate}.` };
-    }
-    if (emp.sepDate != null && emp.sepDate < validated.salesDate) {
-      return { error: `Rule R-06 violation: Sales rep was already separated on ${validated.salesDate}.` };
-    }
+const createSaleHeaderSchema = z.object({
+  salesDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid sales date (YYYY-MM-DD) is required'),
+  custNo: z.string().trim().min(1, 'Customer is required'),
+  empNo: z.string().trim().min(1, 'Salesperson is required'),
+});
 
-    // Validate Rep has JOBHISTORY on or before sale date (R-06)
-    const hasJob = db
-      .prepare('SELECT 1 FROM JOBHISTORY WHERE (empNo = ? OR empNo = ?) AND effDate <= ? LIMIT 1')
-      .get(empNo, rawEmp, validated.salesDate);
-    if (!hasJob) {
-      return { error: `Rule R-06 violation: Sales rep has no assigned department on ${validated.salesDate}.` };
-    }
+const updateSaleHeaderSchema = z.object({
+  transNo: z.string().trim().min(1, 'Transaction number is required'),
+  salesDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid sales date is required'),
+  custNo: z.string().trim().min(1, 'Customer is required'),
+  empNo: z.string().trim().min(1, 'Salesperson is required'),
+});
 
-    // Validate every product exists and has a price on or before salesDate (R-05)
-    for (const item of validated.items) {
-      const prod = db.prepare('SELECT prodCode FROM PRODUCT WHERE prodCode = ?').get(item.prodCode);
-      if (!prod) {
-        return { error: `Product ${item.prodCode} does not exist in the catalog.` };
-      }
+const lineItemSchema = z.object({
+  transNo: z.string().trim().min(1, 'Transaction number is required'),
+  prodCode: z.string().trim().min(1, 'Product is required'),
+  quantity: z.number().int().min(1, 'Quantity must be at least 1').max(99999),
+});
 
-      const price = db
-        .prepare('SELECT unitPrice FROM PRICEHIST WHERE prodCode = ? AND effDate <= ? ORDER BY effDate DESC LIMIT 1')
-        .get(item.prodCode, validated.salesDate) as any;
-      if (!price || price.unitPrice == null) {
-        return { error: `Rule R-05 violation: ${item.prodCode} has no price on ${validated.salesDate}.` };
-      }
-    }
+// ========================================================================
+// 1. CREATE SALE HEADER ACTION (Figure 24)
+// ========================================================================
+export async function createSaleHeaderAction(input: z.infer<typeof createSaleHeaderSchema>) {
+  try {
+    const userName = await ensureStaff();
+    const validated = createSaleHeaderSchema.parse(input);
 
-    // Compute next transNo (R-08)
+    const db = getSqliteDb();
+
+    // Verify Customer exists
+    const cust = db.prepare('SELECT custNo FROM CUSTOMER WHERE custNo = ? AND is_deleted = 0').get(validated.custNo);
+    if (!cust) return { error: `Customer "${validated.custNo}" does not exist or is inactive.` };
+
+    // Verify Employee exists
+    const emp = db.prepare('SELECT empNo FROM EMPLOYEE WHERE empNo = ? AND is_deleted = 0').get(validated.empNo);
+    if (!emp) return { error: `Employee "${validated.empNo}" does not exist or is inactive.` };
+
+    // Auto-number transaction number (Figure 24 rule 1: auto-numbered)
     const nextRow = db.prepare(`
       SELECT COALESCE(
         MAX(CAST(SUBSTR(transNo, 3) AS INTEGER)),
@@ -167,58 +123,279 @@ export async function createSaleAction(input: CreateSaleInput) {
     `).get() as any;
     const nextNum = Number(nextRow?.nextNum || 125);
     const transNo = `TR${String(nextNum).padStart(6, '0')}`;
+    const stampStr = getStampString('CREATED', userName);
 
-    // Atomic transaction (R-09)
-    db.exec('BEGIN IMMEDIATE');
+    db.prepare(`
+      INSERT INTO SALES (transNo, salesDate, custNo, empNo, is_deleted, stamp)
+      VALUES (?, ?, ?, ?, 0, ?)
+    `).run(transNo, validated.salesDate, validated.custNo, validated.empNo, stampStr);
 
-    try {
-      // 1. Insert master sale record
-      db.prepare(`
-        INSERT INTO SALES (transNo, salesDate, custNo, empNo, stamp)
-        VALUES (?, ?, ?, ?, 'ADD sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
-      `).run(transNo, validated.salesDate, custNo, empNo);
+    logAudit(db, 'SALES', 'ADD', transNo, null, {
+      transNo,
+      salesDate: validated.salesDate,
+      custNo: validated.custNo,
+      empNo: validated.empNo,
+    }, userName);
 
-      // 2. Insert line items
-      const insertDetail = db.prepare(`
-        INSERT INTO SALESDETAIL (transNo, prodCode, quantity, stamp)
-        VALUES (?, ?, ?, 'ADD sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
-      `);
-
-      for (const item of validated.items) {
-        insertDetail.run(transNo, item.prodCode, item.quantity);
-      }
-
-      db.exec('COMMIT');
-
-      revalidatePath('/sales');
-      revalidatePath('/');
-      revalidatePath('/customers');
-
-      return { success: true, transNo };
-    } catch (dbErr: any) {
-      db.exec('ROLLBACK');
-      return { error: dbErr?.message || 'Transaction failed, changes rolled back' };
-    }
+    revalidatePath('/sales');
+    return { success: true, transNo };
   } catch (err: any) {
-    if (err instanceof z.ZodError) {
-      return { error: err.errors[0]?.message || 'Invalid input data' };
-    }
-    return { error: err?.message || 'Failed to create sale' };
+    if (err instanceof z.ZodError) return { error: err.errors[0]?.message };
+    return { error: err?.message || 'Failed to create sale.' };
   }
 }
 
-/**
- * Server action to look up the effective unit price for a product on a given date.
- */
+// ========================================================================
+// 2. UPDATE SALE HEADER ACTION
+// ========================================================================
+export async function updateSaleHeaderAction(input: z.infer<typeof updateSaleHeaderSchema>) {
+  try {
+    const userName = await ensureStaff();
+    const validated = updateSaleHeaderSchema.parse(input);
+    const stampStr = getStampString('EDITED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT * FROM SALES WHERE transNo = ?').get(validated.transNo) as any;
+    if (!existing) return { error: `Sale ${validated.transNo} not found.` };
+
+    db.prepare(`
+      UPDATE SALES
+      SET salesDate = ?, custNo = ?, empNo = ?, stamp = ?
+      WHERE transNo = ?
+    `).run(validated.salesDate, validated.custNo, validated.empNo, stampStr, validated.transNo);
+
+    logAudit(db, 'SALES', 'EDIT', validated.transNo, {
+      salesDate: existing.salesDate,
+      custNo: existing.custNo,
+      empNo: existing.empNo,
+    }, {
+      salesDate: validated.salesDate,
+      custNo: validated.custNo,
+      empNo: validated.empNo,
+    }, userName);
+
+    revalidatePath('/sales');
+    return { success: true };
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return { error: err.errors[0]?.message };
+    return { error: err?.message || 'Failed to update sale.' };
+  }
+}
+
+// ========================================================================
+// 3. SOFT-DELETE SALE (Figure 23)
+// ========================================================================
+export async function deleteSaleAction(transNo: string) {
+  try {
+    const userName = await ensureStaff();
+    const cleanTrans = String(transNo).trim();
+    const stampStr = getStampString('DELETED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM SALES WHERE transNo = ?').get(cleanTrans) as any;
+    if (!existing) return { error: `Sale ${cleanTrans} not found.` };
+
+    db.prepare('UPDATE SALES SET is_deleted = 1, stamp = ? WHERE transNo = ?').run(stampStr, cleanTrans);
+    logAudit(db, 'SALES', 'DELETE', cleanTrans, { is_deleted: 0 }, { is_deleted: 1 }, userName);
+
+    revalidatePath('/sales');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to soft-delete sale.' };
+  }
+}
+
+// ========================================================================
+// 4. RESTORE SALE (Figure 23)
+// ========================================================================
+export async function restoreSaleAction(transNo: string) {
+  try {
+    const userName = await ensureStaff();
+    const cleanTrans = String(transNo).trim();
+    const stampStr = getStampString('RESTORED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM SALES WHERE transNo = ?').get(cleanTrans) as any;
+    if (!existing) return { error: `Sale ${cleanTrans} not found.` };
+
+    db.prepare('UPDATE SALES SET is_deleted = 0, stamp = ? WHERE transNo = ?').run(stampStr, cleanTrans);
+    logAudit(db, 'SALES', 'RESTORE', cleanTrans, { is_deleted: 1 }, { is_deleted: 0 }, userName);
+
+    revalidatePath('/sales');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore sale.' };
+  }
+}
+
+// ========================================================================
+// 5. DETAIL LINES ACTIONS (Figures 25 & 26)
+// ========================================================================
+
+export async function addLineItemAction(input: z.infer<typeof lineItemSchema>) {
+  try {
+    const userName = await ensureStaff();
+    const validated = lineItemSchema.parse(input);
+    const cleanTrans = validated.transNo.trim();
+    const cleanProd = validated.prodCode.trim().toUpperCase();
+    const stampStr = getStampString('CREATED', userName);
+
+    const db = getSqliteDb();
+    const sale = db.prepare('SELECT salesDate, is_deleted FROM SALES WHERE transNo = ?').get(cleanTrans) as any;
+    if (!sale) return { error: `Sale ${cleanTrans} not found.` };
+    if (sale.is_deleted === 1) return { error: `Cannot add items to an inactive sale.` };
+
+    const prod = db.prepare('SELECT prodCode FROM PRODUCT WHERE prodCode = ? AND is_deleted = 0').get(cleanProd);
+    if (!prod) return { error: `Product ${cleanProd} not found or inactive.` };
+
+    // Check composite PK (transNo, prodCode)
+    const existing = db.prepare('SELECT is_deleted, quantity FROM SALESDETAIL WHERE transNo = ? AND prodCode = ?').get(cleanTrans, cleanProd) as any;
+    if (existing) {
+      if (existing.is_deleted === 1) {
+        db.prepare('UPDATE SALESDETAIL SET quantity = ?, is_deleted = 0, stamp = ? WHERE transNo = ? AND prodCode = ?').run(
+          validated.quantity,
+          stampStr,
+          cleanTrans,
+          cleanProd
+        );
+        logAudit(db, 'SALESDETAIL', 'RESTORE', `${cleanTrans}:${cleanProd}`, { is_deleted: 1 }, { is_deleted: 0, quantity: validated.quantity }, userName);
+        revalidatePath('/sales');
+        return { success: true };
+      }
+      return { error: `Product ${cleanProd} is already on this sale. Please edit the existing line item instead.` };
+    }
+
+    db.prepare(`
+      INSERT INTO SALESDETAIL (transNo, prodCode, quantity, is_deleted, stamp)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(cleanTrans, cleanProd, validated.quantity, stampStr);
+
+    logAudit(db, 'SALESDETAIL', 'ADD', `${cleanTrans}:${cleanProd}`, null, {
+      transNo: cleanTrans,
+      prodCode: cleanProd,
+      quantity: validated.quantity,
+    }, userName);
+
+    revalidatePath('/sales');
+    return { success: true };
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return { error: err.errors[0]?.message };
+    return { error: err?.message || 'Failed to add line item.' };
+  }
+}
+
+export async function updateLineItemAction(input: z.infer<typeof lineItemSchema>) {
+  try {
+    const userName = await ensureStaff();
+    const validated = lineItemSchema.parse(input);
+    const cleanTrans = validated.transNo.trim();
+    const cleanProd = validated.prodCode.trim().toUpperCase();
+    const stampStr = getStampString('EDITED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT quantity FROM SALESDETAIL WHERE transNo = ? AND prodCode = ?').get(cleanTrans, cleanProd) as any;
+    if (!existing) return { error: `Line item not found.` };
+
+    db.prepare(`
+      UPDATE SALESDETAIL
+      SET quantity = ?, stamp = ?
+      WHERE transNo = ? AND prodCode = ?
+    `).run(validated.quantity, stampStr, cleanTrans, cleanProd);
+
+    logAudit(db, 'SALESDETAIL', 'EDIT', `${cleanTrans}:${cleanProd}`, { quantity: existing.quantity }, { quantity: validated.quantity }, userName);
+
+    revalidatePath('/sales');
+    return { success: true };
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return { error: err.errors[0]?.message };
+    return { error: err?.message || 'Failed to update line item.' };
+  }
+}
+
+export async function deleteLineItemAction(transNo: string, prodCode: string) {
+  try {
+    const userName = await ensureStaff();
+    const cleanTrans = String(transNo).trim();
+    const cleanProd = String(prodCode).trim().toUpperCase();
+    const stampStr = getStampString('DELETED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM SALESDETAIL WHERE transNo = ? AND prodCode = ?').get(cleanTrans, cleanProd) as any;
+    if (!existing) return { error: `Line item not found.` };
+
+    db.prepare('UPDATE SALESDETAIL SET is_deleted = 1, stamp = ? WHERE transNo = ? AND prodCode = ?').run(stampStr, cleanTrans, cleanProd);
+    logAudit(db, 'SALESDETAIL', 'DELETE', `${cleanTrans}:${cleanProd}`, { is_deleted: 0 }, { is_deleted: 1 }, userName);
+
+    revalidatePath('/sales');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to delete line item.' };
+  }
+}
+
+export async function restoreLineItemAction(transNo: string, prodCode: string) {
+  try {
+    const userName = await ensureStaff();
+    const cleanTrans = String(transNo).trim();
+    const cleanProd = String(prodCode).trim().toUpperCase();
+    const stampStr = getStampString('RESTORED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM SALESDETAIL WHERE transNo = ? AND prodCode = ?').get(cleanTrans, cleanProd) as any;
+    if (!existing) return { error: `Line item not found.` };
+
+    db.prepare('UPDATE SALESDETAIL SET is_deleted = 0, stamp = ? WHERE transNo = ? AND prodCode = ?').run(stampStr, cleanTrans, cleanProd);
+    logAudit(db, 'SALESDETAIL', 'RESTORE', `${cleanTrans}:${cleanProd}`, { is_deleted: 1 }, { is_deleted: 0 }, userName);
+
+    revalidatePath('/sales');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore line item.' };
+  }
+}
+
+// ========================================================================
+// LEGACY COMPATIBILITY
+// ========================================================================
 export async function getPriceForProductDateAction(prodCode: string, date: string): Promise<number> {
-  const dbPath = path.join(process.cwd(), 'hope.db');
-  const db = new DatabaseSync(dbPath);
-  const row = db.prepare(`
-    SELECT unitPrice 
-    FROM PRICEHIST 
-    WHERE prodCode = ? AND effDate <= ? 
-    ORDER BY effDate DESC 
-    LIMIT 1
-  `).get(prodCode, date) as any;
-  return row ? Number(row.unitPrice) : 0;
+  try {
+    const db = getSqliteDb();
+    const row = db.prepare(`
+      SELECT unitPrice 
+      FROM PRICEHIST 
+      WHERE prodCode = ? AND effDate <= ? AND is_deleted = 0
+      ORDER BY effDate DESC 
+      LIMIT 1
+    `).get(prodCode, date) as any;
+    return row ? Number(row.unitPrice) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export type CreateSaleInput = {
+  custNo: string | number;
+  empNo: string | number;
+  salesDate: string;
+  items: Array<{ prodCode: string; quantity: number }>;
+};
+
+export async function createSaleAction(input: CreateSaleInput) {
+  const headerRes = await createSaleHeaderAction({
+    salesDate: input.salesDate,
+    custNo: String(input.custNo),
+    empNo: String(input.empNo),
+  });
+
+  if (headerRes.error || !headerRes.transNo) return headerRes;
+
+  for (const item of input.items) {
+    await addLineItemAction({
+      transNo: headerRes.transNo,
+      prodCode: item.prodCode,
+      quantity: item.quantity,
+    });
+  }
+
+  return headerRes;
 }

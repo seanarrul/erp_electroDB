@@ -26,6 +26,7 @@ export default async function SalesPage({ searchParams }: PageProps) {
         initialLines={data.lines}
         metrics={data.metrics}
         lookups={data.lookups}
+        recentAudits={data.recentAudits}
         userRole={userRole}
         initialOpenNewSale={shouldOpenNewSale}
       />
