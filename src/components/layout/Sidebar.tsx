@@ -24,6 +24,9 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
   const pathname = usePathname();
   const { isMobileOpen, closeMobileSidebar } = useSidebar();
 
+  const isSuperadmin = userRole === 'Superadmin';
+  const isAdmin = userRole === 'Admin' || userRole === 'admin' || isSuperadmin;
+
   const navLinks = [
     {
       section: 'OVERVIEW',
@@ -35,39 +38,50 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
       section: 'TRANSACTIONS',
       items: [
         { href: '/sales', label: 'Sales' },
-        { href: '/customers', label: 'Customers & Payments' },
+        { href: '/customers', label: 'Customer' },
       ],
     },
     {
       section: 'CATALOG',
       items: [
-        { href: '/products', label: 'Products & Pricing' },
+        { href: '/products', label: 'Products' },
       ],
     },
     {
       section: 'ORGANIZATION',
       items: [
-        { href: '/employees', label: 'Employees' },
+        { href: '/employees', label: 'Human Resources' },
+        { href: '/reports', label: 'Reports' },
       ],
     },
+    ...(isAdmin
+      ? [
+          {
+            section: 'ADMINISTRATION',
+            items: [
+              { href: '/users', label: 'User Management' },
+            ],
+          },
+        ]
+      : []),
   ];
 
-  const sidebarContent = (
-    <div className="flex h-full flex-col justify-between p-4 sm:p-5 overflow-y-auto font-sans">
+  return (
+    <div className="flex h-full flex-col justify-between p-4 sm:p-5 overflow-y-auto font-sans bg-bg text-text transition-colors duration-150">
       <div className="space-y-4">
-        {/* Brand Section matching JeptahzRepo */}
+        {/* Brand Section matching Image 1 */}
         <div className="flex items-start justify-between pb-5 border-b border-border">
           <Link
             href="/"
             onClick={closeMobileSidebar}
             className="group block select-none"
-            aria-label="ElectronDB G4 HopeERD"
+            aria-label="ElectronDB Monitoring HOPEERD"
           >
             <div className="font-editorial italic text-[25px] font-normal tracking-tight text-text group-hover:text-accent transition-colors leading-none">
               ElectronDB
             </div>
             <div className="font-mono text-[10px] tracking-widest text-text-muted uppercase mt-1">
-              Monitoring &bull; HopeERD
+              MONITORING &bull; HOPEERD
             </div>
           </Link>
 
@@ -84,7 +98,7 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
           </button>
         </div>
 
-        {/* Minimalist Flat Vertical Navigation Stream */}
+        {/* Minimalist Flat Vertical Navigation Stream matching Image 2 */}
         <nav className="mt-5 space-y-4 pt-1" aria-label="Main Navigation">
           {navLinks.map((sec) => (
             <div key={sec.section} className="space-y-1">
@@ -132,21 +146,21 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
         </nav>
       </div>
 
-      {/* Bottom Profile matching JeptahzRepo */}
+      {/* Bottom Profile matching Image 2 */}
       <div className="pt-4 border-t border-border mt-auto flex items-center justify-between gap-2">
         <div className="flex items-center space-x-2.5 min-w-0">
           <div className="w-7 h-7 rounded-full ring-1 ring-border shrink-0 shadow-xs bg-[#041a24] dark:bg-white text-white dark:text-[#041a24] flex items-center justify-center font-mono font-bold text-[10px]">
-            {userName ? userName.slice(0, 2).toUpperCase() : 'ED'}
+            {userName ? userName.slice(0, 2).toUpperCase() : 'JE'}
           </div>
           <div className="flex flex-col text-left min-w-0">
             <div className="flex items-center space-x-1">
               <span className="font-editorial italic text-[15px] text-text leading-tight truncate">
-                {userName}
+                {userName.length > 17 ? `${userName.slice(0, 15)}...` : userName}
               </span>
               <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 fill-sky-500/20 shrink-0" />
             </div>
             <span className="text-xs text-text-faint font-sans leading-tight truncate mt-0.5">
-              @{userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'administrator'}
+              @{userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jeptahashleyildefonso'}
             </span>
           </div>
         </div>
@@ -158,39 +172,10 @@ export function Sidebar({ userRole = 'admin', userName = 'Jeptah Ashley Ildefons
             aria-label="Sign Out"
             className="p-1.5 text-text-muted hover:text-text hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer"
           >
-            <Lock className="w-3.5 h-3.5 stroke-[1.5]" />
+            <Lock className="w-4 h-4 stroke-[1.5]" />
           </button>
         </form>
       </div>
     </div>
-  );
-
-  return (
-    <>
-      {/* 1. Desktop Persistent Sidebar */}
-      <aside className="hidden lg:flex w-[248px] h-screen flex-col bg-surface-1 border-r border-border shrink-0 select-none sticky top-0 transition-colors duration-150">
-        {sidebarContent}
-      </aside>
-
-      {/* 2. Mobile Drawer Backdrop */}
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
-          onClick={closeMobileSidebar}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* 3. Mobile Responsive Drawer */}
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 w-[280px] bg-surface-1 border-r border-border shadow-xl flex flex-col lg:hidden transition-transform duration-200 ease-in-out',
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-        aria-label="Mobile Navigation"
-      >
-        {sidebarContent}
-      </aside>
-    </>
   );
 }

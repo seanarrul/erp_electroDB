@@ -1,40 +1,39 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
 import { createClient } from '@/lib/supabase/server';
 
-export interface CustomerOverviewItem {
-  custNo: string | number;
+export interface CustomerItem {
+  custNo: string;
   custName: string;
   address: string;
+  payterm: 'COD' | '30D' | '45D' | string;
   payTerms: string;
-  ordersPlaced: number;
-  paymentCount: number;
-  totalPaid: number;
-  unpaidOrders: number;
-  lastPaymentDate: string | null;
-  lastPaymentOrNo: string | number | null;
-  customerSince: string | null;
+  isDeleted: boolean;
+  status: 'Active' | 'Inactive';
+  stamp: string | null;
 }
 
-export interface PaymentLedgerItem {
-  orNo: string | number;
-  payDate: string;
-  amount: number;
-  transNo: string | number;
-  custNo: string | number | null;
-  custName: string | null;
-  salesDate: string | null;
-  isUnlinked: boolean;
-}
-
-export interface CustomerSummaryMetrics {
+export interface CustomerMetrics {
   totalCustomers: number;
-  totalTermsCount: number;
-  totalPayments: number;
-  totalCollected: number;
-  unpaidOrdersCount: number;
+  activeCount: number;
+  inactiveCount: number;
   termCounts: Record<string, number>;
+  nextSuggestedCustNo: string;
 }
+
+export interface CustomerAuditLogItem {
+  auditId: number;
+  action: 'ADD' | 'EDIT' | 'DELETE' | 'RESTORE';
+  recordKey: string;
+  oldValues: string | null;
+  newValues: string | null;
+  actionBy: string;
+  actionAt: string;
+}
+
+// Backwards compatibility interfaces if referenced
+export type CustomerOverviewItem = CustomerItem;
 
 export interface CustomerDetailData {
   customer: {
@@ -64,8 +63,51 @@ export interface CustomerDetailData {
   }[];
 }
 
+export interface PaymentLedgerItem {
+
+  orNo: string | number;
+  payDate: string;
+  amount: number;
+  transNo: string | number;
+  custNo: string | number | null;
+  custName: string | null;
+  salesDate: string | null;
+  isUnlinked: boolean;
+}
+export interface CustomerSummaryMetrics {
+  totalCustomers: number;
+  totalTermsCount: number;
+  totalPayments: number;
+  totalCollected: number;
+  unpaidOrdersCount: number;
+  termCounts: Record<string, number>;
+}
+export interface CustomerSalesSummaryItem {
+  transNo: string | number;
+  custNo: string | number;
+  salesDate: string;
+}
+
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
+}
+
 function getSqliteDb(): DatabaseSync {
-  const dbPath = path.join(process.cwd(), 'hope.db');
+  const dbPath = getHopeDbPath();
   return new DatabaseSync(dbPath);
 }
 
@@ -78,85 +120,67 @@ function isSupabaseLive(): boolean {
   );
 }
 
-export interface CustomerSalesSummaryItem {
-  transNo: string | number;
-  custNo: string | number;
-  salesDate: string;
-}
-
 /**
- * Fetch Customer overview list, all payments ledger, summary metrics, and sales links.
+ * Fetch Customer management list, metrics, and audit log.
+ * Purely bound to CUSTOMER table (No PAYMENT table joins).
  */
 export async function getCustomersPageData(): Promise<{
-  customers: CustomerOverviewItem[];
-  payments: PaymentLedgerItem[];
-  sales: CustomerSalesSummaryItem[];
-  metrics: CustomerSummaryMetrics;
+  customers: CustomerItem[];
+  metrics: CustomerMetrics;
+  recentAudits: CustomerAuditLogItem[];
 }> {
   if (isSupabaseLive()) {
     try {
       const supabase = await createClient();
+      const { data, error } = await supabase
+        .from('CUSTOMER')
+        .select('custNo, custName, address, payterm, is_deleted, stamp')
+        .order('custNo', { ascending: true });
 
-      const [custRes, payRes, salesRes] = await Promise.all([
-        supabase.from('v_customer_overview').select('*').order('custNo', { ascending: true }),
-        supabase.from('v_customer_payments').select('*').order('payDate', { ascending: false }),
-        supabase.from('SALES').select('transNo, custNo, salesDate').order('salesDate', { ascending: false }),
-      ]);
+      if (!error && data) {
+        const customers: CustomerItem[] = data.map((r: any) => {
+          const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+          return {
+            custNo: String(r.custNo),
+            custName: String(r.custName || ''),
+            address: String(r.address || ''),
+            payterm: String(r.payterm || 'COD'),
+            payTerms: String(r.payterm || 'COD'),
+            isDeleted,
+            status: isDeleted ? 'Inactive' : 'Active',
+            stamp: r.stamp ? String(r.stamp) : null,
+          };
+        });
 
-      if (!custRes.error && !payRes.error && custRes.data) {
-        const customers: CustomerOverviewItem[] = custRes.data.map((r: any) => ({
-          custNo: String(r.custNo),
-          custName: String(r.custName || ''),
-          address: String(r.address || ''),
-          payTerms: String(r.payTerms || 'COD'),
-          ordersPlaced: Number(r.ordersPlaced || 0),
-          paymentCount: Number(r.paymentCount || 0),
-          totalPaid: Number(r.totalPaid || 0),
-          unpaidOrders: Math.max(0, Number(r.unpaidOrders || 0)),
-          lastPaymentDate: r.lastPaymentDate ? String(r.lastPaymentDate) : null,
-          lastPaymentOrNo: r.lastPaymentOrNo != null ? String(r.lastPaymentOrNo) : null,
-          customerSince: r.customerSince ? String(r.customerSince) : null,
-        }));
+        let maxNum = 0;
+        for (const c of customers) {
+          const match = c.custNo.match(/^C(\d+)$/i);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        }
+        const nextSuggestedCustNo = `C${String(maxNum > 0 ? maxNum + 1 : customers.length + 1).padStart(4, '0')}`;
 
-        const payments: PaymentLedgerItem[] = (payRes.data || []).map((r: any) => ({
-          orNo: String(r.ORNo || r.orNo),
-          payDate: String(r.payDate),
-          amount: Number(r.amount || 0),
-          transNo: String(r.transNo),
-          custNo: r.custNo != null ? String(r.custNo) : null,
-          custName: r.custName ? String(r.custName) : null,
-          salesDate: r.salesDate ? String(r.salesDate) : null,
-          isUnlinked: Boolean(r.isUnlinked),
-        }));
-
-        const sales: CustomerSalesSummaryItem[] = (salesRes.data || []).map((s: any) => ({
-          transNo: String(s.transNo),
-          custNo: String(s.custNo),
-          salesDate: String(s.salesDate),
-        }));
+        const activeCount = customers.filter((c) => !c.isDeleted).length;
+        const inactiveCount = customers.filter((c) => c.isDeleted).length;
 
         const termCounts: Record<string, number> = { ALL: customers.length, COD: 0, '30D': 0, '45D': 0 };
         for (const c of customers) {
-          const t = c.payTerms;
+          const t = c.payterm;
           termCounts[t] = (termCounts[t] || 0) + 1;
         }
 
-        const distinctTerms = Object.keys(termCounts).filter((k) => k !== 'ALL' && termCounts[k] > 0);
-        const totalCollected = payments.reduce((acc, p) => acc + p.amount, 0);
-        const unpaidOrdersCount = customers.reduce((acc, c) => acc + c.unpaidOrders, 0);
-
         return {
           customers,
-          payments,
-          sales,
           metrics: {
             totalCustomers: customers.length,
-            totalTermsCount: distinctTerms.length,
-            totalPayments: payments.length,
-            totalCollected,
-            unpaidOrdersCount,
+            activeCount,
+            inactiveCount,
             termCounts,
+            nextSuggestedCustNo,
           },
+          recentAudits: [],
         };
       }
     } catch {
@@ -164,127 +188,80 @@ export async function getCustomersPageData(): Promise<{
     }
   }
 
-  // SQLite implementation
+  // SQLite implementation directly querying canonical CUSTOMER table
   const db = getSqliteDb();
 
-  const custRows = db.prepare('SELECT * FROM v_customer_overview ORDER BY custNo ASC').all() as any[];
-  const payRows = db.prepare('SELECT * FROM v_customer_payments ORDER BY payDate DESC, ORNo DESC').all() as any[];
-  const salesRows = db.prepare('SELECT transNo, custNo, salesDate FROM SALES ORDER BY salesDate DESC, transNo DESC').all() as any[];
+  const rows = db.prepare(`
+    SELECT custNo, custName, address, payterm, is_deleted, stamp 
+    FROM CUSTOMER 
+    ORDER BY custNo ASC
+  `).all() as any[];
 
-  const customers: CustomerOverviewItem[] = custRows.map((r) => ({
-    custNo: String(r.custNo),
-    custName: String(r.custName || ''),
-    address: String(r.address || ''),
-    payTerms: String(r.payTerms || 'COD'),
-    ordersPlaced: Number(r.ordersPlaced || 0),
-    paymentCount: Number(r.paymentCount || 0),
-    totalPaid: Number(r.totalPaid || 0),
-    unpaidOrders: Math.max(0, Number(r.unpaidOrders || 0)),
-    lastPaymentDate: r.lastPaymentDate ? String(r.lastPaymentDate) : null,
-    lastPaymentOrNo: r.lastPaymentOrNo != null ? String(r.lastPaymentOrNo) : null,
-    customerSince: r.customerSince ? String(r.customerSince) : null,
-  }));
+  const customers: CustomerItem[] = rows.map((r) => {
+    const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+    return {
+      custNo: String(r.custNo),
+      custName: String(r.custName || ''),
+      address: String(r.address || ''),
+      payterm: String(r.payterm || 'COD'),
+      payTerms: String(r.payterm || 'COD'),
+      isDeleted,
+      status: isDeleted ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : null,
+    };
+  });
 
-  const payments: PaymentLedgerItem[] = payRows.map((r) => ({
-    orNo: String(r.ORNo || r.orNo),
-    payDate: String(r.payDate),
-    amount: Number(r.amount || 0),
-    transNo: String(r.transNo),
-    custNo: r.custNo != null ? String(r.custNo) : null,
-    custName: r.custName ? String(r.custName) : null,
-    salesDate: r.salesDate ? String(r.salesDate) : null,
-    isUnlinked: Boolean(r.isUnlinked),
-  }));
+  let maxNum = 0;
+  for (const c of customers) {
+    const match = c.custNo.match(/^C(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  }
+  const nextSuggestedCustNo = `C${String(maxNum > 0 ? maxNum + 1 : customers.length + 1).padStart(4, '0')}`;
 
-  const sales: CustomerSalesSummaryItem[] = salesRows.map((s) => ({
-    transNo: String(s.transNo),
-    custNo: String(s.custNo),
-    salesDate: String(s.salesDate),
-  }));
+  const activeCount = customers.filter((c) => !c.isDeleted).length;
+  const inactiveCount = customers.filter((c) => c.isDeleted).length;
 
   const termCounts: Record<string, number> = { ALL: customers.length, COD: 0, '30D': 0, '45D': 0 };
   for (const c of customers) {
-    const t = c.payTerms;
+    const t = c.payterm || 'COD';
     termCounts[t] = (termCounts[t] || 0) + 1;
   }
 
-  const distinctTerms = Object.keys(termCounts).filter((k) => k !== 'ALL' && termCounts[k] > 0);
-  const totalCollected = payments.reduce((acc, p) => acc + p.amount, 0);
-  const unpaidOrdersCount = customers.reduce((acc, c) => acc + c.unpaidOrders, 0);
+  let recentAudits: CustomerAuditLogItem[] = [];
+  try {
+    const auditRows = db.prepare(`
+      SELECT audit_id, action, record_key, old_values, new_values, action_by, action_at
+      FROM audit_log
+      WHERE table_name = 'CUSTOMER'
+      ORDER BY audit_id DESC
+      LIMIT 20
+    `).all() as any[];
+
+    recentAudits = auditRows.map((a) => ({
+      auditId: Number(a.audit_id),
+      action: a.action,
+      recordKey: String(a.record_key || ''),
+      oldValues: a.old_values ? String(a.old_values) : null,
+      newValues: a.new_values ? String(a.new_values) : null,
+      actionBy: String(a.action_by || 'system'),
+      actionAt: String(a.action_at || ''),
+    }));
+  } catch {
+    // Non-critical if audit table is empty
+  }
 
   return {
     customers,
-    payments,
-    sales,
     metrics: {
       totalCustomers: customers.length,
-      totalTermsCount: distinctTerms.length,
-      totalPayments: payments.length,
-      totalCollected,
-      unpaidOrdersCount,
+      activeCount,
+      inactiveCount,
       termCounts,
+      nextSuggestedCustNo,
     },
-  };
-}
-
-/**
- * Fetch single customer details, calculated summary, their payments, and their sales transactions.
- */
-export async function getCustomerDetailData(custNo: string | number): Promise<CustomerDetailData | null> {
-  const db = getSqliteDb();
-
-  const rawStr = String(custNo).trim();
-  const formattedCustNo = rawStr.startsWith('C') 
-    ? rawStr 
-    : `C${rawStr.padStart(4, '0')}`;
-
-  const custRow = db.prepare('SELECT * FROM CUSTOMER WHERE custNo = ? OR custNo = ?').get(formattedCustNo, rawStr) as any;
-  if (!custRow) return null;
-
-  const overviewRow = db.prepare('SELECT * FROM v_customer_overview WHERE custNo = ? OR custNo = ?').get(formattedCustNo, rawStr) as any;
-
-  // Payments for this customer (newest first)
-  const payments = db.prepare(`
-    SELECT p.ORNo as orNo, p.payDate, p.amount, p.transNo
-    FROM PAYMENT p
-    JOIN SALES s ON s.transNo = p.transNo
-    WHERE s.custNo = ? OR s.custNo = ?
-    ORDER BY p.payDate DESC, p.ORNo DESC
-  `).all(formattedCustNo, rawStr) as any[];
-
-  // Eligible sales transactions for this customer (for Record Payment dialog)
-  const sales = db.prepare(`
-    SELECT transNo, salesDate
-    FROM SALES
-    WHERE custNo = ? OR custNo = ?
-    ORDER BY salesDate DESC, transNo DESC
-  `).all(formattedCustNo, rawStr) as any[];
-
-  return {
-    customer: {
-      custNo: String(custRow.custNo),
-      custName: String(custRow.custName),
-      address: String(custRow.address),
-      payTerms: String(custRow.payTerms),
-    },
-    summary: {
-      ordersPlaced: Number(overviewRow?.ordersPlaced || 0),
-      totalPaid: Number(overviewRow?.totalPaid || 0),
-      paymentCount: Number(overviewRow?.paymentCount || 0),
-      unpaidOrders: Math.max(0, Number(overviewRow?.unpaidOrders || 0)),
-      lastPaymentDate: overviewRow?.lastPaymentDate ? String(overviewRow.lastPaymentDate) : null,
-      lastPaymentOrNo: overviewRow?.lastPaymentOrNo != null ? String(overviewRow.lastPaymentOrNo) : null,
-      customerSince: overviewRow?.customerSince ? String(overviewRow.customerSince) : null,
-    },
-    paymentHistory: payments.map((p) => ({
-      orNo: String(p.orNo),
-      payDate: String(p.payDate),
-      amount: Number(p.amount),
-      transNo: String(p.transNo),
-    })),
-    eligibleTransactions: sales.map((s) => ({
-      transNo: String(s.transNo),
-      salesDate: String(s.salesDate),
-    })),
+    recentAudits,
   };
 }

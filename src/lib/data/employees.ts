@@ -1,7 +1,99 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
-import { createClient } from '@/lib/supabase/server';
+import fs from 'node:fs';
 
+// ========================================================================
+// TYPES & CONTRACTS
+// ========================================================================
+
+export interface EmployeeItem {
+  empNo: string;
+  lastName: string;
+  firstName: string;
+  fullName: string;
+  gender: string;
+  birthDate: string;
+  hireDate: string;
+  sepDate: string | null;
+  isDeleted: boolean;
+  status: 'Active' | 'Inactive';
+  stamp: string | null;
+  currentJobCode: string | null;
+  currentJobDesc: string | null;
+  currentDeptCode: string | null;
+  currentDeptName: string | null;
+  currentSalary: number | null;
+  currentEffDate: string | null;
+}
+
+export interface JobItem {
+  jobCode: string;
+  jobDesc: string;
+  isDeleted?: boolean;
+  status?: 'Active' | 'Inactive';
+  stamp?: string | null;
+  activeStaffCount?: number;
+}
+
+export interface DepartmentItem {
+  deptCode: string;
+  deptName: string;
+  isDeleted?: boolean;
+  status?: 'Active' | 'Inactive';
+  stamp?: string | null;
+  activeStaffCount?: number;
+}
+
+export interface JobHistoryRecord {
+  empNo: string;
+  jobCode: string;
+  jobDesc: string;
+  deptCode: string;
+  deptName: string;
+  effDate: string;
+  salary: number | null;
+  isDeleted: boolean;
+  status: 'Active' | 'Inactive';
+  stamp: string | null;
+}
+
+export interface HumanResourcesMetrics {
+  totalEmployees: number;
+  activeEmployees: number;
+  inactiveEmployees: number;
+  totalJobs: number;
+  activeJobs: number;
+  inactiveJobs: number;
+  totalDepartments: number;
+  activeDepartments: number;
+  inactiveDepartments: number;
+  deptDistribution: Record<string, number>;
+  nextSuggestedEmpNo: string;
+  nextSuggestedJobCode: string;
+  nextSuggestedDeptCode: string;
+}
+
+export interface HumanResourcesAuditItem {
+  auditId: number;
+  tableName: 'EMPLOYEE' | 'JOB' | 'DEPARTMENT' | 'JOBHISTORY' | string;
+  action: 'ADD' | 'EDIT' | 'DELETE' | 'RESTORE' | string;
+  recordKey: string;
+  oldValues: string | null;
+  newValues: string | null;
+  actionBy: string;
+  actionAt: string;
+}
+
+export interface HumanResourcesPageData {
+  employees: EmployeeItem[];
+  jobs: JobItem[];
+  departments: DepartmentItem[];
+  jobHistory: JobHistoryRecord[];
+  metrics: HumanResourcesMetrics;
+  recentAudits: HumanResourcesAuditItem[];
+}
+
+// Backwards compatibility interfaces
 export interface EmployeeDirectoryItem {
   empNo: number;
   lastName: string;
@@ -19,7 +111,7 @@ export interface EmployeeDirectoryItem {
   jobDesc: string;
   deptCode: string;
   deptName: string;
-  salary: number | null; // Masked if non-admin
+  salary: number | null;
   currentJobEffDate: string;
 }
 
@@ -56,18 +148,6 @@ export interface EmployeeDetailPageData {
   latestSaleDate: string | null;
 }
 
-export interface DepartmentItem {
-  deptCode: string;
-  deptName: string;
-  activeCount?: number;
-}
-
-export interface JobItem {
-  jobCode: string;
-  jobDesc: string;
-  activeCount?: number;
-}
-
 export function calculateTenureText(hireDateStr: string, sepDateStr?: string | null): string {
   if (!hireDateStr) return '-';
   const start = new Date(hireDateStr);
@@ -87,103 +167,372 @@ export function calculateTenureText(hireDateStr: string, sepDateStr?: string | n
   return 'Less than 1 month';
 }
 
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
+}
+
 function getSqliteDb(): DatabaseSync {
-  const dbPath = path.join(process.cwd(), 'hope.db');
+  const dbPath = getHopeDbPath();
   return new DatabaseSync(dbPath);
 }
 
 /**
- * Fetch employee directory with department statistics
+ * Main Data Fetcher for Human Resources (Section 3.5: Employees, Jobs, Departments, Job History)
  */
-export async function getEmployeesDirectory(
+export async function getHumanResourcesPageData(
   userRole: string = 'admin'
-): Promise<{
-  items: EmployeeDirectoryItem[];
-  departments: DepartmentStat[];
-  totalActiveCount: number;
-}> {
-  const isAdmin = userRole.toLowerCase() === 'admin';
+): Promise<HumanResourcesPageData> {
   const db = getSqliteDb();
+  const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'superadmin';
 
-  // 1. Get all employees with current status
+  // 1. Query all employees with derived current job assignment
   const empRows = db.prepare(`
-    SELECT * FROM v_employee_current_status
-    ORDER BY empNo ASC
+    SELECT 
+      e.empNo, 
+      e.lastName, 
+      e.firstName, 
+      e.gender, 
+      e.birthDate, 
+      e.hireDate, 
+      e.sepDate, 
+      e.is_deleted, 
+      e.stamp,
+      (
+        SELECT jh.jobCode 
+        FROM JOBHISTORY jh 
+        WHERE jh.empNo = e.empNo 
+          AND jh.is_deleted = 0
+          AND jh.effDate <= date('now', '+8 hours')
+        ORDER BY jh.effDate DESC 
+        LIMIT 1
+      ) AS currentJobCode,
+      (
+        SELECT j.jobDesc 
+        FROM JOBHISTORY jh 
+        JOIN JOB j ON j.jobCode = jh.jobCode
+        WHERE jh.empNo = e.empNo 
+          AND jh.is_deleted = 0
+          AND jh.effDate <= date('now', '+8 hours')
+        ORDER BY jh.effDate DESC 
+        LIMIT 1
+      ) AS currentJobDesc,
+      (
+        SELECT jh.deptCode 
+        FROM JOBHISTORY jh 
+        WHERE jh.empNo = e.empNo 
+          AND jh.is_deleted = 0
+          AND jh.effDate <= date('now', '+8 hours')
+        ORDER BY jh.effDate DESC 
+        LIMIT 1
+      ) AS currentDeptCode,
+      (
+        SELECT d.deptName 
+        FROM JOBHISTORY jh 
+        JOIN DEPARTMENT d ON d.deptCode = jh.deptCode
+        WHERE jh.empNo = e.empNo 
+          AND jh.is_deleted = 0
+          AND jh.effDate <= date('now', '+8 hours')
+        ORDER BY jh.effDate DESC 
+        LIMIT 1
+      ) AS currentDeptName,
+      (
+        SELECT jh.salary 
+        FROM JOBHISTORY jh 
+        WHERE jh.empNo = e.empNo 
+          AND jh.is_deleted = 0
+          AND jh.effDate <= date('now', '+8 hours')
+        ORDER BY jh.effDate DESC 
+        LIMIT 1
+      ) AS currentSalary,
+      (
+        SELECT jh.effDate 
+        FROM JOBHISTORY jh 
+        WHERE jh.empNo = e.empNo 
+          AND jh.is_deleted = 0
+          AND jh.effDate <= date('now', '+8 hours')
+        ORDER BY jh.effDate DESC 
+        LIMIT 1
+      ) AS currentEffDate
+    FROM EMPLOYEE e
+    ORDER BY e.empNo ASC
   `).all() as any[];
 
-  const items: EmployeeDirectoryItem[] = empRows.map((r) => {
-    const genderRaw = String(r.gender || 'M').toUpperCase();
-    const genderDisplay = genderRaw === 'M' ? 'Male' : genderRaw === 'F' ? 'Female' : genderRaw;
-    const hireDate = String(r.hireDate || '');
-    const sepDate = r.sepDate ? String(r.sepDate) : null;
+  const employees: EmployeeItem[] = empRows.map((r) => {
+    const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+    const isSeparated = r.sepDate != null && String(r.sepDate).trim() !== '';
+    const isInactive = isDeleted || isSeparated;
 
     return {
-      empNo: Number(r.empNo),
+      empNo: String(r.empNo),
       lastName: String(r.lastName || ''),
       firstName: String(r.firstName || ''),
-      fullName: String(r.fullName || `${r.firstName} ${r.lastName}`),
-      gender: genderRaw,
-      genderDisplay,
+      fullName: `${String(r.firstName || '')} ${String(r.lastName || '')}`.trim(),
+      gender: String(r.gender || 'M').toUpperCase(),
       birthDate: String(r.birthDate || ''),
-      hireDate,
-      sepDate,
-      employmentStatus: (r.employmentStatus || r.status || (sepDate ? 'Separated' : 'Active')) as 'Active' | 'Separated',
-      tenureDays: Number(r.tenureDays || 0),
-      tenureText: calculateTenureText(hireDate, sepDate),
-      jobCode: String(r.jobCode || 'N/A'),
-      jobDesc: String(r.jobDesc || 'Unassigned'),
-      deptCode: String(r.deptCode || 'N/A'),
-      deptName: String(r.deptName || 'Unassigned'),
-      salary: isAdmin ? (r.salary != null ? Number(r.salary) : null) : null,
-      currentJobEffDate: String(r.currentJobEffDate || hireDate),
+      hireDate: String(r.hireDate || ''),
+      sepDate: r.sepDate ? String(r.sepDate) : null,
+      isDeleted,
+      status: isInactive ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : null,
+      currentJobCode: r.currentJobCode ? String(r.currentJobCode) : null,
+      currentJobDesc: r.currentJobDesc ? String(r.currentJobDesc) : null,
+      currentDeptCode: r.currentDeptCode ? String(r.currentDeptCode) : null,
+      currentDeptName: r.currentDeptName ? String(r.currentDeptName) : null,
+      currentSalary: isAdmin ? (r.currentSalary != null ? Number(r.currentSalary) : null) : null,
+      currentEffDate: r.currentEffDate ? String(r.currentEffDate) : null,
     };
   });
 
-  // 2. Compute department stats (including departments with 0 employees)
-  const deptRows = db.prepare(`
-    SELECT d.deptCode, d.deptName
-    FROM DEPARTMENT d
-    ORDER BY d.deptName ASC
+  // 2. Query all Jobs
+  const jobRows = db.prepare(`
+    SELECT j.jobCode, j.jobDesc, j.is_deleted, j.stamp,
+      (
+        SELECT COUNT(DISTINCT jh.empNo)
+        FROM JOBHISTORY jh
+        JOIN EMPLOYEE e ON e.empNo = jh.empNo
+        WHERE jh.jobCode = j.jobCode 
+          AND jh.is_deleted = 0 
+          AND e.is_deleted = 0 
+          AND e.sepDate IS NULL
+          AND jh.effDate = (
+            SELECT MAX(jh2.effDate) 
+            FROM JOBHISTORY jh2 
+            WHERE jh2.empNo = jh.empNo 
+              AND jh2.is_deleted = 0
+              AND jh2.effDate <= date('now', '+8 hours')
+          )
+      ) AS activeStaffCount
+    FROM JOB j
+    ORDER BY j.jobCode ASC
   `).all() as any[];
 
-  let totalActiveCount = 0;
-  const departments: DepartmentStat[] = deptRows.map((d) => {
-    const deptEmployees = items.filter((emp) => emp.deptCode === d.deptCode);
-    const activeCount = deptEmployees.filter((emp) => emp.employmentStatus === 'Active').length;
-    const separatedCount = deptEmployees.filter((emp) => emp.employmentStatus === 'Separated').length;
-
-    totalActiveCount += activeCount;
-
+  const jobs: JobItem[] = jobRows.map((r) => {
+    const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
     return {
-      deptCode: String(d.deptCode),
-      deptName: String(d.deptName),
-      activeCount,
-      separatedCount,
-      totalCount: deptEmployees.length,
+      jobCode: String(r.jobCode),
+      jobDesc: String(r.jobDesc || ''),
+      isDeleted,
+      status: isDeleted ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : null,
+      activeStaffCount: Number(r.activeStaffCount || 0),
     };
   });
 
+  // 3. Query all Departments
+  const deptRows = db.prepare(`
+    SELECT d.deptCode, d.deptName, d.is_deleted, d.stamp,
+      (
+        SELECT COUNT(DISTINCT jh.empNo)
+        FROM JOBHISTORY jh
+        JOIN EMPLOYEE e ON e.empNo = jh.empNo
+        WHERE jh.deptCode = d.deptCode 
+          AND jh.is_deleted = 0 
+          AND e.is_deleted = 0 
+          AND e.sepDate IS NULL
+          AND jh.effDate = (
+            SELECT MAX(jh2.effDate) 
+            FROM JOBHISTORY jh2 
+            WHERE jh2.empNo = jh.empNo 
+              AND jh2.is_deleted = 0
+              AND jh2.effDate <= date('now', '+8 hours')
+          )
+      ) AS activeStaffCount
+    FROM DEPARTMENT d
+    ORDER BY d.deptCode ASC
+  `).all() as any[];
+
+  const departments: DepartmentItem[] = deptRows.map((r) => {
+    const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+    return {
+      deptCode: String(r.deptCode),
+      deptName: String(r.deptName || ''),
+      isDeleted,
+      status: isDeleted ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : null,
+      activeStaffCount: Number(r.activeStaffCount || 0),
+    };
+  });
+
+  // 4. Query all Job History records
+  const jhRows = db.prepare(`
+    SELECT 
+      jh.empNo, 
+      jh.jobCode, 
+      j.jobDesc, 
+      jh.deptCode, 
+      d.deptName, 
+      jh.effDate, 
+      jh.salary, 
+      jh.is_deleted, 
+      jh.stamp
+    FROM JOBHISTORY jh
+    LEFT JOIN JOB j ON j.jobCode = jh.jobCode
+    LEFT JOIN DEPARTMENT d ON d.deptCode = jh.deptCode
+    ORDER BY jh.effDate DESC, jh.empNo ASC
+  `).all() as any[];
+
+  const jobHistory: JobHistoryRecord[] = jhRows.map((r) => {
+    const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+    return {
+      empNo: String(r.empNo),
+      jobCode: String(r.jobCode),
+      jobDesc: String(r.jobDesc || r.jobCode),
+      deptCode: String(r.deptCode || ''),
+      deptName: String(r.deptName || r.deptCode || ''),
+      effDate: String(r.effDate),
+      salary: isAdmin ? (r.salary != null ? Number(r.salary) : null) : null,
+      isDeleted,
+      status: isDeleted ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : null,
+    };
+  });
+
+  // 5. Compute Metrics
+  const activeEmployees = employees.filter((e) => e.status === 'Active').length;
+  const inactiveEmployees = employees.filter((e) => e.status === 'Inactive').length;
+
+  const activeJobs = jobs.filter((j) => !j.isDeleted).length;
+  const inactiveJobs = jobs.filter((j) => j.isDeleted).length;
+
+  const activeDepartments = departments.filter((d) => !d.isDeleted).length;
+  const inactiveDepartments = departments.filter((d) => d.isDeleted).length;
+
+  const deptDistribution: Record<string, number> = {};
+  for (const emp of employees) {
+    if (emp.status === 'Active' && emp.currentDeptName) {
+      deptDistribution[emp.currentDeptName] = (deptDistribution[emp.currentDeptName] || 0) + 1;
+    }
+  }
+
+  // Calculate next suggested EmpNo (VARCHAR(5))
+  let maxEmpInt = 0;
+  for (const emp of employees) {
+    const num = parseInt(emp.empNo, 10);
+    if (!isNaN(num) && num > maxEmpInt) {
+      maxEmpInt = num;
+    }
+  }
+  const nextSuggestedEmpNo = String(maxEmpInt + 2).padStart(5, '0');
+
+  // Next suggested job code and dept code
+  const nextSuggestedJobCode = `J${String(jobs.length + 1).padStart(3, '0')}`;
+  const nextSuggestedDeptCode = `D${String(departments.length + 1).padStart(2, '0')}`;
+
+  // 6. Query recent audit records for HR entities
+  let recentAudits: HumanResourcesAuditItem[] = [];
+  try {
+    const auditRows = db.prepare(`
+      SELECT audit_id, table_name, action, record_key, old_values, new_values, action_by, action_at
+      FROM audit_log
+      WHERE table_name IN ('EMPLOYEE', 'JOB', 'DEPARTMENT', 'JOBHISTORY')
+      ORDER BY audit_id DESC
+      LIMIT 30
+    `).all() as any[];
+
+    recentAudits = auditRows.map((a) => ({
+      auditId: Number(a.audit_id),
+      tableName: String(a.table_name),
+      action: a.action,
+      recordKey: String(a.record_key || ''),
+      oldValues: a.old_values ? String(a.old_values) : null,
+      newValues: a.new_values ? String(a.new_values) : null,
+      actionBy: String(a.action_by || 'system'),
+      actionAt: String(a.action_at || ''),
+    }));
+  } catch {
+    // Audit table may be empty or inaccessible
+  }
+
   return {
-    items,
+    employees,
+    jobs,
     departments,
-    totalActiveCount,
+    jobHistory,
+    metrics: {
+      totalEmployees: employees.length,
+      activeEmployees,
+      inactiveEmployees,
+      totalJobs: jobs.length,
+      activeJobs,
+      inactiveJobs,
+      totalDepartments: departments.length,
+      activeDepartments,
+      inactiveDepartments,
+      deptDistribution,
+      nextSuggestedEmpNo,
+      nextSuggestedJobCode,
+      nextSuggestedDeptCode,
+    },
+    recentAudits,
   };
 }
 
-/**
- * Fetch complete profile and job history for a single employee
- */
+// ========================================================================
+// LEGACY COMPATIBILITY HELPERS
+// ========================================================================
+
+export async function getEmployeesDirectory(userRole: string = 'admin') {
+  const data = await getHumanResourcesPageData(userRole);
+  const items: EmployeeDirectoryItem[] = data.employees.map((emp) => ({
+    empNo: Number(emp.empNo),
+    lastName: emp.lastName,
+    firstName: emp.firstName,
+    fullName: emp.fullName,
+    gender: emp.gender,
+    genderDisplay: emp.gender === 'M' ? 'Male' : emp.gender === 'F' ? 'Female' : emp.gender,
+    birthDate: emp.birthDate,
+    hireDate: emp.hireDate,
+    sepDate: emp.sepDate,
+    employmentStatus: emp.status === 'Active' ? 'Active' : 'Separated',
+    tenureDays: 0,
+    tenureText: calculateTenureText(emp.hireDate, emp.sepDate),
+    jobCode: emp.currentJobCode || 'N/A',
+    jobDesc: emp.currentJobDesc || 'Unassigned',
+    deptCode: emp.currentDeptCode || 'N/A',
+    deptName: emp.currentDeptName || 'Unassigned',
+    salary: emp.currentSalary,
+    currentJobEffDate: emp.currentEffDate || emp.hireDate,
+  }));
+
+  const deptStats: DepartmentStat[] = data.departments.map((d) => ({
+    deptCode: d.deptCode,
+    deptName: d.deptName,
+    activeCount: d.activeStaffCount ?? 0,
+    separatedCount: 0,
+    totalCount: d.activeStaffCount ?? 0,
+  }));
+
+  return {
+    items,
+    departments: deptStats,
+    totalActiveCount: data.metrics.activeEmployees,
+  };
+}
+
 export async function getEmployeeDetailPageData(
   empNo: number | string,
   userRole: string = 'admin'
 ): Promise<EmployeeDetailPageData | null> {
-  const isAdmin = userRole.toLowerCase() === 'admin';
   const db = getSqliteDb();
-
+  const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'superadmin';
   const rawStr = String(empNo).trim();
   const formattedEmpNo = rawStr.padStart(5, '0');
 
-  const empRow = db.prepare('SELECT * FROM v_employee_current_status WHERE empNo = ? OR empNo = ?').get(formattedEmpNo, rawStr) as any;
+  const empRow = db.prepare('SELECT * FROM EMPLOYEE WHERE empNo = ? OR empNo = ?').get(formattedEmpNo, rawStr) as any;
   if (!empRow) return null;
 
   const hireDate = String(empRow.hireDate || '');
@@ -191,7 +540,6 @@ export async function getEmployeeDetailPageData(
   const genderRaw = String(empRow.gender || 'M').toUpperCase();
   const genderDisplay = genderRaw === 'M' ? 'Male' : genderRaw === 'F' ? 'Female' : genderRaw;
 
-  // Job history sorted newest first
   const rawHistory = db.prepare(`
     SELECT 
       jh.empNo,
@@ -202,14 +550,12 @@ export async function getEmployeeDetailPageData(
       jh.salary,
       jh.effDate
     FROM JOBHISTORY jh
-    JOIN JOB j ON j.jobCode = jh.jobCode
-    JOIN DEPARTMENT d ON d.deptCode = jh.deptCode
-    WHERE jh.empNo = ? OR jh.empNo = ?
+    LEFT JOIN JOB j ON j.jobCode = jh.jobCode
+    LEFT JOIN DEPARTMENT d ON d.deptCode = jh.deptCode
+    WHERE (jh.empNo = ? OR jh.empNo = ?) AND jh.is_deleted = 0
     ORDER BY jh.effDate DESC
   `).all(formattedEmpNo, rawStr) as any[];
 
-  // Current assignment is the row with latest effDate on or before today
-  // Since ordered by effDate DESC, the first row with effDate <= today is current
   const todayStr = new Date().toISOString().slice(0, 10);
   let currentFound = false;
 
@@ -220,55 +566,51 @@ export async function getEmployeeDetailPageData(
     return {
       empNo: Number(row.empNo),
       jobCode: String(row.jobCode),
-      jobDesc: String(row.jobDesc),
+      jobDesc: String(row.jobDesc || row.jobCode),
       effDate: String(row.effDate),
-      deptCode: String(row.deptCode),
-      deptName: String(row.deptName),
+      deptCode: String(row.deptCode || ''),
+      deptName: String(row.deptName || ''),
       salary: isAdmin ? (row.salary != null ? Number(row.salary) : null) : null,
       isCurrent,
     };
   });
 
-  // Current assignment block
   const currentAss = history.find((h) => h.isCurrent) || history[0] || {
-    jobCode: String(empRow.jobCode || 'N/A'),
-    jobDesc: String(empRow.jobDesc || 'Unassigned'),
-    deptCode: String(empRow.deptCode || 'N/A'),
-    deptName: String(empRow.deptName || 'Unassigned'),
-    salary: isAdmin ? (empRow.salary != null ? Number(empRow.salary) : null) : null,
-    effDate: String(empRow.currentJobEffDate || hireDate),
+    jobCode: 'N/A',
+    jobDesc: 'Unassigned',
+    deptCode: 'N/A',
+    deptName: 'Unassigned',
+    salary: null,
+    effDate: hireDate,
   };
 
-  // Latest sale date for validation display
   const latestSale = db.prepare(`
     SELECT MAX(salesDate) AS latestSaleDate
     FROM SALES
     WHERE empNo = ? OR empNo = ?
   `).get(formattedEmpNo, rawStr) as any;
 
-  const employee: EmployeeDirectoryItem = {
-    empNo: Number(empRow.empNo),
-    lastName: String(empRow.lastName || ''),
-    firstName: String(empRow.firstName || ''),
-    fullName: String(empRow.fullName || `${empRow.firstName} ${empRow.lastName}`),
-    gender: genderRaw,
-    genderDisplay,
-    birthDate: String(empRow.birthDate || ''),
-    hireDate,
-    sepDate,
-    employmentStatus: empRow.employmentStatus as 'Active' | 'Separated',
-    tenureDays: Number(empRow.tenureDays || 0),
-    tenureText: calculateTenureText(hireDate, sepDate),
-    jobCode: currentAss.jobCode,
-    jobDesc: currentAss.jobDesc,
-    deptCode: currentAss.deptCode,
-    deptName: currentAss.deptName,
-    salary: isAdmin ? currentAss.salary : null,
-    currentJobEffDate: currentAss.effDate,
-  };
-
   return {
-    employee,
+    employee: {
+      empNo: Number(empRow.empNo),
+      lastName: String(empRow.lastName || ''),
+      firstName: String(empRow.firstName || ''),
+      fullName: `${String(empRow.firstName || '')} ${String(empRow.lastName || '')}`.trim(),
+      gender: genderRaw,
+      genderDisplay,
+      birthDate: String(empRow.birthDate || ''),
+      hireDate,
+      sepDate,
+      employmentStatus: (empRow.is_deleted === 1 || sepDate != null) ? 'Separated' : 'Active',
+      tenureDays: 0,
+      tenureText: calculateTenureText(hireDate, sepDate),
+      jobCode: currentAss.jobCode,
+      jobDesc: currentAss.jobDesc,
+      deptCode: currentAss.deptCode,
+      deptName: currentAss.deptName,
+      salary: isAdmin ? currentAss.salary : null,
+      currentJobEffDate: currentAss.effDate,
+    },
     currentAssignment: {
       jobCode: currentAss.jobCode,
       jobDesc: currentAss.jobDesc,
@@ -282,28 +624,20 @@ export async function getEmployeeDetailPageData(
   };
 }
 
-/**
- * Fetch Department & Job lists for lookups and manager modal
- */
-export async function getDepartmentsAndJobsLookups(): Promise<{
-  departments: DepartmentItem[];
-  jobs: JobItem[];
-}> {
+export async function getDepartmentsAndJobsLookups() {
   const db = getSqliteDb();
 
   const departments = db.prepare(`
-    SELECT d.deptCode, d.deptName, COUNT(e.empNo) AS activeCount
+    SELECT d.deptCode, d.deptName
     FROM DEPARTMENT d
-    LEFT JOIN v_employee_current_status e ON e.deptCode = d.deptCode AND e.employmentStatus = 'Active'
-    GROUP BY d.deptCode, d.deptName
+    WHERE d.is_deleted = 0
     ORDER BY d.deptName ASC
   `).all() as any[];
 
   const jobs = db.prepare(`
-    SELECT j.jobCode, j.jobDesc, COUNT(e.empNo) AS activeCount
+    SELECT j.jobCode, j.jobDesc
     FROM JOB j
-    LEFT JOIN v_employee_current_status e ON e.jobCode = j.jobCode AND e.employmentStatus = 'Active'
-    GROUP BY j.jobCode, j.jobDesc
+    WHERE j.is_deleted = 0
     ORDER BY j.jobDesc ASC
   `).all() as any[];
 
@@ -311,12 +645,10 @@ export async function getDepartmentsAndJobsLookups(): Promise<{
     departments: departments.map((d) => ({
       deptCode: String(d.deptCode),
       deptName: String(d.deptName),
-      activeCount: Number(d.activeCount || 0),
     })),
     jobs: jobs.map((j) => ({
       jobCode: String(j.jobCode),
       jobDesc: String(j.jobDesc),
-      activeCount: Number(j.activeCount || 0),
     })),
   };
 }

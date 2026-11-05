@@ -1,96 +1,96 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { addProductAction } from '@/app/actions/products';
-import {
-  detectCategoryAndBrand,
-  generateStructuredSkuCode,
-  FAMILY_LABELS,
-  KNOWN_BRANDS,
-} from '@/lib/products';
-import { AlertCircle, Wand2, Sparkles, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, PackagePlus, AlertCircle } from 'lucide-react';
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  availableUnits?: string[];
-  existingCodes?: string[];
+  nextSuggestedProdCode?: string;
 }
+
+const PERMITTED_UNITS = [
+  { value: 'pc', label: 'pc (Piece)' },
+  { value: 'ea', label: 'ea (Each)' },
+  { value: 'mtr', label: 'mtr (Meter)' },
+  { value: 'pkg', label: 'pkg (Package)' },
+  { value: 'ltr', label: 'ltr (Liter)' },
+];
 
 export function AddProductModal({
   isOpen,
   onClose,
-  availableUnits = ['pc'],
-  existingCodes = [],
+  nextSuggestedProdCode = 'P-006',
 }: AddProductModalProps) {
   const router = useRouter();
 
-  const getTodayManila = () => {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-  };
+  const getTodayManila = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
-  const [prodCode, setProdCode] = useState('');
+  const [prodCode, setProdCode] = useState(nextSuggestedProdCode);
   const [description, setDescription] = useState('');
-  const [unit, setUnit] = useState(availableUnits[0] || 'pc');
+  const [unit, setUnit] = useState<'pc' | 'ea' | 'mtr' | 'pkg' | 'ltr'>('pc');
   const [initialPrice, setInitialPrice] = useState('');
   const [effDate, setEffDate] = useState(getTodayManila());
-
-  // SKU Builder manual controls
-  const [selectedCategory, setSelectedCategory] = useState('CPU');
-  const [selectedBrand, setSelectedBrand] = useState('AMD');
-  const [showSkuBuilder, setShowSkuBuilder] = useState(false);
-  const [hasManuallyEditedCode, setHasManuallyEditedCode] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Live auto-detection from description
-  const detected = useMemo(() => {
-    return detectCategoryAndBrand(description);
-  }, [description]);
-
-  const autoSuggestedSku = useMemo(() => {
-    if (!description.trim() || description.trim().length < 3) return null;
-    return generateStructuredSkuCode(detected.category, detected.brand, existingCodes);
-  }, [description, detected, existingCodes]);
-
-  // When description changes, if user hasn't manually typed a custom code, auto-fill suggested SKU
   useEffect(() => {
-    if (autoSuggestedSku && !hasManuallyEditedCode) {
-      setProdCode(autoSuggestedSku.code);
-      setSelectedCategory(detected.category);
-      setSelectedBrand(detected.brand);
+    if (isOpen) {
+      setProdCode(nextSuggestedProdCode);
+      setDescription('');
+      setUnit('pc');
+      setInitialPrice('');
+      setEffDate(getTodayManila());
+      setErrorMsg(null);
     }
-  }, [autoSuggestedSku, hasManuallyEditedCode, detected]);
+  }, [isOpen, nextSuggestedProdCode]);
 
-  // Generate SKU from builder
-  const handleGenerateSkuFromBuilder = () => {
-    const res = generateStructuredSkuCode(selectedCategory, selectedBrand, existingCodes);
-    setProdCode(res.code);
-    setHasManuallyEditedCode(true);
-  };
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    const price = parseFloat(initialPrice);
-    if (isNaN(price) || price <= 0) {
-      setErrorMsg('Unit price must be greater than zero.');
+    const cleanCode = prodCode.trim().toUpperCase();
+    if (!cleanCode) {
+      setErrorMsg('Product code is required.');
       return;
+    }
+    if (cleanCode.length > 6) {
+      setErrorMsg('Product code cannot exceed 6 characters (Schema limit: VARCHAR(6)).');
+      return;
+    }
+
+    if (!description.trim()) {
+      setErrorMsg('Product description is required.');
+      return;
+    }
+    if (description.trim().length > 30) {
+      setErrorMsg('Description cannot exceed 30 characters (Schema limit: VARCHAR(30)).');
+      return;
+    }
+
+    let parsedPrice: number | undefined;
+    if (initialPrice.trim()) {
+      parsedPrice = parseFloat(initialPrice);
+      if (isNaN(parsedPrice) || parsedPrice <= 0) {
+        setErrorMsg('Initial price must be a positive number greater than 0.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
       const result = await addProductAction({
-        prodCode: prodCode.trim().toUpperCase(),
+        prodCode: cleanCode,
         description: description.trim(),
-        unit: unit.trim(),
-        initialPrice: price,
-        effDate,
+        unit,
+        initialPrice: parsedPrice,
+        effDate: parsedPrice ? effDate : undefined,
       });
 
       if (result.error) {
@@ -101,233 +101,159 @@ export function AddProductModal({
 
       setIsSubmitting(false);
       onClose();
-      // Reset form
-      setProdCode('');
-      setDescription('');
-      setInitialPrice('');
-      setHasManuallyEditedCode(false);
-      setEffDate(getTodayManila());
       router.refresh();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Failed to add product.');
+    } catch {
+      setErrorMsg('An unexpected error occurred while creating product.');
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Add Product"
-      description="Create a product in PRODUCT and record its first price in PRICEHIST."
-      maxWidth="md"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+      <div
+        className="w-full max-w-md rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5"
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <PackagePlus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Add Product
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
         {errorMsg && (
-          <div className="flex items-start gap-2 rounded-md border border-[#FDECEA] bg-[#FDECEA]/60 p-3 text-xs text-[#B42318]">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-[#B42318]" />
-            <p className="leading-snug">{errorMsg}</p>
+          <div className="rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* Description First (helps auto-detect SKU) */}
-        <div>
-          <label className="block text-xs font-semibold text-[#17231F] mb-1">
-            Description
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. AMD Ryzen 5 5600G | 6 Cores 12 Threads | 3.9GHz"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-            required
-            autoFocus
-          />
-          <p className="mt-1 text-[11px] text-[#52615B]">
-            Entering an item (e.g. Ryzen 5 5600G) auto-suggests its structured retailer SKU code.
-          </p>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
+          {/* Product Code */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Product Code <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono">Max 6 chars (PK)</span>
+            </div>
+            <input
+              type="text"
+              required
+              maxLength={6}
+              value={prodCode}
+              onChange={(e) => setProdCode(e.target.value.toUpperCase())}
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-mono uppercase text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              placeholder="e.g. P-006 or AD0005"
+            />
+          </div>
 
-        {/* Live Detected SKU Suggestion Banner */}
-        {autoSuggestedSku && (
-          <div className="rounded-md border border-[#DDE3DE] bg-[#FAFBFA] p-2.5 flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1.5 text-[#17231F]">
-              <Sparkles className="h-3.5 w-3.5 text-[#245B48] shrink-0" />
-              <span>
-                Suggested SKU: <strong className="font-mono">{autoSuggestedSku.code}</strong>{' '}
-                <span className="text-[11px] text-[#52615B]">
-                  ({detected.category} · {detected.brand})
-                </span>
+          {/* Description */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Description <span className="text-rose-500">*</span>
+              </label>
+              <span className={`text-[10px] font-mono ${description.length >= 30 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                {description.length}/30
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setProdCode(autoSuggestedSku.code);
-                setHasManuallyEditedCode(true);
-              }}
-              className="text-[11px] font-semibold text-[#245B48] underline hover:text-[#1C4939] whitespace-nowrap"
-            >
-              Apply SKU
-            </button>
+            <input
+              type="text"
+              required
+              maxLength={30}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              placeholder="e.g. Industrial Widget A"
+            />
           </div>
-        )}
 
-        {/* Product Code */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs font-semibold text-[#17231F]">
-              Product code (Retailer SKU)
+          {/* Unit of Measurement */}
+          <div className="space-y-1">
+            <label className="block font-semibold text-slate-800 dark:text-slate-200">
+              Unit of Measurement <span className="text-rose-500">*</span>
             </label>
-            <button
-              type="button"
-              onClick={() => setShowSkuBuilder(!showSkuBuilder)}
-              className="inline-flex items-center gap-1 text-[11px] text-[#245B48] hover:underline"
+            <select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value as any)}
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
             >
-              <Wand2 className="h-3 w-3" />
-              <span>{showSkuBuilder ? 'Hide SKU builder' : 'SKU generator'}</span>
-              {showSkuBuilder ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-            </button>
+              {PERMITTED_UNITS.map((u) => (
+                <option key={u.value} value={u.value}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              Enforced by database check constraint: unit IN (&apos;pc&apos;, &apos;ea&apos;, &apos;mtr&apos;, &apos;pkg&apos;, &apos;ltr&apos;).
+            </p>
           </div>
 
-          <input
-            type="text"
-            placeholder="e.g. CPU-AMD-000008"
-            value={prodCode}
-            onChange={(e) => {
-              setProdCode(e.target.value.toUpperCase());
-              setHasManuallyEditedCode(true);
-            }}
-            className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs font-mono uppercase text-[#17231F] focus:border-[#245B48] focus:outline-none focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-            required
-          />
-          <p className="mt-1 text-[11px] text-[#52615B]">
-            Format: Category-Brand-Sequential (e.g. CPU-AMD-000008)
-          </p>
-        </div>
-
-        {/* Expandable Structured SKU Generator */}
-        {showSkuBuilder && (
-          <div className="rounded-md border border-[#DDE3DE] bg-[#FAFBFA] p-3 space-y-3">
-            <div className="text-[11px] font-semibold text-[#17231F] flex items-center gap-1">
-              <Wand2 className="h-3 w-3 text-[#245B48]" />
-              <span>Structured SKU Code Builder</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <label className="block text-[11px] text-[#52615B] mb-0.5">Category</label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full rounded-md border border-[#CCD5CD] bg-white px-2 py-1.5 text-xs text-[#17231F]"
-                >
-                  {Object.entries(FAMILY_LABELS).map(([code, label]) => (
-                    <option key={code} value={code}>
-                      {code} ({label})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] text-[#52615B] mb-0.5">Brand</label>
-                <input
-                  type="text"
-                  list="known-brands-list"
-                  placeholder="e.g. AMD, INTEL"
-                  value={selectedBrand}
-                  onChange={(e) => setSelectedBrand(e.target.value.toUpperCase())}
-                  className="w-full rounded-md border border-[#CCD5CD] bg-white px-2 py-1.5 text-xs font-mono uppercase text-[#17231F]"
-                />
-                <datalist id="known-brands-list">
-                  {KNOWN_BRANDS.map((b) => (
-                    <option key={b} value={b} />
-                  ))}
-                </datalist>
-              </div>
+          {/* Optional Initial Price & Effective Date */}
+          <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-1">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Initial Price (Optional)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={initialPrice}
+                onChange={(e) => setInitialPrice(e.target.value)}
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-mono"
+                placeholder="e.g. 13.75"
+              />
             </div>
 
+            <div className="space-y-1">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Effective Date
+              </label>
+              <input
+                type="date"
+                disabled={!initialPrice}
+                value={effDate}
+                onChange={(e) => setEffDate(e.target.value)}
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-4">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleGenerateSkuFromBuilder}
-              className="w-full flex items-center justify-center gap-1.5 font-sans text-xs"
+              onClick={onClose}
+              disabled={isSubmitting}
             >
-              <Sparkles className="h-3 w-3" />
-              <span>Generate SKU ({selectedCategory}-{selectedBrand}-...)</span>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSubmitting ? 'Saving...' : 'Add Product'}
             </Button>
           </div>
-        )}
-
-        {/* Unit & Initial Price */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#17231F] mb-1">
-              Unit
-            </label>
-            <select
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-            >
-              {availableUnits.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#17231F] mb-1">
-              First unit price (₱)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0.00"
-              value={initialPrice}
-              onChange={(e) => setInitialPrice(e.target.value)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs tabular-nums text-[#17231F] focus:border-[#245B48] focus:outline-none focus:ring-1 focus:ring-[#245B48]/30 transition-all font-mono"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Effective Date */}
-        <div>
-          <label className="block text-xs font-semibold text-[#17231F] mb-1">
-            Effective date
-          </label>
-          <input
-            type="date"
-            max={getTodayManila()}
-            value={effDate}
-            onChange={(e) => setEffDate(e.target.value)}
-            className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none focus:ring-1 focus:ring-[#245B48]/30 transition-all font-mono"
-            required
-          />
-          <p className="mt-1 text-[11px] text-[#52615B]">
-            Cannot be in the future. Defaults to today.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#DDE3DE]">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Add Product'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+        </form>
+      </div>
+    </div>
   );
 }

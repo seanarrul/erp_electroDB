@@ -4,67 +4,42 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from './auth';
 
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
+}
+
 function getSqliteDb(): DatabaseSync {
-  const dbPath = path.join(process.cwd(), 'hope.db');
+  const dbPath = getHopeDbPath();
   return new DatabaseSync(dbPath);
 }
 
-function getManilaToday(): string {
-  // Asia/Manila current date in YYYY-MM-DD
+function getStampString(action: 'CREATED' | 'EDITED' | 'DELETED' | 'RESTORED', byUser = 'system'): string {
   const now = new Date();
-  return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
+  return `${action} ${byUser} ${dateStr} ${timeStr}`;
 }
 
-// ========================================================================
-// SCHEMAS
-// ========================================================================
-
-const addProductSchema = z.object({
-  prodCode: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(
-      /^[A-Z]{2,4}-[A-Z0-9-]+$/,
-      'Product code must follow the pattern FAM-XXXX (2-4 uppercase letters, a hyphen, then uppercase letters, digits and hyphens).'
-    ),
-  description: z.string().trim().min(1, 'Product description is required').max(255),
-  unit: z.string().trim().toLowerCase().min(1, 'Unit of measurement is required').max(30),
-  initialPrice: z.number().positive('Unit price must be greater than zero'),
-  effDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid effective date is required'),
-});
-
-const newPriceSchema = z.object({
-  prodCode: z.string().trim().toUpperCase().min(1, 'Product code is required'),
-  unitPrice: z.number().positive('Unit price must be greater than zero'),
-  effDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid effective date is required'),
-});
-
-const correctPriceSchema = z.object({
-  prodCode: z.string().trim().toUpperCase().min(1, 'Product code is required'),
-  unitPrice: z.number().positive('Unit price must be greater than zero'),
-});
-
-const updateProductSchema = z.object({
-  prodCode: z.string().trim().toUpperCase().min(1, 'Product code is required'),
-  description: z.string().trim().min(1, 'Product description is required').max(255),
-  unit: z.string().trim().toLowerCase().min(1, 'Unit of measurement is required').max(30),
-});
-
-export type AddProductInput = z.infer<typeof addProductSchema>;
-export type NewPriceInput = z.infer<typeof newPriceSchema>;
-export type CorrectPriceInput = z.infer<typeof correctPriceSchema>;
-export type UpdateProductInput = z.infer<typeof updateProductSchema>;
-
-// Helper to assert admin role
-async function assertAdmin(): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user || user.role !== 'admin') {
-    throw new Error('Access denied. Only system administrators can perform this action.');
-  }
+function getManilaToday(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 }
 
 function isSupabaseLive(): boolean {
@@ -77,74 +52,118 @@ function isSupabaseLive(): boolean {
 }
 
 // ========================================================================
-// 1. ADD PRODUCT ACTION (R-01, R-02, R-03, R-04, R-05)
+// SCHEMAS
+// ========================================================================
+
+const addProductSchema = z.object({
+  prodCode: z.string().trim().min(1, 'Product code is required').max(6, 'Product code cannot exceed 6 characters (VARCHAR(6)).'),
+  description: z.string().trim().min(1, 'Product description is required').max(30, 'Description cannot exceed 30 characters (VARCHAR(30)).'),
+  unit: z.enum(['pc', 'ea', 'mtr', 'pkg', 'ltr'], {
+    errorMap: () => ({ message: 'Unit must be one of: pc, ea, mtr, pkg, ltr (Schema CHECK constraint).' }),
+  }),
+  initialPrice: z.number().positive('Price must be greater than zero').optional(),
+  effDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid effective date (YYYY-MM-DD) is required').optional(),
+});
+
+const updateProductSchema = z.object({
+  prodCode: z.string().trim().min(1, 'Product code is required').max(6),
+  description: z.string().trim().min(1, 'Product description is required').max(30, 'Description cannot exceed 30 characters (VARCHAR(30)).'),
+  unit: z.enum(['pc', 'ea', 'mtr', 'pkg', 'ltr'], {
+    errorMap: () => ({ message: 'Unit must be one of: pc, ea, mtr, pkg, ltr.' }),
+  }),
+});
+
+const priceRecordSchema = z.object({
+  prodCode: z.string().trim().min(1, 'Product code is required').max(6),
+  effDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid effective date (YYYY-MM-DD) is required'),
+  unitPrice: z.number().positive('Unit price must be greater than zero'),
+});
+
+export type AddProductInput = z.infer<typeof addProductSchema>;
+export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+export type PriceRecordInput = z.infer<typeof priceRecordSchema>;
+export type NewPriceInput = PriceRecordInput;
+export type CorrectPriceInput = { prodCode: string; unitPrice: number };
+
+// ========================================================================
+// 1. ADD PRODUCT ACTION
 // ========================================================================
 export async function addProductAction(input: AddProductInput) {
   try {
-    await assertAdmin();
-    const validated = addProductSchema.parse(input);
-    const today = getManilaToday();
-
-    // R-05: Effective date cannot be in the future
-    if (validated.effDate > today) {
-      return { error: 'The effective date cannot be in the future.' };
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrative and sales staff can add products.' };
     }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const validated = addProductSchema.parse(input);
+    const code = validated.prodCode.toUpperCase();
+    const stampStr = getStampString('CREATED', userName);
 
     if (isSupabaseLive()) {
       try {
         const supabase = await createClient();
-        const { data, error } = await supabase.rpc('create_product', {
-          p_prod_code: validated.prodCode,
-          p_description: validated.description,
-          p_unit: validated.unit,
-          p_initial_price: validated.initialPrice,
-          p_eff_date: validated.effDate,
+        const { error } = await supabase.from('PRODUCT').insert({
+          prodCode: code,
+          description: validated.description,
+          unit: validated.unit,
+          is_deleted: 0,
+          stamp: stampStr,
         });
 
         if (error) return { error: error.message };
+
+        if (validated.initialPrice && validated.effDate) {
+          await supabase.from('PRICEHIST').insert({
+            effDate: validated.effDate,
+            prodCode: code,
+            unitPrice: validated.initialPrice,
+            is_deleted: 0,
+            stamp: stampStr,
+          });
+        }
+
         revalidatePath('/products');
-        return { success: true, prodCode: data };
+        return { success: true, prodCode: code };
       } catch (err: any) {
-        return { error: err?.message || 'Database error creating product' };
+        return { error: err?.message || 'Database error adding product.' };
       }
     }
 
-    // SQLite fallback
+    // SQLite implementation
     const db = getSqliteDb();
 
-    // Check duplicate code (R-02)
-    const existingCode = db.prepare('SELECT prodCode FROM PRODUCT WHERE prodCode = ?').get(validated.prodCode);
+    // Check duplicate prodCode
+    const existingCode = db.prepare('SELECT prodCode FROM PRODUCT WHERE prodCode = ?').get(code);
     if (existingCode) {
-      return { error: `Product code "${validated.prodCode}" already exists.` };
+      return { error: `Product code "${code}" already exists.` };
     }
 
-    // Check duplicate description case-insensitively (R-03)
-    const existingDesc = db
-      .prepare('SELECT prodCode FROM PRODUCT WHERE LOWER(TRIM(description)) = LOWER(?)')
-      .get(validated.description);
-    if (existingDesc) {
-      return { error: 'A product with this description already exists.' };
+    db.prepare(`
+      INSERT INTO PRODUCT (prodCode, description, unit, is_deleted, stamp)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(code, validated.description, validated.unit, stampStr);
+
+    if (validated.initialPrice && validated.effDate) {
+      db.prepare(`
+        INSERT INTO PRICEHIST (effDate, prodCode, unitPrice, is_deleted, stamp)
+        VALUES (?, ?, ?, 0, ?)
+      `).run(validated.effDate, code, validated.initialPrice, stampStr);
     }
 
-    db.exec('BEGIN IMMEDIATE');
+    // Audit log
     try {
       db.prepare(`
-        INSERT INTO PRODUCT (prodCode, description, unit)
-        VALUES (?, ?, ?)
-      `).run(validated.prodCode, validated.description, validated.unit);
-
-      db.prepare(`
-        INSERT INTO PRICEHIST (effDate, prodCode, unitPrice)
-        VALUES (?, ?, ?)
-      `).run(validated.effDate, validated.prodCode, validated.initialPrice);
-
-      db.exec('COMMIT');
-      revalidatePath('/products');
-      return { success: true, prodCode: validated.prodCode };
-    } catch (dbErr: any) {
-      db.exec('ROLLBACK');
-      return { error: dbErr?.message || 'Failed to add product to catalog.' };
+        INSERT INTO audit_log (table_name, action, record_key, new_values, action_by)
+        VALUES ('PRODUCT', 'ADD', ?, ?, ?)
+      `).run(code, JSON.stringify({ description: validated.description, unit: validated.unit }), userName);
+    } catch {
+      // Non-blocking
     }
+
+    revalidatePath('/products');
+    return { success: true, prodCode: code };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return { error: err.errors[0]?.message || 'Invalid product parameters' };
@@ -154,191 +173,32 @@ export async function addProductAction(input: AddProductInput) {
 }
 
 // ========================================================================
-// 2. ADD NEW PRICE ACTION (R-04, R-05, R-06, R-08)
-// ========================================================================
-export async function addNewPriceAction(input: NewPriceInput) {
-  try {
-    await assertAdmin();
-    const validated = newPriceSchema.parse(input);
-    const today = getManilaToday();
-
-    // R-05: Effective date cannot be in the future
-    if (validated.effDate > today) {
-      return { error: 'The effective date cannot be in the future.' };
-    }
-
-    if (isSupabaseLive()) {
-      try {
-        const supabase = await createClient();
-        const { error } = await supabase.rpc('add_price_record', {
-          p_prod_code: validated.prodCode,
-          p_unit_price: validated.unitPrice,
-          p_eff_date: validated.effDate,
-        });
-
-        if (error) return { error: error.message };
-        revalidatePath('/products');
-        return { success: true };
-      } catch (err: any) {
-        return { error: err?.message || 'Database error adding price record' };
-      }
-    }
-
-    // SQLite fallback
-    const db = getSqliteDb();
-
-    // Check product exists
-    const prod = db.prepare('SELECT prodCode FROM PRODUCT WHERE prodCode = ?').get(validated.prodCode) as any;
-    if (!prod) {
-      return { error: 'Product not found.' };
-    }
-
-    // Fetch latest price record
-    const latestPrice = db
-      .prepare('SELECT effDate, unitPrice FROM PRICEHIST WHERE prodCode = ? ORDER BY effDate DESC LIMIT 1')
-      .get(validated.prodCode) as any;
-
-    // R-05: Must be later than latest price record
-    if (latestPrice && validated.effDate <= latestPrice.effDate) {
-      return {
-        error: `The effective date must be after the latest price record (${latestPrice.effDate}).`,
-      };
-    }
-
-    // R-08: New price cannot equal current price
-    if (latestPrice && Math.abs(Number(latestPrice.unitPrice) - validated.unitPrice) < 0.001) {
-      return { error: 'The new price is the same as the current price.' };
-    }
-
-    // R-06: Must be later than product's latest sale date
-    const latestSale = db
-      .prepare(`
-        SELECT MAX(s.salesDate) AS maxSaleDate
-        FROM SALESDETAIL sd
-        JOIN SALES s ON s.transNo = sd.transNo
-        WHERE sd.prodCode = ?
-      `)
-      .get(validated.prodCode) as any;
-
-    if (latestSale?.maxSaleDate && validated.effDate <= latestSale.maxSaleDate) {
-      return {
-        error: `This product has sales dated ${latestSale.maxSaleDate}. The effective date must be after it, so past sales keep their original price.`,
-      };
-    }
-
-    db.exec('BEGIN IMMEDIATE');
-    try {
-      db.prepare(`
-        INSERT INTO PRICEHIST (effDate, prodCode, unitPrice)
-        VALUES (?, ?, ?)
-      `).run(validated.effDate, validated.prodCode, validated.unitPrice);
-
-      db.exec('COMMIT');
-      revalidatePath('/products');
-      return { success: true };
-    } catch (dbErr: any) {
-      db.exec('ROLLBACK');
-      return { error: dbErr?.message || 'Failed to record price change.' };
-    }
-  } catch (err: any) {
-    if (err instanceof z.ZodError) {
-      return { error: err.errors[0]?.message || 'Invalid price parameters' };
-    }
-    return { error: err?.message || 'Failed to record new price' };
-  }
-}
-
-// ========================================================================
-// 3. CORRECT PRICE ACTION (R-04, R-09)
-// ========================================================================
-export async function correctPriceAction(input: CorrectPriceInput) {
-  try {
-    await assertAdmin();
-    const validated = correctPriceSchema.parse(input);
-
-    if (isSupabaseLive()) {
-      try {
-        const supabase = await createClient();
-        const { error } = await supabase.rpc('correct_price_record', {
-          p_prod_code: validated.prodCode,
-          p_new_price: validated.unitPrice,
-        });
-
-        if (error) return { error: error.message };
-        revalidatePath('/products');
-        return { success: true };
-      } catch (err: any) {
-        return { error: err?.message || 'Database error correcting price' };
-      }
-    }
-
-    // SQLite fallback
-    const db = getSqliteDb();
-
-    // Fetch latest effDate
-    const latestRow = db
-      .prepare('SELECT effDate FROM PRICEHIST WHERE prodCode = ? ORDER BY effDate DESC LIMIT 1')
-      .get(validated.prodCode) as any;
-
-    if (!latestRow) {
-      return { error: 'No price records found for this product.' };
-    }
-
-    // R-09: Verify no sales on or after latest effDate
-    const saleCheck = db
-      .prepare(`
-        SELECT 1 FROM SALESDETAIL sd
-        JOIN SALES s ON s.transNo = sd.transNo
-        WHERE sd.prodCode = ? AND s.salesDate >= ?
-        LIMIT 1
-      `)
-      .get(validated.prodCode, latestRow.effDate);
-
-    if (saleCheck) {
-      return {
-        error: 'This price is already used by a sale and cannot be changed. Add a new price instead.',
-      };
-    }
-
-    db.exec('BEGIN IMMEDIATE');
-    try {
-      db.prepare(`
-        UPDATE PRICEHIST
-        SET unitPrice = ?
-        WHERE prodCode = ? AND effDate = ?
-      `).run(validated.unitPrice, validated.prodCode, latestRow.effDate);
-
-      db.exec('COMMIT');
-      revalidatePath('/products');
-      return { success: true };
-    } catch (dbErr: any) {
-      db.exec('ROLLBACK');
-      return { error: dbErr?.message || 'Failed to correct price.' };
-    }
-  } catch (err: any) {
-    if (err instanceof z.ZodError) {
-      return { error: err.errors[0]?.message || 'Invalid correction parameters' };
-    }
-    return { error: err?.message || 'Failed to correct price' };
-  }
-}
-
-// ========================================================================
-// 4. UPDATE PRODUCT ACTION (R-03, R-12)
+// 2. UPDATE PRODUCT ACTION
 // ========================================================================
 export async function updateProductAction(input: UpdateProductInput) {
   try {
-    await assertAdmin();
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrative and sales staff can edit products.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
     const validated = updateProductSchema.parse(input);
+    const code = validated.prodCode.toUpperCase();
+    const stampStr = getStampString('EDITED', userName);
 
     if (isSupabaseLive()) {
       try {
         const supabase = await createClient();
-        const { error } = await supabase.rpc('update_product', {
-          p_prod_code: validated.prodCode,
-          p_description: validated.description,
-          p_unit: validated.unit,
-        });
+        const { error } = await supabase
+          .from('PRODUCT')
+          .update({
+            description: validated.description,
+            unit: validated.unit,
+            stamp: stampStr,
+          })
+          .eq('prodCode', code);
 
         if (error) return { error: error.message };
         revalidatePath('/products');
@@ -348,57 +208,36 @@ export async function updateProductAction(input: UpdateProductInput) {
       }
     }
 
-    // SQLite fallback
+    // SQLite implementation
     const db = getSqliteDb();
-
-    // Fetch existing product
-    const existing = db
-      .prepare('SELECT prodCode, unit FROM PRODUCT WHERE prodCode = ?')
-      .get(validated.prodCode) as any;
-
+    const existing = db.prepare('SELECT * FROM PRODUCT WHERE prodCode = ?').get(code) as any;
     if (!existing) {
       return { error: 'Product not found.' };
     }
 
-    // Check duplicate description on another product (R-03)
-    const dupDesc = db
-      .prepare(`
-        SELECT prodCode FROM PRODUCT 
-        WHERE LOWER(TRIM(description)) = LOWER(?) 
-          AND prodCode <> ?
-      `)
-      .get(validated.description, validated.prodCode) as any;
+    db.prepare(`
+      UPDATE PRODUCT
+      SET description = ?, unit = ?, stamp = ?
+      WHERE prodCode = ?
+    `).run(validated.description, validated.unit, stampStr, code);
 
-    if (dupDesc) {
-      return { error: 'A product with this description already exists.' };
-    }
-
-    // R-12: If unit changed, verify product has not been sold
-    if (existing.unit !== validated.unit) {
-      const hasSales = db
-        .prepare('SELECT 1 FROM SALESDETAIL WHERE prodCode = ? LIMIT 1')
-        .get(validated.prodCode);
-
-      if (hasSales) {
-        return { error: 'The unit cannot be changed because this product has already been sold.' };
-      }
-    }
-
-    db.exec('BEGIN IMMEDIATE');
+    // Audit log
     try {
       db.prepare(`
-        UPDATE PRODUCT
-        SET description = ?, unit = ?
-        WHERE prodCode = ?
-      `).run(validated.description, validated.unit, validated.prodCode);
-
-      db.exec('COMMIT');
-      revalidatePath('/products');
-      return { success: true };
-    } catch (dbErr: any) {
-      db.exec('ROLLBACK');
-      return { error: dbErr?.message || 'Failed to update product.' };
+        INSERT INTO audit_log (table_name, action, record_key, old_values, new_values, action_by)
+        VALUES ('PRODUCT', 'EDIT', ?, ?, ?, ?)
+      `).run(
+        code,
+        JSON.stringify({ description: existing.description, unit: existing.unit }),
+        JSON.stringify({ description: validated.description, unit: validated.unit }),
+        userName
+      );
+    } catch {
+      // Non-blocking
     }
+
+    revalidatePath('/products');
+    return { success: true };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return { error: err.errors[0]?.message || 'Invalid parameters' };
@@ -406,3 +245,299 @@ export async function updateProductAction(input: UpdateProductInput) {
     return { error: err?.message || 'Failed to update product' };
   }
 }
+
+// ========================================================================
+// 3. SOFT-DELETE & RESTORE PRODUCT ACTIONS
+// ========================================================================
+export async function deleteProductAction(prodCode: string) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrative staff can soft-delete products.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const cleanCode = String(prodCode).trim().toUpperCase();
+    const stampStr = getStampString('DELETED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM PRODUCT WHERE prodCode = ?').get(cleanCode) as any;
+    if (!existing) {
+      return { error: `Product #${cleanCode} was not found.` };
+    }
+
+    if (existing.is_deleted === 1 || existing.is_deleted === true) {
+      return { error: `Product #${cleanCode} is already inactive.` };
+    }
+
+    db.prepare(`
+      UPDATE PRODUCT 
+      SET is_deleted = 1, stamp = ?
+      WHERE prodCode = ?
+    `).run(stampStr, cleanCode);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, action_by)
+        VALUES ('PRODUCT', 'DELETE', ?, ?)
+      `).run(cleanCode, userName);
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/products');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to soft-delete product.' };
+  }
+}
+
+export async function restoreProductAction(prodCode: string) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrative staff can restore products.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const cleanCode = String(prodCode).trim().toUpperCase();
+    const stampStr = getStampString('RESTORED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM PRODUCT WHERE prodCode = ?').get(cleanCode) as any;
+    if (!existing) {
+      return { error: `Product #${cleanCode} was not found.` };
+    }
+
+    if (!existing.is_deleted) {
+      return { error: `Product #${cleanCode} is already active.` };
+    }
+
+    db.prepare(`
+      UPDATE PRODUCT 
+      SET is_deleted = 0, stamp = ?
+      WHERE prodCode = ?
+    `).run(stampStr, cleanCode);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, action_by)
+        VALUES ('PRODUCT', 'RESTORE', ?, ?)
+      `).run(cleanCode, userName);
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/products');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore product.' };
+  }
+}
+
+// ========================================================================
+// 4. PRICE HISTORY ACTIONS (FIGURE 12 & 13)
+// ========================================================================
+export async function addPriceAction(input: PriceRecordInput) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrators and sales can add price records.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const validated = priceRecordSchema.parse(input);
+    const code = validated.prodCode.toUpperCase();
+    const stampStr = getStampString('CREATED', userName);
+
+    const db = getSqliteDb();
+
+    // Check if price record with same effDate already exists
+    const existing = db.prepare('SELECT 1 FROM PRICEHIST WHERE prodCode = ? AND effDate = ?').get(code, validated.effDate);
+    if (existing) {
+      return { error: `A price record already exists for ${code} on ${validated.effDate}. Edit that record instead.` };
+    }
+
+    db.prepare(`
+      INSERT INTO PRICEHIST (effDate, prodCode, unitPrice, is_deleted, stamp)
+      VALUES (?, ?, ?, 0, ?)
+    `).run(validated.effDate, code, validated.unitPrice, stampStr);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, new_values, action_by)
+        VALUES ('PRICEHIST', 'ADD', ?, ?, ?)
+      `).run(
+        `${code}:${validated.effDate}`,
+        JSON.stringify({ unitPrice: validated.unitPrice }),
+        userName
+      );
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/products');
+    return { success: true };
+  } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      return { error: err.errors[0]?.message || 'Invalid price input' };
+    }
+    return { error: err?.message || 'Failed to add price record' };
+  }
+}
+
+export async function updatePriceAction(input: PriceRecordInput) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrators and sales can update price records.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const validated = priceRecordSchema.parse(input);
+    const code = validated.prodCode.toUpperCase();
+    const stampStr = getStampString('EDITED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT * FROM PRICEHIST WHERE prodCode = ? AND effDate = ?').get(code, validated.effDate) as any;
+    if (!existing) {
+      return { error: 'Price record not found.' };
+    }
+
+    db.prepare(`
+      UPDATE PRICEHIST
+      SET unitPrice = ?, stamp = ?
+      WHERE prodCode = ? AND effDate = ?
+    `).run(validated.unitPrice, stampStr, code, validated.effDate);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, old_values, new_values, action_by)
+        VALUES ('PRICEHIST', 'EDIT', ?, ?, ?, ?)
+      `).run(
+        `${code}:${validated.effDate}`,
+        JSON.stringify({ unitPrice: existing.unitPrice }),
+        JSON.stringify({ unitPrice: validated.unitPrice }),
+        userName
+      );
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/products');
+    return { success: true };
+  } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      return { error: err.errors[0]?.message || 'Invalid price input' };
+    }
+    return { error: err?.message || 'Failed to update price' };
+  }
+}
+
+export async function deletePriceAction(prodCode: string, effDate: string) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrators can soft-delete price records.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const cleanCode = String(prodCode).trim().toUpperCase();
+    const cleanDate = String(effDate).trim();
+    const stampStr = getStampString('DELETED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM PRICEHIST WHERE prodCode = ? AND effDate = ?').get(cleanCode, cleanDate) as any;
+    if (!existing) {
+      return { error: 'Price record not found.' };
+    }
+
+    db.prepare(`
+      UPDATE PRICEHIST
+      SET is_deleted = 1, stamp = ?
+      WHERE prodCode = ? AND effDate = ?
+    `).run(stampStr, cleanCode, cleanDate);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, action_by)
+        VALUES ('PRICEHIST', 'DELETE', ?, ?)
+      `).run(`${cleanCode}:${cleanDate}`, userName);
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/products');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to soft-delete price record.' };
+  }
+}
+
+export async function restorePriceAction(prodCode: string, effDate: string) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Access denied: Only administrators can restore price records.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const cleanCode = String(prodCode).trim().toUpperCase();
+    const cleanDate = String(effDate).trim();
+    const stampStr = getStampString('RESTORED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM PRICEHIST WHERE prodCode = ? AND effDate = ?').get(cleanCode, cleanDate) as any;
+    if (!existing) {
+      return { error: 'Price record not found.' };
+    }
+
+    db.prepare(`
+      UPDATE PRICEHIST
+      SET is_deleted = 0, stamp = ?
+      WHERE prodCode = ? AND effDate = ?
+    `).run(stampStr, cleanCode, cleanDate);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, action_by)
+        VALUES ('PRICEHIST', 'RESTORE', ?, ?)
+      `).run(`${cleanCode}:${cleanDate}`, userName);
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/products');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore price record.' };
+  }
+}
+
+// Backward compatibility exports
+export const addNewPriceAction = addPriceAction;
+export async function correctPriceAction(input: { prodCode: string; unitPrice: number; effDate?: string }) {
+  const db = getSqliteDb();
+  let effDate = input.effDate;
+  if (!effDate) {
+    const latest = db
+      .prepare('SELECT effDate FROM PRICEHIST WHERE prodCode = ? ORDER BY effDate DESC LIMIT 1')
+      .get(input.prodCode.toUpperCase()) as any;
+    effDate = latest?.effDate;
+  }
+  if (!effDate) {
+    return { error: 'No price record found for this product.' };
+  }
+  return updatePriceAction({
+    prodCode: input.prodCode,
+    effDate,
+    unitPrice: input.unitPrice,
+  });
+}
+

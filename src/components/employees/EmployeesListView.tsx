@@ -1,1029 +1,1362 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useDeferredValue } from 'react';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
-import { formatPHP, formatDate } from '@/lib/utils';
-
-const AddEmployeeModal = dynamic(
-  () => import('./AddEmployeeModal').then((mod) => mod.AddEmployeeModal),
-  { ssr: false }
-);
-
-const ManageJobsDeptsModal = dynamic(
-  () => import('./ManageJobsDeptsModal').then((mod) => mod.ManageJobsDeptsModal),
-  { ssr: false }
-);
-import type {
-  EmployeeDirectoryItem,
-  DepartmentStat,
-  DepartmentItem,
-  JobItem,
-} from '@/lib/data/employees';
+import React, { useState, useMemo, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import {
-  Search,
-  Download,
-  Plus,
-  Settings2,
-  Building2,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   Users,
-  UserCheck,
   Briefcase,
+  Building2,
+  Search,
+  Plus,
+  History,
+  ShieldCheck,
+  RotateCcw,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  ExternalLink,
+  Info,
 } from 'lucide-react';
+import {
+  deleteEmployeeAction,
+  restoreEmployeeAction,
+  deleteJobAction,
+  restoreJobAction,
+  deleteDepartmentAction,
+  restoreDepartmentAction,
+} from '@/app/actions/employees';
+import { RightSideKpiPanel, type KpiCardItem } from '@/components/ui/RightSideKpiPanel';
+import { AddEmployeeModal } from './AddEmployeeModal';
+import { EditEmployeeModal } from './EditEmployeeModal';
+import { AddJobModal } from './AddJobModal';
+import { EditJobModal } from './EditJobModal';
+import { AddDepartmentModal } from './AddDepartmentModal';
+import { EditDepartmentModal } from './EditDepartmentModal';
+import { JobHistoryModal } from './JobHistoryModal';
+import { HumanResourcesAuditModal } from './HumanResourcesAuditModal';
+import type {
+  EmployeeItem,
+  JobItem,
+  DepartmentItem,
+  JobHistoryRecord,
+  HumanResourcesMetrics,
+  HumanResourcesAuditItem,
+} from '@/lib/data/employees';
 
 interface EmployeesListViewProps {
-  initialEmployees: EmployeeDirectoryItem[];
-  departments: DepartmentStat[];
-  departmentLookups: DepartmentItem[];
-  jobLookups: JobItem[];
-  totalActiveCount: number;
+  initialEmployees?: EmployeeItem[];
+  initialJobs?: JobItem[];
+  initialDepartments?: DepartmentItem[];
+  initialJobHistory?: JobHistoryRecord[];
+  metrics?: HumanResourcesMetrics;
+  recentAudits?: HumanResourcesAuditItem[];
+  userRole?: string;
+  // Legacy props fallback
+  departments?: any;
+  departmentLookups?: any;
+  jobLookups?: any;
+  totalActiveCount?: number;
 }
 
-type SortField =
-  | 'empNo'
-  | 'lastName'
-  | 'firstName'
-  | 'jobDesc'
-  | 'hireDate'
-  | 'employmentStatus'
-  | 'salary'
-  | 'deptName';
-
-type SortDirection = 'asc' | 'desc';
+type TabType = 'employees' | 'jobs' | 'departments';
+type StatusFilter = 'active' | 'inactive' | 'all';
 
 export function EmployeesListView({
-  initialEmployees,
-  departments,
-  departmentLookups,
-  jobLookups,
-  totalActiveCount,
+  initialEmployees = [],
+  initialJobs = [],
+  initialDepartments = [],
+  initialJobHistory = [],
+  metrics,
+  recentAudits = [],
+  userRole = 'admin',
 }: EmployeesListViewProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
 
-  // Selected Department (URL synced)
-  const initialDept = searchParams.get('dept') || 'ALL';
-  const [selectedDept, setSelectedDept] = useState<string>(initialDept);
+  const roleUpper = userRole.toUpperCase();
+  const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'superadmin';
+  const canModify = isAdmin;
 
-  useEffect(() => {
-    const deptParam = searchParams.get('dept') || 'ALL';
-    setSelectedDept(deptParam);
-  }, [searchParams]);
+  // Active Main Tab: Employees (default), Jobs, Departments
+  const [activeTab, setActiveTab] = useState<TabType>('employees');
 
-  const handleSelectDept = (code: string) => {
-    setSelectedDept(code);
-    const params = new URLSearchParams(window.location.search);
-    if (code === 'ALL') {
-      params.delete('dept');
+  // Status Filter: Active, Inactive, All
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
+
+  // Search input per tab
+  const [empSearch, setEmpSearch] = useState('');
+  const [jobSearch, setJobSearch] = useState('');
+  const [deptSearch, setDeptSearch] = useState('');
+
+  // Pagination per tab
+  const [empPage, setEmpPage] = useState(1);
+  const [empPageSize, setEmpPageSize] = useState<number>(10);
+
+  const [jobPage, setJobPage] = useState(1);
+  const [jobPageSize, setJobPageSize] = useState<number>(10);
+
+  const [deptPage, setDeptPage] = useState(1);
+  const [deptPageSize, setDeptPageSize] = useState<number>(10);
+
+  // Modals state
+  const [isAddEmpOpen, setIsAddEmpOpen] = useState(false);
+  const [editingEmp, setEditingEmp] = useState<EmployeeItem | null>(null);
+  const [historyEmp, setHistoryEmp] = useState<EmployeeItem | null>(null);
+
+  const [isAddJobOpen, setIsAddJobOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<JobItem | null>(null);
+
+  const [isAddDeptOpen, setIsAddDeptOpen] = useState(false);
+  const [editingDept, setEditingDept] = useState<DepartmentItem | null>(null);
+
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+
+  // Deletion Confirmation Modal
+  type DeleteTarget =
+    | { type: 'employee'; data: EmployeeItem }
+    | { type: 'job'; data: JobItem }
+    | { type: 'department'; data: DepartmentItem }
+    | null;
+  const [deletingTarget, setDeletingTarget] = useState<DeleteTarget>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // ========================================================================
+  // FILTERING & TAB COMPUTATIONS
+  // ========================================================================
+
+  // 1. Employees Tab Filter
+  const filteredEmployees = useMemo(() => {
+    let list = initialEmployees;
+    if (isAdmin) {
+      if (statusFilter === 'active') {
+        list = list.filter((e) => e.status === 'Active');
+      } else if (statusFilter === 'inactive') {
+        list = list.filter((e) => e.status === 'Inactive');
+      }
     } else {
-      params.set('dept', code);
-    }
-    const newSearch = params.toString();
-    router.replace(newSearch ? `?${newSearch}` : '/employees', { scroll: false });
-  };
-
-  // Filter Tabs: All, Active, Separated
-  const [statusTab, setStatusTab] = useState<'ALL' | 'Active' | 'Separated'>('ALL');
-
-  // Search with deferred value for instant 0ms typing
-  const [searchQuery, setSearchQuery] = useState('');
-  const deferredSearch = useDeferredValue(searchQuery);
-
-  // Sorting
-  const [sortField, setSortField] = useState<SortField>('empNo');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(10);
-
-  // Modals
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-
-  // Stats Bar Audit Modals State
-  type StaffAuditType = 'total-employees' | 'active-staff' | 'departments' | 'job-positions' | null;
-  const [activeAudit, setActiveAudit] = useState<StaffAuditType>(null);
-
-  const activeEmployeesList = useMemo(
-    () => initialEmployees.filter((e) => e.employmentStatus === 'Active'),
-    [initialEmployees]
-  );
-
-  // Department metadata for the right pane header
-  const currentDeptMeta = useMemo(() => {
-    if (selectedDept === 'ALL') {
-      const allActive = initialEmployees.filter((e) => e.employmentStatus === 'Active').length;
-      const allSeparated = initialEmployees.filter((e) => e.employmentStatus === 'Separated').length;
-      return {
-        title: 'All departments',
-        code: null,
-        activeCount: allActive,
-        separatedCount: allSeparated,
-        totalCount: initialEmployees.length,
-      };
-    }
-    const d = departments.find((dept) => dept.deptCode === selectedDept);
-    return {
-      title: d?.deptName || selectedDept,
-      code: selectedDept,
-      activeCount: d?.activeCount || 0,
-      separatedCount: d?.separatedCount || 0,
-      totalCount: d?.totalCount || 0,
-    };
-  }, [selectedDept, departments, initialEmployees]);
-
-  // Tab counts for the currently selected department
-  const tabCounts = useMemo(() => {
-    const deptEmployees =
-      selectedDept === 'ALL'
-        ? initialEmployees
-        : initialEmployees.filter((e) => e.deptCode === selectedDept);
-
-    return {
-      all: deptEmployees.length,
-      active: deptEmployees.filter((e) => e.employmentStatus === 'Active').length,
-      separated: deptEmployees.filter((e) => e.employmentStatus === 'Separated').length,
-    };
-  }, [selectedDept, initialEmployees]);
-
-  // Filtered and Sorted employees
-  const processedEmployees = useMemo(() => {
-    let result = initialEmployees;
-
-    // 1. Department filter
-    if (selectedDept !== 'ALL') {
-      result = result.filter((e) => e.deptCode === selectedDept);
+      list = list.filter((e) => e.status === 'Active');
     }
 
-    // 2. Status tab
-    if (statusTab !== 'ALL') {
-      result = result.filter((e) => e.employmentStatus === statusTab);
-    }
-
-    // 3. Search query (uses deferredSearch)
-    if (deferredSearch.trim()) {
-      const q = deferredSearch.toLowerCase().trim();
-      result = result.filter((e) => {
+    const q = empSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((e) => {
         return (
-          e.empNo.toString().includes(q) ||
+          e.empNo.toLowerCase().includes(q) ||
           e.lastName.toLowerCase().includes(q) ||
           e.firstName.toLowerCase().includes(q) ||
-          e.jobCode.toLowerCase().includes(q) ||
-          e.jobDesc.toLowerCase().includes(q) ||
-          e.deptCode.toLowerCase().includes(q) ||
-          e.deptName.toLowerCase().includes(q)
+          e.fullName.toLowerCase().includes(q) ||
+          (e.currentJobDesc && e.currentJobDesc.toLowerCase().includes(q)) ||
+          (e.currentDeptName && e.currentDeptName.toLowerCase().includes(q)) ||
+          (e.stamp && e.stamp.toLowerCase().includes(q))
         );
       });
     }
+    return list;
+  }, [initialEmployees, statusFilter, empSearch, isAdmin]);
 
-    // 4. Sort
-    result = [...result].sort((a, b) => {
-      let aVal: any = a[sortField];
-      let bVal: any = b[sortField];
+  // 2. Jobs Tab Filter
+  const filteredJobs = useMemo(() => {
+    let list = initialJobs;
+    if (isAdmin) {
+      if (statusFilter === 'active') {
+        list = list.filter((j) => !j.isDeleted);
+      } else if (statusFilter === 'inactive') {
+        list = list.filter((j) => j.isDeleted);
+      }
+    } else {
+      list = list.filter((j) => !j.isDeleted);
+    }
 
-      if (typeof aVal === 'string') {
-        aVal = aVal.toLowerCase();
-        bVal = (bVal || '').toLowerCase();
+    const q = jobSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((j) => {
+        return (
+          j.jobCode.toLowerCase().includes(q) ||
+          j.jobDesc.toLowerCase().includes(q) ||
+          (j.stamp && j.stamp.toLowerCase().includes(q))
+        );
+      });
+    }
+    return list;
+  }, [initialJobs, statusFilter, jobSearch, isAdmin]);
+
+  // 3. Departments Tab Filter
+  const filteredDepartments = useMemo(() => {
+    let list = initialDepartments;
+    if (isAdmin) {
+      if (statusFilter === 'active') {
+        list = list.filter((d) => !d.isDeleted);
+      } else if (statusFilter === 'inactive') {
+        list = list.filter((d) => d.isDeleted);
+      }
+    } else {
+      list = list.filter((d) => !d.isDeleted);
+    }
+
+    const q = deptSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((d) => {
+        return (
+          d.deptCode.toLowerCase().includes(q) ||
+          d.deptName.toLowerCase().includes(q) ||
+          (d.stamp && d.stamp.toLowerCase().includes(q))
+        );
+      });
+    }
+    return list;
+  }, [initialDepartments, statusFilter, deptSearch, isAdmin]);
+
+  // Counts for current tab status pills
+  const currentTabCounts = useMemo(() => {
+    if (activeTab === 'employees') {
+      const active = initialEmployees.filter((e) => e.status === 'Active').length;
+      const inactive = initialEmployees.filter((e) => e.status === 'Inactive').length;
+      return { active, inactive, total: initialEmployees.length };
+    }
+    if (activeTab === 'jobs') {
+      const active = initialJobs.filter((j) => !j.isDeleted).length;
+      const inactive = initialJobs.filter((j) => j.isDeleted).length;
+      return { active, inactive, total: initialJobs.length };
+    }
+    const active = initialDepartments.filter((d) => !d.isDeleted).length;
+    const inactive = initialDepartments.filter((d) => d.isDeleted).length;
+    return { active, inactive, total: initialDepartments.length };
+  }, [activeTab, initialEmployees, initialJobs, initialDepartments]);
+
+  // Paginated Slices
+  const paginatedEmployees = useMemo(() => {
+    if (empPageSize === 0) return filteredEmployees;
+    const start = (empPage - 1) * empPageSize;
+    return filteredEmployees.slice(start, start + empPageSize);
+  }, [filteredEmployees, empPage, empPageSize]);
+
+  const paginatedJobs = useMemo(() => {
+    if (jobPageSize === 0) return filteredJobs;
+    const start = (jobPage - 1) * jobPageSize;
+    return filteredJobs.slice(start, start + jobPageSize);
+  }, [filteredJobs, jobPage, jobPageSize]);
+
+  const paginatedDepartments = useMemo(() => {
+    if (deptPageSize === 0) return filteredDepartments;
+    const start = (deptPage - 1) * deptPageSize;
+    return filteredDepartments.slice(start, start + deptPageSize);
+  }, [filteredDepartments, deptPage, deptPageSize]);
+
+  // ========================================================================
+  // ACTIONS: SOFT-DELETE & RESTORE
+  // ========================================================================
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTarget) return;
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      let res: { success?: boolean; error?: string };
+      if (deletingTarget.type === 'employee') {
+        res = await deleteEmployeeAction(deletingTarget.data.empNo);
+      } else if (deletingTarget.type === 'job') {
+        res = await deleteJobAction(deletingTarget.data.jobCode);
+      } else {
+        res = await deleteDepartmentAction(deletingTarget.data.deptCode);
       }
 
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
 
-    return result;
-  }, [initialEmployees, selectedDept, statusTab, deferredSearch, sortField, sortDirection]);
-
-  // Reset pagination on filter change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedDept, statusTab, searchQuery, pageSize]);
-
-  // Pagination calculation
-  const totalItems = processedEmployees.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedEmployees = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return processedEmployees.slice(start, start + pageSize);
-  }, [processedEmployees, currentPage, pageSize]);
-
-  // Sorting header click
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
+      setDeletingTarget(null);
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError(`Failed to soft-delete ${deletingTarget.type}.`);
+      setIsSubmitting(false);
     }
   };
 
-  const renderSortIndicator = (field: SortField) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />;
+  const handleRestoreEmployee = async (emp: EmployeeItem) => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const res = await restoreEmployeeAction(emp.empNo);
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError('Failed to restore employee.');
+      setIsSubmitting(false);
     }
-    return sortDirection === 'asc' ? (
-      <ArrowUp className="w-3 h-3 text-[#17231F] ml-1" />
-    ) : (
-      <ArrowDown className="w-3 h-3 text-[#17231F] ml-1" />
-    );
   };
 
-  // CSV Export (Section 15)
-  const handleExportCSV = () => {
-    const headers = [
-      'Emp No',
-      'Last name',
-      'First name',
-      'Gender',
-      'Birth date',
-      'Hire date',
-      'Separation date',
-      'Status',
-      'Job code',
-      'Job description',
-      'Department code',
-      'Department name',
-      'Salary',
-    ];
-
-    const rows = processedEmployees.map((e) => [
-      e.empNo,
-      `"${e.lastName.replace(/"/g, '""')}"`,
-      `"${e.firstName.replace(/"/g, '""')}"`,
-      e.gender,
-      e.birthDate,
-      e.hireDate,
-      e.sepDate || '',
-      e.employmentStatus,
-      e.jobCode,
-      `"${e.jobDesc.replace(/"/g, '""')}"`,
-      e.deptCode,
-      `"${e.deptName.replace(/"/g, '""')}"`,
-      e.salary != null ? e.salary.toFixed(2) : '',
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const todayStr = new Date().toISOString().slice(0, 10);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `employees-${todayStr}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleRestoreJob = async (job: JobItem) => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const res = await restoreJobAction(job.jobCode);
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError('Failed to restore job.');
+      setIsSubmitting(false);
+    }
   };
+
+  const handleRestoreDepartment = async (dept: DepartmentItem) => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const res = await restoreDepartmentAction(dept.deptCode);
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError('Failed to restore department.');
+      setIsSubmitting(false);
+    }
+  };
+
+  // ========================================================================
+  // RIGHT SIDE KPI PANEL DEDICATED TO HUMAN RESOURCES
+  // ========================================================================
+
+  const totalEmployeesCount = metrics?.totalEmployees ?? initialEmployees.length;
+  const activeEmployeesCount =
+    metrics?.activeEmployees ?? initialEmployees.filter((e) => e.status === 'Active').length;
+  const inactiveEmployeesCount =
+    metrics?.inactiveEmployees ?? initialEmployees.filter((e) => e.status === 'Inactive').length;
+
+  const totalJobsCount = metrics?.totalJobs ?? initialJobs.length;
+  const activeJobsCount = metrics?.activeJobs ?? initialJobs.filter((j) => !j.isDeleted).length;
+  const inactiveJobsCount = metrics?.inactiveJobs ?? initialJobs.filter((j) => j.isDeleted).length;
+
+  const totalDeptsCount = metrics?.totalDepartments ?? initialDepartments.length;
+  const activeDeptsCount =
+    metrics?.activeDepartments ?? initialDepartments.filter((d) => !d.isDeleted).length;
+  const inactiveDeptsCount =
+    metrics?.inactiveDepartments ?? initialDepartments.filter((d) => d.isDeleted).length;
+
+  const statBarCards: KpiCardItem[] = useMemo(
+    () => [
+      {
+        id: 'total-employees',
+        title: 'TOTAL REGISTERED',
+        value: totalEmployeesCount,
+        subtext: `${activeEmployeesCount} active · ${inactiveEmployeesCount} inactive`,
+        icon: Users,
+        onClick: () => setIsAuditModalOpen(true),
+        clickable: true,
+      },
+      {
+        id: 'total-jobs',
+        title: 'TOTAL JOBS',
+        value: totalJobsCount,
+        subtext: `${activeJobsCount} active · ${inactiveJobsCount} inactive`,
+        icon: Briefcase,
+        onClick: () => {
+          setActiveTab('jobs');
+          setStatusFilter('active');
+        },
+        clickable: true,
+      },
+      {
+        id: 'total-departments',
+        title: 'DEPARTMENTS',
+        value: totalDeptsCount,
+        subtext: `${activeDeptsCount} active · ${inactiveDeptsCount} inactive`,
+        icon: Building2,
+        onClick: () => {
+          setActiveTab('departments');
+          setStatusFilter('active');
+        },
+        clickable: true,
+      },
+    ],
+    [
+      totalEmployeesCount,
+      activeEmployeesCount,
+      inactiveEmployeesCount,
+      totalJobsCount,
+      activeJobsCount,
+      inactiveJobsCount,
+      totalDeptsCount,
+      activeDeptsCount,
+      inactiveDeptsCount,
+    ]
+  );
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header (Section 7.1) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-black/10 pb-4">
+    <div className="space-y-6 font-sans">
+      {/* Top Header Row with Title and Role */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <nav className="flex items-center text-[10px] text-[#41555f] mb-1 font-mono uppercase tracking-[0.12em]">
-            <span>ElectronDB G4 HopeERD</span>
-            <span className="mx-1.5">&bull;</span>
-            <span className="text-[#041a24] dark:text-white font-semibold">Employees</span>
-          </nav>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] dark:text-white tracking-tight">
-            Employees &amp; Staff
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Human Resources
           </h1>
-          <p className="text-xs text-[#41555f] dark:text-slate-300 mt-0.5 font-sans">
-            Employee personnel records, job history, and department assignments.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Section 3.5: Employees, job titles, departments and each employee&apos;s job/salary history.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] h-8 px-3 text-xs font-medium shadow-2xs"
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsAuditModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-sm cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5 mr-1.5 text-black/40" />
-            Export CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsManageModalOpen(true)}
-            className="bg-white border border-black/15 hover:bg-black/5 text-[#041a24] rounded-[2px] h-8 px-3 text-xs font-medium shadow-2xs"
-          >
-            <Settings2 className="w-3.5 h-3.5 mr-1.5 text-black/40" />
-            Departments &amp; Jobs
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-[#041a24] hover:bg-[#1c313b] text-white rounded-[2px] h-8 px-3.5 text-xs font-medium shadow-2xs cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Add Employee
-          </Button>
-        </div>
-      </div>
+            <History className="h-3.5 w-3.5 text-slate-500" />
+            <span>Audit Trail</span>
+          </button>
 
-      {/* Responsive Department Select (Tablet / Mobile) */}
-      <div className="lg:hidden">
-        <label className="block text-xs font-semibold text-[#041a24] mb-1.5">
-          Select Department
-        </label>
-        <select
-          value={selectedDept}
-          onChange={(e) => handleSelectDept(e.target.value)}
-          className="w-full h-8 rounded-[2px] border border-black/15 bg-white px-3 text-xs text-[#041a24] font-medium focus:outline-none focus:border-[#041a24]"
-        >
-          <option value="ALL">All departments ({totalActiveCount} active)</option>
-          {departments.map((d) => (
-            <option key={d.deptCode} value={d.deptCode}>
-              {d.deptName} ({d.deptCode}) — {d.activeCount} active
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* 2-Column Desktop Layout: Main Content (Left) + Right-Side Portrait KPI Panel (Right) */}
-      <div className="flex flex-col xl:flex-row items-start gap-6">
-        <div className="flex-1 min-w-0 w-full space-y-4">
-          {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start font-sans">
-        {/* 2. Department Sections (Left Column, Desktop) */}
-        <div className="hidden lg:block lg:col-span-1">
-          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 overflow-hidden shadow-2xs">
-            <div className="p-3 border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 flex items-center justify-between">
-              <span className="text-xs font-bold text-[#041a24] dark:text-text tracking-tight">
-                Departments
-              </span>
-              <span className="text-[10px] font-mono text-[#41555f] dark:text-text-muted">
-                {departments.length} units
-              </span>
-            </div>
-
-            <div className="p-1 space-y-0.5">
-              {/* All departments */}
-              <button
-                type="button"
-                onClick={() => handleSelectDept('ALL')}
-                className={`w-full flex items-center justify-between py-2 px-2.5 rounded-[2px] text-xs transition-colors text-left cursor-pointer ${
-                  selectedDept === 'ALL'
-                    ? 'bg-black/5 dark:bg-surface-2 text-[#041a24] dark:text-text font-semibold border-l-3 border-[#041a24] dark:border-primary-bg'
-                    : 'text-[#41555f] dark:text-text-muted hover:text-[#041a24] dark:hover:text-text hover:bg-[#F4F4F0]/60 dark:hover:bg-surface-2/60'
-                }`}
-              >
-                <span className="truncate">All departments</span>
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] ml-2 ${
-                  selectedDept === 'ALL' ? 'bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg font-medium' : 'bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-text-muted'
-                }`}>
-                  {totalActiveCount}
-                </span>
-              </button>
-
-              {/* Department items */}
-              {departments.map((dept) => {
-                const isSelected = selectedDept === dept.deptCode;
-                return (
-                  <button
-                    key={dept.deptCode}
-                    type="button"
-                    onClick={() => handleSelectDept(dept.deptCode)}
-                    className={`w-full flex items-center justify-between py-2 px-2.5 rounded-[2px] text-xs transition-colors text-left cursor-pointer ${
-                      isSelected
-                        ? 'bg-black/5 text-[#041a24] font-semibold border-l-3 border-[#041a24]'
-                        : 'text-[#41555f] hover:text-[#041a24] hover:bg-[#F4F4F0]/60'
-                    }`}
-                  >
-                    <div className="min-w-0 pr-2">
-                      <p className="truncate leading-tight">{dept.deptName}</p>
-                      <p className="text-[10px] font-mono text-[#41555f] mt-0.5">{dept.deptCode}</p>
-                    </div>
-                    <span
-                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] shrink-0 ${
-                        isSelected
-                          ? 'bg-[#041a24] text-white font-medium'
-                          : dept.activeCount > 0
-                          ? 'bg-black/5 text-[#41555f]'
-                          : 'bg-black/2 text-black/30'
-                      }`}
-                    >
-                      {dept.activeCount}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-semibold uppercase rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            <span>{roleUpper}</span>
           </div>
         </div>
+      </div>
 
-        {/* 3. Table & Content (Right Column) */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 overflow-hidden shadow-2xs">
-            {/* Selected Department Header */}
-            <div className="p-3.5 border-b border-black/10 dark:border-border bg-[#F4F4F0]/40 dark:bg-surface-2/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold text-[#041a24] dark:text-text tracking-tight">
-                  {currentDeptMeta.title}
-                  {currentDeptMeta.code && (
-                    <span className="ml-2 font-mono text-[10px] text-[#41555f] dark:text-text-muted font-normal">
-                      ({currentDeptMeta.code})
-                    </span>
+      {/* Action Error Banner */}
+      {actionError && (
+        <div className="rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="text-xs underline hover:no-underline font-semibold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Main 3-Tab Navigator (Figures 15, 18, 19) */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('employees');
+            setStatusFilter('active');
+          }}
+          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === 'employees'
+              ? 'bg-[#001A2B] text-white shadow-sm'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          Employees
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('jobs');
+            setStatusFilter('active');
+          }}
+          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === 'jobs'
+              ? 'bg-[#001A2B] text-white shadow-sm'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          Jobs
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('departments');
+            setStatusFilter('active');
+          }}
+          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === 'departments'
+              ? 'bg-[#001A2B] text-white shadow-sm'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          Departments
+        </button>
+      </div>
+
+      {/* Main Content Area: Left CRUD Table + Right Stat Bar */}
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
+        {/* Left Column: Tab Data & Table */}
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Subheading Title based on current tab */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 capitalize">
+              {activeTab}
+            </h2>
+          </div>
+
+          {/* Controls Bar (Status Filters + Search + Primary Button with #001A2B) */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+            {/* Status Filter Pills (Admin only per Figures 15, 18, 19) */}
+            {isAdmin ? (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-md text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('active');
+                    if (activeTab === 'employees') setEmpPage(1);
+                    if (activeTab === 'jobs') setJobPage(1);
+                    if (activeTab === 'departments') setDeptPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'active'
+                      ? 'bg-white dark:bg-slate-700 text-[#001A2B] dark:text-blue-300 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  Active ({currentTabCounts.active})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('inactive');
+                    if (activeTab === 'employees') setEmpPage(1);
+                    if (activeTab === 'jobs') setJobPage(1);
+                    if (activeTab === 'departments') setDeptPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'inactive'
+                      ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-300 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  Inactive ({currentTabCounts.inactive})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('all');
+                    if (activeTab === 'employees') setEmpPage(1);
+                    if (activeTab === 'jobs') setJobPage(1);
+                    if (activeTab === 'departments') setDeptPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'all'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  All ({currentTabCounts.total})
+                </button>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            {/* Right Controls: Search bar with #001A2B outline + Primary button with #001A2B */}
+            <div className="flex items-center gap-2 flex-1 md:justify-end">
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                {activeTab === 'employees' && (
+                  <input
+                    type="text"
+                    value={empSearch}
+                    onChange={(e) => {
+                      setEmpSearch(e.target.value);
+                      setEmpPage(1);
+                    }}
+                    placeholder="Search employees..."
+                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none transition-all"
+                  />
+                )}
+                {activeTab === 'jobs' && (
+                  <input
+                    type="text"
+                    value={jobSearch}
+                    onChange={(e) => {
+                      setJobSearch(e.target.value);
+                      setJobPage(1);
+                    }}
+                    placeholder="Search jobs..."
+                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none transition-all"
+                  />
+                )}
+                {activeTab === 'departments' && (
+                  <input
+                    type="text"
+                    value={deptSearch}
+                    onChange={(e) => {
+                      setDeptSearch(e.target.value);
+                      setDeptPage(1);
+                    }}
+                    placeholder="Search departments..."
+                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none transition-all"
+                  />
+                )}
+              </div>
+
+              {canModify && (
+                <>
+                  {activeTab === 'employees' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddEmpOpen(true)}
+                      className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>+ Add Employee</span>
+                    </button>
                   )}
-                </h2>
-                <p className="text-[10px] font-mono text-[#41555f] dark:text-text-muted mt-0.5">
-                  {currentDeptMeta.activeCount} active, {currentDeptMeta.separatedCount} separated
-                </p>
-              </div>
-
-              {/* Search Box */}
-              <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 dark:text-text-faint" />
-                <input
-                  type="text"
-                  placeholder="Search name, emp no, job..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-8 pr-3 text-xs rounded-[2px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 text-[#041a24] dark:text-text placeholder:text-[#41555f]/60 dark:placeholder:text-text-muted/60 focus:outline-none focus:border-[#041a24] dark:focus:border-border-control focus:ring-1 focus:ring-[#041a24]/15 transition-all"
-                />
-              </div>
+                  {activeTab === 'jobs' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddJobOpen(true)}
+                      className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>+ Add Job</span>
+                    </button>
+                  )}
+                  {activeTab === 'departments' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddDeptOpen(true)}
+                      className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>+ Add Department</span>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
+          </div>
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 px-4 pt-2.5 border-b border-black/10 dark:border-border bg-white dark:bg-surface-1 font-mono text-xs">
-              <button
-                type="button"
-                onClick={() => setStatusTab('ALL')}
-                className={`py-2 px-3 text-xs font-mono transition-colors cursor-pointer border-b-2 ${
-                  statusTab === 'ALL'
-                    ? 'border-[#041a24] text-[#041a24] font-bold'
-                    : 'border-transparent text-[#41555f] hover:text-[#041a24]'
-                }`}
-              >
-                All ({tabCounts.all})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusTab('Active')}
-                className={`py-2 px-3 text-xs font-mono transition-colors cursor-pointer border-b-2 ${
-                  statusTab === 'Active'
-                    ? 'border-[#041a24] text-[#041a24] font-bold'
-                    : 'border-transparent text-[#41555f] hover:text-[#041a24]'
-                }`}
-              >
-                Active ({tabCounts.active})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusTab('Separated')}
-                className={`py-2 px-3 text-xs font-mono transition-colors cursor-pointer border-b-2 ${
-                  statusTab === 'Separated'
-                    ? 'border-[#041a24] text-[#041a24] font-bold'
-                    : 'border-transparent text-[#41555f] hover:text-[#041a24]'
-                }`}
-              >
-                Separated ({tabCounts.separated})
-              </button>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-sans">
-                <thead className="bg-[#F4F4F0]/70 dark:bg-surface-2/70 border-b border-black/10 dark:border-border text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
-                  <tr>
-                    <th
-                      onClick={() => handleSort('empNo')}
-                      className="py-2.5 px-3 cursor-pointer select-none group w-20"
-                    >
-                      <div className="flex items-center">
-                        Emp No
-                        {renderSortIndicator('empNo')}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSort('lastName')}
-                      className="py-2.5 px-3 cursor-pointer select-none group"
-                    >
-                      <div className="flex items-center">
-                        Last name
-                        {renderSortIndicator('lastName')}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSort('firstName')}
-                      className="py-2.5 px-3 cursor-pointer select-none group"
-                    >
-                      <div className="flex items-center">
-                        First name
-                        {renderSortIndicator('firstName')}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSort('jobDesc')}
-                      className="py-2.5 px-3 cursor-pointer select-none group"
-                    >
-                      <div className="flex items-center">
-                        Current job
-                        {renderSortIndicator('jobDesc')}
-                      </div>
-                    </th>
-                    {selectedDept === 'ALL' && (
-                      <th
-                        onClick={() => handleSort('deptName')}
-                        className="py-2.5 px-3 cursor-pointer select-none group"
-                      >
-                        <div className="flex items-center">
-                          Department
-                          {renderSortIndicator('deptName')}
-                        </div>
-                      </th>
-                    )}
-                    <th
-                      onClick={() => handleSort('hireDate')}
-                      className="py-2.5 px-3 cursor-pointer select-none group"
-                    >
-                      <div className="flex items-center">
-                        Hire date
-                        {renderSortIndicator('hireDate')}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSort('employmentStatus')}
-                      className="py-2.5 px-3 cursor-pointer select-none group w-24 text-center"
-                    >
-                      <div className="flex items-center justify-center">
-                        Status
-                        {renderSortIndicator('employmentStatus')}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSort('salary')}
-                      className="py-2.5 px-3 cursor-pointer select-none group text-right w-28"
-                    >
-                      <div className="flex items-center justify-end">
-                        Salary
-                        {renderSortIndicator('salary')}
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
-                  {paginatedEmployees.length === 0 ? (
+          {/* TAB 1: EMPLOYEES TABLE (Figure 15 & 20) */}
+          {activeTab === 'employees' && (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/70 dark:bg-slate-850/70 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono text-[10px] uppercase tracking-wider">
                     <tr>
-                      <td
-                        colSpan={selectedDept === 'ALL' ? 8 : 7}
-                        className="py-12 text-center text-[#41555f] dark:text-text-muted font-mono text-xs"
-                      >
-                        {searchQuery.trim() ? (
-                          <div className="space-y-1">
-                            <p className="font-semibold text-[#041a24] dark:text-text">No employees match your search.</p>
-                            <p className="text-[11px] text-[#41555f] dark:text-text-muted">Try searching for a different name, job, or ID.</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <p className="font-semibold text-[#041a24] dark:text-text">No employees in this department yet.</p>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => setIsAddModalOpen(true)}
-                              className="bg-[#041a24] dark:bg-primary-bg text-white dark:text-primary-fg rounded-[2px] text-xs px-3 py-1.5"
-                            >
-                              <Plus className="w-3.5 h-3.5 mr-1" />
-                              Add Employee
-                            </Button>
-                          </div>
-                        )}
-                      </td>
+                      <th className="px-3.5 py-3">EMP NO</th>
+                      <th className="px-3.5 py-3">LAST NAME</th>
+                      <th className="px-3.5 py-3">FIRST NAME</th>
+                      <th className="px-3.5 py-3">GENDER</th>
+                      <th className="px-3.5 py-3">BIRTH DATE</th>
+                      <th className="px-3.5 py-3">HIRE DATE</th>
+                      <th className="px-3.5 py-3">SEP DATE</th>
+                      {isAdmin && <th className="px-3.5 py-3">STATUS</th>}
+                      {isAdmin && <th className="px-3.5 py-3">STAMP</th>}
+                      <th className="px-3.5 py-3 text-right">ACTIONS</th>
                     </tr>
-                  ) : (
-                    paginatedEmployees.map((emp) => (
-                      <tr
-                        key={emp.empNo}
-                        onClick={() => router.push(`/employees/${emp.empNo}`)}
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            router.push(`/employees/${emp.empNo}`);
-                          }
-                        }}
-                        className="group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2 focus:bg-black/5 dark:focus:bg-surface-2 focus:outline-none"
-                      >
-                        <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
-                          <div className="absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none scale-y-0 group-hover/row:scale-y-100" />
-                          <span className="inline-block font-mono font-semibold text-[#041a24] dark:text-text transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
-                            {emp.empNo}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-semibold text-[#041a24] dark:text-text">
-                          <span className="inline-block transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
-                            {emp.lastName}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-[#041a24] dark:text-text">
-                          {emp.firstName}
-                        </td>
-                        <td className="py-2.5 px-3 text-[#041a24] dark:text-text">
-                          <div>{emp.jobDesc}</div>
-                          <div className="text-[10px] font-mono text-[#41555f] dark:text-text-muted">
-                            {emp.jobCode}
-                          </div>
-                        </td>
-                        {selectedDept === 'ALL' && (
-                          <td className="py-2.5 px-3 text-[#041a24] dark:text-text">
-                            <div>{emp.deptName}</div>
-                            <div className="text-[10px] font-mono text-[#41555f] dark:text-text-muted">
-                              {emp.deptCode}
-                            </div>
-                          </td>
-                        )}
-                        <td className="py-2.5 px-3 text-[#41555f] dark:text-text-muted font-mono text-xs tabular-nums">
-                          {formatDate(emp.hireDate)}
-                        </td>
-                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          <span
-                            className={`inline-block px-1.5 py-0.5 rounded-[2px] text-[9px] font-mono font-medium uppercase tracking-wider transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 ${
-                              emp.employmentStatus === 'Active'
-                                ? 'bg-[#041a24] dark:bg-white text-white dark:text-[#041a24]'
-                                : 'bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-slate-300 border border-black/10 dark:border-border'
-                            }`}
-                          >
-                            {emp.employmentStatus}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold tabular-nums text-[#041a24] dark:text-text">
-                          {emp.salary != null ? formatPHP(emp.salary) : '—'}
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
+                    {paginatedEmployees.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={isAdmin ? 10 : 8}
+                          className="px-4 py-8 text-center text-xs text-slate-400"
+                        >
+                          No employee records match the current filter.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      paginatedEmployees.map((emp) => {
+                        const isInactive = emp.status === 'Inactive';
+                        return (
+                          <tr
+                            key={emp.empNo}
+                            className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
+                              isInactive ? 'bg-rose-50/20 dark:bg-rose-950/10 opacity-75' : ''
+                            }`}
+                          >
+                            <td className="px-3.5 py-3 font-mono font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                              {emp.empNo}
+                            </td>
+                            <td className="px-3.5 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                              {emp.lastName}
+                            </td>
+                            <td className="px-3.5 py-3 text-slate-800 dark:text-slate-200">
+                              {emp.firstName}
+                            </td>
+                            <td className="px-3.5 py-3 text-slate-600 dark:text-slate-300">
+                              {emp.gender}
+                            </td>
+                            <td className="px-3.5 py-3 font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                              {emp.birthDate}
+                            </td>
+                            <td className="px-3.5 py-3 font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                              {emp.hireDate}
+                            </td>
+                            <td className="px-3.5 py-3 font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                              {emp.sepDate || '—'}
+                            </td>
+
+                            {isAdmin && (
+                              <td className="px-3.5 py-3 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium font-sans ${
+                                    isInactive
+                                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  }`}
+                                >
+                                  {emp.status}
+                                </span>
+                              </td>
+                            )}
+
+                            {isAdmin && (
+                              <td className="px-3.5 py-3 font-mono text-[10.5px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {emp.stamp || '—'}
+                              </td>
+                            )}
+
+                            <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* History Button: opens JOBHISTORY modal */}
+                                <button
+                                  type="button"
+                                  onClick={() => setHistoryEmp(emp)}
+                                  className="px-2.5 py-1 text-xs rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs cursor-pointer font-medium"
+                                >
+                                  History
+                                </button>
+
+                                {canModify && (
+                                  <>
+                                    {!emp.isDeleted ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingEmp(emp)}
+                                          className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setDeletingTarget({ type: 'employee', data: emp })
+                                          }
+                                          className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          Delete
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRestoreEmployee(emp)}
+                                        disabled={isSubmitting}
+                                        className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                      >
+                                        <RotateCcw className="h-3 w-3" />
+                                        <span>Restore</span>
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Employees Pagination */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span>Rows per page:</span>
+                  <select
+                    value={empPageSize}
+                    onChange={(e) => {
+                      setEmpPageSize(Number(e.target.value));
+                      setEmpPage(1);
+                    }}
+                    className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-700 dark:text-slate-200"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={0}>All ({filteredEmployees.length})</option>
+                  </select>
+                  <span className="ml-2 font-mono text-[11px]">
+                    Showing{' '}
+                    {filteredEmployees.length === 0
+                      ? 0
+                      : (empPage - 1) * (empPageSize || filteredEmployees.length) + 1}
+                    &ndash;
+                    {empPageSize === 0
+                      ? filteredEmployees.length
+                      : Math.min(empPage * empPageSize, filteredEmployees.length)}{' '}
+                    of {filteredEmployees.length}
+                  </span>
+                </div>
+
+                {empPageSize > 0 && Math.ceil(filteredEmployees.length / empPageSize) > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEmpPage((p) => Math.max(1, p - 1))}
+                      disabled={empPage <= 1}
+                      className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="px-2 text-xs font-mono">
+                      {empPage} / {Math.ceil(filteredEmployees.length / empPageSize)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEmpPage((p) =>
+                          Math.min(Math.ceil(filteredEmployees.length / empPageSize), p + 1)
+                        )
+                      }
+                      disabled={empPage >= Math.ceil(filteredEmployees.length / empPageSize)}
+                      className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: JOBS TABLE (Figure 18) */}
+          {activeTab === 'jobs' && (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/70 dark:bg-slate-850/70 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono text-[10px] uppercase tracking-wider">
+                    <tr>
+                      <th className="px-3.5 py-3">JOB CODE</th>
+                      <th className="px-3.5 py-3">DESCRIPTION</th>
+                      {isAdmin && <th className="px-3.5 py-3">STATUS</th>}
+                      {isAdmin && <th className="px-3.5 py-3">STAMP</th>}
+                      <th className="px-3.5 py-3 text-right">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
+                    {paginatedJobs.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={isAdmin ? 5 : 3}
+                          className="px-4 py-8 text-center text-xs text-slate-400"
+                        >
+                          No job records match the current filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedJobs.map((job) => {
+                        const isDeleted = job.isDeleted;
+                        return (
+                          <tr
+                            key={job.jobCode}
+                            className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
+                              isDeleted ? 'bg-rose-50/20 dark:bg-rose-950/10 opacity-75' : ''
+                            }`}
+                          >
+                            <td className="px-3.5 py-3 font-mono font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                              {job.jobCode}
+                            </td>
+                            <td className="px-3.5 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                              {job.jobDesc}
+                            </td>
+
+                            {isAdmin && (
+                              <td className="px-3.5 py-3 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium font-sans ${
+                                    isDeleted
+                                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  }`}
+                                >
+                                  {isDeleted ? 'Inactive' : 'Active'}
+                                </span>
+                              </td>
+                            )}
+
+                            {isAdmin && (
+                              <td className="px-3.5 py-3 font-mono text-[10.5px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {job.stamp || '—'}
+                              </td>
+                            )}
+
+                            <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {canModify && (
+                                  <>
+                                    {!isDeleted ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingJob(job)}
+                                          className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setDeletingTarget({ type: 'job', data: job })
+                                          }
+                                          className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          Delete
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRestoreJob(job)}
+                                        disabled={isSubmitting}
+                                        className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                      >
+                                        <RotateCcw className="h-3 w-3" />
+                                        <span>Restore</span>
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Jobs Pagination */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span>Rows per page:</span>
+                  <select
+                    value={jobPageSize}
+                    onChange={(e) => {
+                      setJobPageSize(Number(e.target.value));
+                      setJobPage(1);
+                    }}
+                    className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-700 dark:text-slate-200"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={0}>All ({filteredJobs.length})</option>
+                  </select>
+                  <span className="ml-2 font-mono text-[11px]">
+                    Showing{' '}
+                    {filteredJobs.length === 0
+                      ? 0
+                      : (jobPage - 1) * (jobPageSize || filteredJobs.length) + 1}
+                    &ndash;
+                    {jobPageSize === 0
+                      ? filteredJobs.length
+                      : Math.min(jobPage * jobPageSize, filteredJobs.length)}{' '}
+                    of {filteredJobs.length}
+                  </span>
+                </div>
+
+                {jobPageSize > 0 && Math.ceil(filteredJobs.length / jobPageSize) > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setJobPage((p) => Math.max(1, p - 1))}
+                      disabled={jobPage <= 1}
+                      className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="px-2 text-xs font-mono">
+                      {jobPage} / {Math.ceil(filteredJobs.length / jobPageSize)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setJobPage((p) =>
+                          Math.min(Math.ceil(filteredJobs.length / jobPageSize), p + 1)
+                        )
+                      }
+                      disabled={jobPage >= Math.ceil(filteredJobs.length / jobPageSize)}
+                      className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: DEPARTMENTS TABLE (Figure 19) */}
+          {activeTab === 'departments' && (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/70 dark:bg-slate-850/70 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono text-[10px] uppercase tracking-wider">
+                    <tr>
+                      <th className="px-3.5 py-3">DEPT CODE</th>
+                      <th className="px-3.5 py-3">DEPARTMENT NAME</th>
+                      {isAdmin && <th className="px-3.5 py-3">STATUS</th>}
+                      {isAdmin && <th className="px-3.5 py-3">STAMP</th>}
+                      <th className="px-3.5 py-3 text-right">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
+                    {paginatedDepartments.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={isAdmin ? 5 : 3}
+                          className="px-4 py-8 text-center text-xs text-slate-400"
+                        >
+                          No department records match the current filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedDepartments.map((dept) => {
+                        const isDeleted = dept.isDeleted;
+                        return (
+                          <tr
+                            key={dept.deptCode}
+                            className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
+                              isDeleted ? 'bg-rose-50/20 dark:bg-rose-950/10 opacity-75' : ''
+                            }`}
+                          >
+                            <td className="px-3.5 py-3 font-mono font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                              {dept.deptCode}
+                            </td>
+                            <td className="px-3.5 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                              {dept.deptName}
+                            </td>
+
+                            {isAdmin && (
+                              <td className="px-3.5 py-3 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium font-sans ${
+                                    isDeleted
+                                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  }`}
+                                >
+                                  {isDeleted ? 'Inactive' : 'Active'}
+                                </span>
+                              </td>
+                            )}
+
+                            {isAdmin && (
+                              <td className="px-3.5 py-3 font-mono text-[10.5px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {dept.stamp || '—'}
+                              </td>
+                            )}
+
+                            <td className="px-3.5 py-3 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {canModify && (
+                                  <>
+                                    {!isDeleted ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingDept(dept)}
+                                          className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setDeletingTarget({ type: 'department', data: dept })
+                                          }
+                                          className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                        >
+                                          Delete
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRestoreDepartment(dept)}
+                                        disabled={isSubmitting}
+                                        className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                      >
+                                        <RotateCcw className="h-3 w-3" />
+                                        <span>Restore</span>
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Departments Pagination */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span>Rows per page:</span>
+                  <select
+                    value={deptPageSize}
+                    onChange={(e) => {
+                      setDeptPageSize(Number(e.target.value));
+                      setDeptPage(1);
+                    }}
+                    className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-700 dark:text-slate-200"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={0}>All ({filteredDepartments.length})</option>
+                  </select>
+                  <span className="ml-2 font-mono text-[11px]">
+                    Showing{' '}
+                    {filteredDepartments.length === 0
+                      ? 0
+                      : (deptPage - 1) * (deptPageSize || filteredDepartments.length) + 1}
+                    &ndash;
+                    {deptPageSize === 0
+                      ? filteredDepartments.length
+                      : Math.min(deptPage * deptPageSize, filteredDepartments.length)}{' '}
+                    of {filteredDepartments.length}
+                  </span>
+                </div>
+
+                {deptPageSize > 0 && Math.ceil(filteredDepartments.length / deptPageSize) > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setDeptPage((p) => Math.max(1, p - 1))}
+                      disabled={deptPage <= 1}
+                      className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="px-2 text-xs font-mono">
+                      {deptPage} / {Math.ceil(filteredDepartments.length / deptPageSize)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDeptPage((p) =>
+                          Math.min(Math.ceil(filteredDepartments.length / deptPageSize), p + 1)
+                        )
+                      }
+                      disabled={deptPage >= Math.ceil(filteredDepartments.length / deptPageSize)}
+                      className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Stat Bar Dashboard dedicated to Human Resources (Image 2 style) */}
+        <aside className="w-full xl:w-[248px] shrink-0 space-y-3">
+          <RightSideKpiPanel
+            title="HR Stats Bar"
+            subtitle="LIVE"
+            cards={statBarCards}
+          />
+
+          {/* Department Breakdown Card (matching Image 2 distribution) */}
+          <div className="rounded-[12px] border border-[#E2E7E4] dark:border-border bg-white dark:bg-surface-1 p-3 shadow-2xs font-sans">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Staffing Distribution
+              </span>
+              <Building2 className="w-3.5 h-3.5 text-slate-400" />
             </div>
 
-            {/* Pagination Controls */}
-            {totalItems > 0 && (
-              <div className="p-2.5 border-t border-[#DDE3DE] dark:border-border bg-[#FAFBFA] dark:bg-surface-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-[#52615B] dark:text-slate-300">
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px]">
-                    Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)}-
-                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems}
+            <div className="space-y-1.5 text-xs">
+              {initialDepartments.slice(0, 5).map((d) => (
+                <div
+                  key={d.deptCode}
+                  className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                >
+                  <span className="text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
+                    {d.deptName}
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[#7A8781] dark:text-slate-400">Rows per page:</span>
-                    <select
-                      value={pageSize}
-                      onChange={(e) => setPageSize(Number(e.target.value))}
-                      className="h-6 px-1.5 text-[11px] rounded border border-[#CCD5CD] dark:border-border bg-white dark:bg-surface-1 text-[#17231F] dark:text-white focus:outline-none focus:border-[#245B48] dark:focus:border-border-control"
-                    >
-                      <option value={10}>10</option>
-                      <option value={25}>25</option>
-                      <option value={50}>50</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-[10px] dark:border-border dark:text-white"
-                    disabled={currentPage <= 1}
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <span className="px-2 text-[11px] font-mono text-neutral-400 dark:text-slate-400">
-                    {currentPage} / {totalPages}
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                    {d.activeStaffCount}
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-[10px] dark:border-border dark:text-white"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    Next
-                  </Button>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
 
-        </div>
-
-        {/* Right-Side Portrait KPI Monitoring Panel */}
-        <aside className="w-full xl:w-[248px] shrink-0">
-          <RightSideKpiPanel
-            title="Staff Stats Bar"
-            cards={[
-              {
-                id: 'total-employees',
-                title: 'TOTAL HEADCOUNT',
-                value: initialEmployees.length,
-                subtext: '10 total staff',
-                icon: Users,
-                onClick: () => setActiveAudit('total-employees'),
-                clickable: true,
-              },
-              {
-                id: 'active-staff',
-                title: 'ACTIVE EMPLOYEES',
-                value: totalActiveCount,
-                subtext: `${initialEmployees.length - totalActiveCount} separated`,
-                icon: UserCheck,
-                onClick: () => setActiveAudit('active-staff'),
-                clickable: true,
-              },
-              {
-                id: 'departments',
-                title: 'DEPARTMENTS',
-                value: departments.length,
-                subtext: 'Operating departments',
-                icon: Building2,
-                onClick: () => setActiveAudit('departments'),
-                clickable: true,
-              },
-              {
-                id: 'job-positions',
-                title: 'JOB POSITIONS',
-                value: jobLookups.length,
-                subtext: 'Defined career roles',
-                icon: Briefcase,
-                onClick: () => setActiveAudit('job-positions'),
-                clickable: true,
-              },
-            ]}
-          />
+          {/* Next ID Sequence Card (matching Image 2 bottom box) */}
+          <div className="rounded-[12px] border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-3 text-xs font-sans">
+            <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 font-semibold mb-1">
+              <Info className="w-3.5 h-3.5" />
+              <span>Next ID Sequence</span>
+            </div>
+            <div className="font-mono text-sm font-bold text-[#001A2B] dark:text-blue-200 mt-1">
+              Auto-assigned: {metrics?.nextSuggestedEmpNo || '00065'}
+            </div>
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Primary key strictly follows the canonical schema pattern (VARCHAR(5)).
+            </p>
+          </div>
         </aside>
       </div>
-      {/* 1. TOTAL HEADCOUNT AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'total-employees'}
-        onClose={() => setActiveAudit(null)}
-        title="Total Headcount Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Registered Personnel Roster
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {initialEmployees.length} Total Employees
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Roster Status</div>
-              <div className="text-lg font-bold font-mono text-white">
-                {totalActiveCount} Active &bull; {initialEmployees.length - totalActiveCount} Separated
-              </div>
-            </div>
-          </div>
 
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Emp #</th>
-                    <th className="py-2 px-3">Employee Name</th>
-                    <th className="py-2 px-3">Department</th>
-                    <th className="py-2 px-3">Job Role</th>
-                    <th className="py-2 px-3">Hire Date</th>
-                    <th className="py-2 px-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {initialEmployees.map((e) => (
-                    <tr key={e.empNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{e.empNo}</td>
-                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{e.fullName}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.deptName}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.jobDesc}</td>
-                      <td className="py-2 px-3 font-mono text-[#41555f] dark:text-slate-300">{e.hireDate}</td>
-                      <td className="py-2 px-3 text-center">
-                        {e.employmentStatus === 'Active' ? (
-                          <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] font-semibold bg-[#041a24] text-white dark:bg-white dark:text-[#041a24]">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 border border-red-300 dark:border-red-800">
-                            Separated ({e.sepDate})
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Universal Soft-delete Confirmation Modal */}
+      {deletingTarget && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-xl border border-rose-200 dark:border-rose-900 bg-white dark:bg-slate-900 p-5 shadow-2xl font-sans">
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              Confirm Soft Delete
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+              Are you sure you want to mark this {deletingTarget.type} record as{' '}
+              <span className="font-bold text-rose-600">Inactive</span>?
+            </p>
+            <div className="mt-3 p-2.5 rounded bg-slate-50 dark:bg-slate-800 text-xs font-mono">
+              {deletingTarget.type === 'employee' && (
+                <span>
+                  {deletingTarget.data.empNo} &bull; {deletingTarget.data.fullName}
+                </span>
+              )}
+              {deletingTarget.type === 'job' && (
+                <span>
+                  {deletingTarget.data.jobCode} &bull; {deletingTarget.data.jobDesc}
+                </span>
+              )}
+              {deletingTarget.type === 'department' && (
+                <span>
+                  {deletingTarget.data.deptCode} &bull; {deletingTarget.data.deptName}
+                </span>
+              )}
             </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Headcount:</span>
-              <span className="text-[#041a24] dark:text-white text-sm">{initialEmployees.length} Personnel Records</span>
+
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setDeletingTarget(null)}
+                disabled={isSubmitting}
+                className="px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isSubmitting}
+                className="px-3.5 py-1.5 text-xs font-medium rounded-md bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1 cursor-pointer"
+              >
+                {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
+                <span>Confirm Delete</span>
+              </button>
             </div>
           </div>
         </div>
-      </Modal>
+      )}
 
-      {/* 2. ACTIVE EMPLOYEES AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'active-staff'}
-        onClose={() => setActiveAudit(null)}
-        title="Active Personnel Roster Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Active Workforce on Payroll
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {totalActiveCount} Active Staff
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Operational Departments</div>
-              <div className="text-lg font-bold font-mono text-white">{departments.length} units</div>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-[4px] border border-black/10 dark:border-border bg-[#F8F9FA] dark:bg-surface-2 space-y-1">
-            <div className="text-[11px] font-mono font-semibold uppercase text-text">Headcount Formula:</div>
-            <div className="font-mono text-[11px] text-[#041a24] dark:text-white bg-white dark:bg-surface-1 p-2 rounded border border-black/5 dark:border-border">
-              Active Workforce = Total Staff ({initialEmployees.length}) &minus; Separated ({initialEmployees.length - totalActiveCount}) = {totalActiveCount} Active
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Emp #</th>
-                    <th className="py-2 px-3">Employee Name</th>
-                    <th className="py-2 px-3">Department</th>
-                    <th className="py-2 px-3">Job Role</th>
-                    <th className="py-2 px-3">Hire Date</th>
-                    <th className="py-2 px-3 text-right">Tenure</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {activeEmployeesList.map((e) => (
-                    <tr key={e.empNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{e.empNo}</td>
-                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{e.fullName}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.deptName}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{e.jobDesc}</td>
-                      <td className="py-2 px-3 font-mono text-[#41555f] dark:text-slate-300">{e.hireDate}</td>
-                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">{e.tenureText}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Active Headcount:</span>
-              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{totalActiveCount} Active Employees</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 3. DEPARTMENTS AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'departments'}
-        onClose={() => setActiveAudit(null)}
-        title="Operational Departments Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Operating Departments
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {departments.length} Units
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Total Staff Allocated</div>
-              <div className="text-lg font-bold font-mono text-white">{initialEmployees.length} personnel</div>
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Dept Code</th>
-                    <th className="py-2 px-3">Department Name</th>
-                    <th className="py-2 px-3 text-center">Active Staff</th>
-                    <th className="py-2 px-3 text-center">Separated</th>
-                    <th className="py-2 px-3 text-right">Total Staff</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {departments.map((d) => (
-                    <tr key={d.deptCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{d.deptCode}</td>
-                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{d.deptName}</td>
-                      <td className="py-2 px-3 text-center font-bold text-emerald-700 dark:text-emerald-400">{d.activeCount}</td>
-                      <td className="py-2 px-3 text-center text-[#41555f] dark:text-slate-300">{d.separatedCount}</td>
-                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">{d.totalCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Operating Units:</span>
-              <span className="text-[#041a24] dark:text-white text-sm">{departments.length} Departments ({totalActiveCount} Active Staff)</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 4. JOB POSITIONS AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'job-positions'}
-        onClose={() => setActiveAudit(null)}
-        title="Job Classifications & Roles Audit"
-        maxWidth="2xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Career Role Classifications
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {jobLookups.length} Standard Roles
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Framework</div>
-              <div className="text-lg font-bold font-mono text-white">Active Catalog</div>
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Job Code</th>
-                    <th className="py-2 px-3">Role Description</th>
-                    <th className="py-2 px-3 text-right">Active Assignments</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {jobLookups.map((j) => (
-                    <tr key={j.jobCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{j.jobCode}</td>
-                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{j.jobDesc}</td>
-                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">
-                        {j.activeCount ?? initialEmployees.filter((e) => e.jobCode === j.jobCode && e.employmentStatus === 'Active').length}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Defined Career Roles:</span>
-              <span className="text-[#041a24] dark:text-white text-sm">{jobLookups.length} Standard Positions</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modals */}
+      {/* Add Employee Modal */}
       <AddEmployeeModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        departments={departmentLookups}
-        jobs={jobLookups}
+        isOpen={isAddEmpOpen}
+        onClose={() => setIsAddEmpOpen(false)}
+        nextSuggestedEmpNo={metrics?.nextSuggestedEmpNo}
+        jobs={initialJobs}
+        departments={initialDepartments}
       />
 
-      <ManageJobsDeptsModal
-        isOpen={isManageModalOpen}
-        onClose={() => setIsManageModalOpen(false)}
-        departments={departmentLookups}
-        jobs={jobLookups}
+      {/* Edit Employee Modal */}
+      {editingEmp && (
+        <EditEmployeeModal
+          isOpen={Boolean(editingEmp)}
+          onClose={() => setEditingEmp(null)}
+          employee={editingEmp}
+        />
+      )}
+
+      {/* Job History Modal (Figures 16 & 17) */}
+      {historyEmp && (
+        <JobHistoryModal
+          isOpen={Boolean(historyEmp)}
+          onClose={() => setHistoryEmp(null)}
+          employee={historyEmp}
+          historyRecords={initialJobHistory}
+          jobs={initialJobs}
+          departments={initialDepartments}
+          userRole={userRole}
+        />
+      )}
+
+      {/* Add Job Modal */}
+      <AddJobModal
+        isOpen={isAddJobOpen}
+        onClose={() => setIsAddJobOpen(false)}
+        nextSuggestedCode={metrics?.nextSuggestedJobCode}
+      />
+
+      {/* Edit Job Modal */}
+      {editingJob && (
+        <EditJobModal
+          isOpen={Boolean(editingJob)}
+          onClose={() => setEditingJob(null)}
+          job={editingJob}
+        />
+      )}
+
+      {/* Add Department Modal */}
+      <AddDepartmentModal
+        isOpen={isAddDeptOpen}
+        onClose={() => setIsAddDeptOpen(false)}
+        nextSuggestedCode={metrics?.nextSuggestedDeptCode}
+      />
+
+      {/* Edit Department Modal */}
+      {editingDept && (
+        <EditDepartmentModal
+          isOpen={Boolean(editingDept)}
+          onClose={() => setEditingDept(null)}
+          department={editingDept}
+        />
+      )}
+
+      {/* Human Resources Audit Modal */}
+      <HumanResourcesAuditModal
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
+        audits={recentAudits}
       />
     </div>
   );

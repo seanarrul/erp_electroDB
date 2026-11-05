@@ -1,79 +1,36 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useTransition, useDeferredValue, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useMemo, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent } from '@/components/ui/Card';
-import { ProductDetailPanel } from './ProductDetailPanel';
-
-const AddProductModal = dynamic(
-  () => import('./AddProductModal').then((mod) => mod.AddProductModal),
-  { ssr: false }
-);
 import { Modal } from '@/components/ui/Modal';
-import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
-import { formatPHP, formatDate } from '@/lib/utils';
-import {
-  splitDescription,
-  getFamilyLabel,
-  getProductFamily,
-  formatPriceChange,
-  FAMILY_LABELS,
-} from '@/lib/products';
-import type {
-  ProductOverviewItem,
-  PriceHistoryItem,
-  ProductsSummaryMetrics,
-  ProductDetailItem,
-} from '@/lib/data/products';
+import { RightSideKpiPanel, type KpiCardItem } from '@/components/ui/RightSideKpiPanel';
+import { PriceHistoryModal } from './PriceHistoryModal';
+import { AddProductModal } from './AddProductModal';
+import { EditProductModal } from './EditProductModal';
+import { deleteProductAction, restoreProductAction } from '@/app/actions/products';
+import { formatPHP } from '@/lib/utils';
+import type { ProductItem, PriceRecordItem, ProductsMetrics, ProductAuditLogItem } from '@/lib/data/products';
 import {
   Search,
-  Download,
   Plus,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  CheckCircle2,
+  Package,
+  RotateCcw,
+  AlertCircle,
   Clock,
-  AlertTriangle,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
+  ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  Layers,
-  ShoppingBag,
-  DollarSign,
-  Package,
   History,
-  X,
-  AlertCircle,
+  FileText,
+  DollarSign,
 } from 'lucide-react';
 
-const CANONICAL_FAMILY_PREFIXES = [
-  'ALL',
-  'AD',
-  'AK',
-  'AM',
-  'AP',
-  'MD',
-  'MP',
-  'NB',
-  'NH',
-  'NT',
-  'PA',
-  'PC',
-  'PF',
-  'PR',
-  'PS',
-];
-
 interface ProductsMainViewProps {
-  initialProducts: ProductOverviewItem[];
-  initialPriceHistory: PriceHistoryItem[];
-  metrics: ProductsSummaryMetrics;
+  initialProducts: ProductItem[];
+  initialPriceHistory: PriceRecordItem[];
+  metrics: ProductsMetrics;
+  recentAudits?: ProductAuditLogItem[];
   userRole?: string;
 }
 
@@ -81,1206 +38,733 @@ export function ProductsMainView({
   initialProducts,
   initialPriceHistory,
   metrics,
-  userRole = 'sales',
+  recentAudits = [],
+  userRole = 'admin',
 }: ProductsMainViewProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
-  const isAdmin = userRole.toLowerCase() === 'admin';
+  const roleUpper = userRole.toUpperCase();
+  const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(roleUpper);
+  const canModify = ['ADMIN', 'SUPERADMIN', 'SALES'].includes(roleUpper);
 
-  // Read URL State with defaults
-  const activeView = (searchParams.get('view') === 'history' ? 'history' : 'products') as
-    | 'products'
-    | 'history';
-  const selectedFamily = searchParams.get('family') || 'ALL';
-  const selectedCode = searchParams.get('code') || null;
-  const searchQuery = searchParams.get('q') || '';
-  const soldFilter = (searchParams.get('sold') || 'all') as 'all' | 'sold' | 'none';
-  const sortCol = searchParams.get('sort') || (activeView === 'history' ? 'effDate' : 'prodCode');
-  const sortOrder = (searchParams.get('order') || (activeView === 'history' ? 'desc' : 'asc')) as
-    | 'asc'
-    | 'desc';
-  const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const pageSize = [10, 25, 50].includes(parseInt(searchParams.get('size') || '10', 10))
-    ? parseInt(searchParams.get('size') || '10', 10)
-    : 10;
+  // Status Filter: 'active' | 'inactive' | 'all'
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
 
-  // Window width for drawer vs split column
-  const [isDesktop, setIsDesktop] = useState(true);
-  useEffect(() => {
-    const checkWidth = () => setIsDesktop(window.innerWidth >= 1280);
-    checkWidth();
-    window.addEventListener('resize', checkWidth);
-    return () => window.removeEventListener('resize', checkWidth);
-  }, []);
+  // Search Query
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal state
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  // Pagination
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Stats Bar Audit Modals State
-  type ProductAuditType = 'products' | 'price-records' | 'units-sold' | 'sales-revenue' | null;
-  const [activeAudit, setActiveAudit] = useState<ProductAuditType>(null);
+  // Modal states
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<ProductItem | null>(null);
+  const [pricingProduct, setPricingProduct] = useState<ProductItem | null>(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditTab, setAuditTab] = useState<'roster' | 'logs'>('roster');
 
-  const unitsSoldAuditList = useMemo(
-    () => [...initialProducts].sort((a, b) => b.unitsSold - a.unitsSold),
-    [initialProducts]
-  );
+  // Action status
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const salesRevenueAuditList = useMemo(
-    () => [...initialProducts].sort((a, b) => b.salesRevenue - a.salesRevenue),
-    [initialProducts]
-  );
-
-  // Local Search state for instant, zero-lag typing
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const deferredSearch = useDeferredValue(localSearch);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Synchronize local search state if URL updates externally
-  useEffect(() => {
-    setLocalSearch(searchQuery);
-  }, [searchQuery]);
-
-  useEffect(() => {
-    return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    };
-  }, []);
-
-  // Update URL helper (uses router.replace to avoid history pollution and full reload costs)
-  const updateUrl = (updates: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([key, val]) => {
-      if (val === null || val === undefined || val === '') {
-        params.delete(key);
-      } else {
-        params.set(key, val);
-      }
-    });
-    startTransition(() => {
-      router.replace(`/products?${params.toString()}`, { scroll: false });
-    });
-  };
-
-  const handleSearchChange = (val: string) => {
-    setLocalSearch(val);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      updateUrl({ q: val ? val : null, page: '1' });
-    }, 300);
-  };
-
-  const handleClearSearch = () => {
-    setLocalSearch('');
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    updateUrl({ q: null, page: '1' });
-  };
-
-  const handleClearAllFilters = () => {
-    setLocalSearch('');
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    updateUrl({ family: null, q: null, sold: null, page: '1' });
-  };
-
-  // Distinct families in catalog
-  const catalogFamilies = useMemo(() => {
-    const present = Object.keys(metrics.familyCounts || {})
-      .filter((f) => f !== 'ALL' && (metrics.familyCounts[f] || 0) > 0)
-      .sort();
-    return ['ALL', ...present];
-  }, [metrics.familyCounts]);
-
-  // 1. Filtered Products View list (uses deferredSearch for non-blocking rendering)
+  // Filtered products list
   const filteredProducts = useMemo(() => {
-    return initialProducts.filter((p) => {
-      // Family filter
-      if (selectedFamily !== 'ALL' && p.family.toUpperCase() !== selectedFamily.toUpperCase()) {
-        return false;
-      }
-      // Sales activity filter
-      if (soldFilter === 'sold' && p.unitsSold <= 0) return false;
-      if (soldFilter === 'none' && p.unitsSold > 0) return false;
+    let result = initialProducts;
 
-      // Search query (code or description)
-      if (deferredSearch.trim()) {
-        const q = deferredSearch.trim().toLowerCase();
+    // 1. Status Filter
+    if (isAdmin) {
+      if (statusFilter === 'active') {
+        result = result.filter((p) => !p.isDeleted);
+      } else if (statusFilter === 'inactive') {
+        result = result.filter((p) => p.isDeleted);
+      }
+    } else {
+      // In standard user view, only active products are visible
+      result = result.filter((p) => !p.isDeleted);
+    }
+
+    // 2. Search Query Filter
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter((p) => {
         const codeMatch = p.prodCode.toLowerCase().includes(q);
         const descMatch = p.description.toLowerCase().includes(q);
-        if (!codeMatch && !descMatch) return false;
-      }
+        const unitMatch = p.unit.toLowerCase().includes(q);
+        const priceMatch = p.currentPrice != null ? String(p.currentPrice).includes(q) : false;
+        const stampMatch = p.stamp ? p.stamp.toLowerCase().includes(q) : false;
+        return codeMatch || descMatch || unitMatch || priceMatch || stampMatch;
+      });
+    }
 
-      return true;
-    });
-  }, [initialProducts, selectedFamily, soldFilter, deferredSearch]);
+    return result;
+  }, [initialProducts, statusFilter, searchQuery, isAdmin]);
 
-  // 2. Filtered Price History View list
-  const filteredPriceHistory = useMemo(() => {
-    return initialPriceHistory.filter((h) => {
-      // Family filter
-      const pFamily = getProductFamily(h.prodCode);
-      if (selectedFamily !== 'ALL' && pFamily.toUpperCase() !== selectedFamily.toUpperCase()) {
-        return false;
-      }
-
-      // Sales activity filter (filter by matching product)
-      if (soldFilter !== 'all') {
-        const prod = initialProducts.find((p) => p.prodCode === h.prodCode);
-        if (soldFilter === 'sold' && (!prod || prod.unitsSold <= 0)) return false;
-        if (soldFilter === 'none' && prod && prod.unitsSold > 0) return false;
-      }
-
-      // Search query
-      if (deferredSearch.trim()) {
-        const q = deferredSearch.trim().toLowerCase();
-        const codeMatch = h.prodCode.toLowerCase().includes(q);
-        const descMatch = h.description.toLowerCase().includes(q);
-        if (!codeMatch && !descMatch) return false;
-      }
-
-      return true;
-    });
-  }, [initialPriceHistory, initialProducts, selectedFamily, soldFilter, deferredSearch]);
-
-  // 3. Sorting logic
-  const sortedProducts = useMemo(() => {
-    return [...filteredProducts].sort((a, b) => {
-      let valA: any = (a as any)[sortCol];
-      let valB: any = (b as any)[sortCol];
-
-      if (valA === null || valA === undefined) valA = '';
-      if (valB === null || valB === undefined) valB = '';
-
-      if (typeof valA === 'number' && typeof valB === 'number') {
-        return sortOrder === 'asc' ? valA - valB : valB - valA;
-      }
-      return sortOrder === 'asc'
-        ? String(valA).localeCompare(String(valB))
-        : String(valB).localeCompare(String(valA));
-    });
-  }, [filteredProducts, sortCol, sortOrder]);
-
-  const sortedPriceHistory = useMemo(() => {
-    return [...filteredPriceHistory].sort((a, b) => {
-      let valA: any = (a as any)[sortCol];
-      let valB: any = (b as any)[sortCol];
-
-      if (valA === null || valA === undefined) valA = '';
-      if (valB === null || valB === undefined) valB = '';
-
-      if (typeof valA === 'number' && typeof valB === 'number') {
-        return sortOrder === 'asc' ? valA - valB : valB - valA;
-      }
-      return sortOrder === 'asc'
-        ? String(valA).localeCompare(String(valB))
-        : String(valB).localeCompare(String(valA));
-    });
-  }, [filteredPriceHistory, sortCol, sortOrder]);
-
-  // 4. Pagination
-  const totalCount = activeView === 'products' ? sortedProducts.length : sortedPriceHistory.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const safePage = Math.min(currentPage, totalPages);
-  const startIdx = (safePage - 1) * pageSize;
-  const endIdx = Math.min(startIdx + pageSize, totalCount);
+  // Pagination calculation
+  const totalItems = filteredProducts.length;
+  const effectivePageSize = pageSize === 0 ? totalItems : pageSize;
+  const totalPages = effectivePageSize > 0 ? Math.ceil(totalItems / effectivePageSize) : 1;
+  const safePage = Math.min(Math.max(1, currentPage), Math.max(1, totalPages));
 
   const paginatedProducts = useMemo(() => {
-    return sortedProducts.slice(startIdx, endIdx);
-  }, [sortedProducts, startIdx, endIdx]);
+    if (pageSize === 0) return filteredProducts;
+    const start = (safePage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, safePage, pageSize]);
 
-  const paginatedPriceHistory = useMemo(() => {
-    return sortedPriceHistory.slice(startIdx, endIdx);
-  }, [sortedPriceHistory, startIdx, endIdx]);
+  // Handle Soft Delete
+  const handleConfirmDelete = async () => {
+    if (!deletingProduct) return;
+    setIsSubmitting(true);
+    setActionError(null);
 
-  // 5. Selected Product Detail Object
-  const selectedProductDetail: ProductDetailItem | null = useMemo(() => {
-    if (!selectedCode) return null;
-    const prod = initialProducts.find(
-      (p) => p.prodCode.toUpperCase() === selectedCode.toUpperCase()
-    );
-    if (!prod) return null;
+    try {
+      const res = await deleteProductAction(deletingProduct.prodCode);
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
 
-    // Filter all price history rows for this product
-    const historyRows = initialPriceHistory
-      .filter((h) => h.prodCode.toUpperCase() === prod.prodCode.toUpperCase())
-      .sort((a, b) => b.effDate.localeCompare(a.effDate));
-
-    const latestEffDate = historyRows.length > 0 ? historyRows[0].effDate : null;
-
-    return {
-      ...prod,
-      hasSales: prod.unitsSold > 0,
-      priceHistory: historyRows.map((r, idx) => ({
-        ...r,
-        canCorrectPrice: idx === 0 && prod.unitsSold === 0,
-      })),
-    };
-  }, [selectedCode, initialProducts, initialPriceHistory]);
-
-  const hasUnknownCode = Boolean(selectedCode && !selectedProductDetail);
-
-  // Sorting Handler
-  const handleSort = (colKey: string) => {
-    if (sortCol === colKey) {
-      updateUrl({ order: sortOrder === 'asc' ? 'desc' : 'asc' });
-    } else {
-      updateUrl({ sort: colKey, order: 'asc', page: '1' });
+      setDeletingProduct(null);
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError('Failed to soft-delete product.');
+      setIsSubmitting(false);
     }
   };
 
-  // CSV Export Handler (Section 16)
-  const handleExportCSV = () => {
-    const today = new Date().toISOString().split('T')[0];
+  // Handle Restore
+  const handleRestore = async (product: ProductItem) => {
+    setIsSubmitting(true);
+    setActionError(null);
 
-    if (activeView === 'products') {
-      const headers = [
-        'Product Code',
-        'Description',
-        'Unit',
-        'Unit price',
-      ];
-      const rows = filteredProducts.map((p) => [
-        p.prodCode,
-        `"${p.description.replace(/"/g, '""')}"`,
-        p.unit,
-        p.currentUnitPrice != null ? p.currentUnitPrice.toFixed(2) : '',
-      ]);
+    try {
+      const res = await restoreProductAction(product.prodCode);
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
 
-      const csvContent =
-        'data:text/csv;charset=utf-8,' +
-        [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', `products-${today}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      const headers = [
-        'Effective date',
-        'Product Code',
-        'Description',
-        'Unit price',
-        'Status',
-      ];
-      const rows = filteredPriceHistory.map((h) => [
-        h.effDate,
-        h.prodCode,
-        `"${h.description.replace(/"/g, '""')}"`,
-        h.unitPrice.toFixed(2),
-        h.status,
-      ]);
-
-      const csvContent =
-        'data:text/csv;charset=utf-8,' +
-        [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', `price-history-${today}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError('Failed to restore product.');
+      setIsSubmitting(false);
     }
   };
+
+  // Right-Side Dashboard Stat Bar (matching Image 2 style)
+  // strictly showing "TOTAL PRODUCTS" w/ audit similar to Customer module
+  const statBarCards: KpiCardItem[] = useMemo(() => [
+    {
+      id: 'total-products',
+      title: 'TOTAL PRODUCTS',
+      value: metrics.totalProducts,
+      subtext: `${metrics.activeCount} active · ${metrics.inactiveCount} inactive`,
+      icon: Package,
+      onClick: () => setIsAuditModalOpen(true),
+      clickable: true,
+    },
+  ], [metrics.totalProducts, metrics.activeCount, metrics.inactiveCount]);
 
   return (
     <div className="space-y-6">
-      {/* 9.1 Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-black/10 dark:border-border pb-4">
+      {/* Top Header Row with Title and Role */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#41555f] dark:text-slate-400 block">
-            ElectronDB G4 HopeERD &bull; Products
-          </span>
-          <h1 className="font-editorial text-2xl sm:text-3xl font-normal tracking-tight text-[#041a24] dark:text-white mt-0.5">
-            Products &amp; Pricing
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
+            Product Management
           </h1>
-          <p className="text-xs text-[#41555f] dark:text-slate-300 mt-0.5 font-sans">
-            PC hardware catalog, unit prices, and historical price adjustments.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Canonical 3NF module managing product catalog entities and historical unit price schedules (Figure 3.4).
           </p>
         </div>
 
-        {/* Header Actions */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            className="bg-white dark:bg-surface-2 border border-black/15 dark:border-white/20 hover:bg-black/5 dark:hover:bg-surface-3 text-[#0F172A] dark:text-white rounded-[2px] px-3 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5"
-          >
-            <Download className="h-3.5 w-3.5 text-black/60 dark:text-white" />
-            <span>Export CSV</span>
-          </Button>
-
-          {isAdmin && (
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={() => setIsAddProductOpen(true)}
-              className="bg-[#0F172A] dark:bg-white hover:bg-[#1E293B] dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-[2px] px-3.5 py-1.5 text-xs font-medium shadow-2xs transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:scale-[0.985] cursor-pointer inline-flex items-center gap-1.5 font-semibold"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Product</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* 2-Column Desktop Layout: Main Content (Left) + Right-Side Portrait KPI Panel (Right) */}
-      <div className="flex flex-col xl:flex-row items-start gap-6">
-        <div className="flex-1 min-w-0 w-full space-y-4">
-          {/* Filter and View Controls Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-1">
-        {/* Left: View Tabs */}
-        <div className="inline-flex p-1 bg-[#F4F4F0] dark:bg-surface-2 rounded-[2px] border border-black/10 dark:border-white/15 gap-1 font-mono text-xs">
+        <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => updateUrl({ view: 'products', page: '1' })}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
-              activeView === 'products'
-                ? 'bg-[#041a24] dark:bg-white text-white dark:text-slate-900 shadow-2xs font-semibold'
-                : 'text-[#41555f] dark:text-slate-300 hover:text-[#041a24] dark:hover:text-white'
-            }`}
+            onClick={() => setIsAuditModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-sm cursor-pointer"
           >
-            <span>Products</span>
-            <span
-              className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
-                activeView === 'products'
-                  ? 'bg-white/20 dark:bg-slate-900/15 text-white dark:text-slate-900 font-semibold'
-                  : 'bg-black/5 dark:bg-surface-1 text-[#41555f] dark:text-slate-300'
-              }`}
-            >
-              {filteredProducts.length}
-            </span>
+            <History className="h-3.5 w-3.5 text-slate-500" />
+            <span>Audit Trail</span>
           </button>
-          <button
-            type="button"
-            onClick={() => updateUrl({ view: 'history', page: '1' })}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] transition-all cursor-pointer font-medium ${
-              activeView === 'history'
-                ? 'bg-[#041a24] dark:bg-white text-white dark:text-slate-900 shadow-2xs font-semibold'
-                : 'text-[#41555f] dark:text-slate-300 hover:text-[#041a24] dark:hover:text-white'
-            }`}
-          >
-            <span>Price history</span>
-            <span
-              className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded-[2px] ${
-                activeView === 'history'
-                  ? 'bg-white/20 dark:bg-slate-900/15 text-white dark:text-slate-900 font-semibold'
-                  : 'bg-black/5 dark:bg-surface-1 text-[#41555f] dark:text-slate-300'
-              }`}
-            >
-              {filteredPriceHistory.length}
-            </span>
-          </button>
-        </div>
 
-        {/* Right: Search & Sales Activity Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          {/* Search Box */}
-          <div className="relative min-w-[240px] sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-black/40 dark:text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search code or description..."
-              value={localSearch}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full rounded-[2px] border border-black/15 dark:border-white/20 bg-white dark:bg-surface-1 pl-8 pr-7 py-1.5 text-xs text-[#041a24] dark:text-white placeholder:text-[#41555f]/60 dark:placeholder:text-slate-400 focus:border-[#041a24] dark:focus:border-white focus:ring-1 focus:ring-[#041a24]/15 focus:outline-none"
-            />
-            {localSearch && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                aria-label="Clear search query"
-                className="absolute right-2 top-2 text-black/40 dark:text-slate-400 hover:text-[#041a24] dark:hover:text-white"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Category / Family Select */}
-          <div className="flex items-center gap-1.5 font-mono text-xs">
-            <span className="text-[#41555f] dark:text-slate-300 whitespace-nowrap">Category:</span>
-            <select
-              value={selectedFamily}
-              onChange={(e) => updateUrl({ family: e.target.value === 'ALL' ? null : e.target.value, page: '1' })}
-              className="rounded-[2px] border border-black/15 dark:border-white/20 bg-white dark:bg-surface-1 px-2 py-1.5 text-xs text-[#041a24] dark:text-white focus:border-[#041a24] dark:focus:border-white focus:outline-none cursor-pointer max-w-[170px] truncate"
-            >
-              <option value="ALL">All ({initialProducts.length})</option>
-              {catalogFamilies.filter((f) => f !== 'ALL').map((f) => (
-                <option key={f} value={f}>
-                  {f} - {getFamilyLabel(f)} ({metrics.familyCounts[f] || 0})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Sales Activity Select */}
-          <div className="flex items-center gap-1.5 font-mono text-xs">
-            <span className="text-[#41555f] dark:text-slate-300 whitespace-nowrap">Sales:</span>
-            <select
-              value={soldFilter}
-              onChange={(e) => updateUrl({ sold: e.target.value === 'all' ? null : e.target.value, page: '1' })}
-              className="rounded-[2px] border border-black/15 dark:border-white/20 bg-white dark:bg-surface-1 px-2 py-1.5 text-xs text-[#041a24] dark:text-white focus:border-[#041a24] dark:focus:border-white focus:outline-none cursor-pointer"
-            >
-              <option value="all">All</option>
-              <option value="sold">Has sales</option>
-              <option value="none">No sales yet</option>
-            </select>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-semibold uppercase rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            <span>{roleUpper}</span>
           </div>
         </div>
       </div>
 
-      {/* Unknown code warning */}
-      {hasUnknownCode && (
-        <div className="rounded-[4px] border border-[rgba(134,37,37,0.3)] bg-[#FCECEC] dark:bg-danger-soft p-3 text-xs text-[#862525] dark:text-danger flex items-center justify-between">
+      {actionError && (
+        <div className="rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>That product was not found ({selectedCode}).</span>
+            <span>{actionError}</span>
           </div>
           <button
             type="button"
-            onClick={() => updateUrl({ code: null })}
-            className="underline font-semibold hover:text-black dark:hover:text-text"
+            onClick={() => setActionError(null)}
+            className="text-xs underline hover:no-underline font-semibold"
           >
-            Show all products
+            Dismiss
           </button>
         </div>
       )}
 
-      {/* Main Content Layout: Table & Detail Panel */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        {/* Table Column */}
-        <div
-          className={`${
-            selectedProductDetail && isDesktop ? 'xl:col-span-7 2xl:col-span-8' : 'xl:col-span-12'
-          }`}
-        >
-          {/* Card Container for Table */}
-          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 overflow-hidden shadow-2xs font-sans">
-            {activeView === 'products' ? (
-              // PRODUCTS VIEW (Section 9.4)
-              paginatedProducts.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#41555f] dark:text-slate-300 space-y-2 font-mono">
-                  <p className="font-semibold text-[#041a24] dark:text-white">No products match your filters.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearAllFilters}
-                    className="rounded-[2px] border-black/15 dark:border-white/20 text-xs dark:text-white"
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2 text-[#41555f] dark:text-white font-mono text-[10px] uppercase tracking-wider">
-                        <th
-                          onClick={() => handleSort('prodCode')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Product Code</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'prodCode' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                        <th
-                          onClick={() => handleSort('description')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none min-w-[200px]"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Description</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'description' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                        <th
-                          onClick={() => handleSort('unit')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Unit</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'unit' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                        <th
-                          onClick={() => handleSort('currentUnitPrice')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Unit price</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'currentUnitPrice' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
-                      {paginatedProducts.map((p) => {
-                        const { title, detail } = splitDescription(p.description);
-                        const family = getProductFamily(p.prodCode);
-                        const familyName = getFamilyLabel(family);
-                        const isSelected = selectedCode?.toUpperCase() === p.prodCode.toUpperCase();
+      {/* Main Content Area: Left Table & Right Stat Bar */}
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
+        {/* Left Column: Product CRUD Table */}
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Controls Bar (Filter Tabs, Search, Add Button) matching Figure 3.4 */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+            {/* Status Filter Tabs (Figure 3.4) */}
+            {isAdmin ? (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-md text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('active');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'active'
+                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Active ({metrics.activeCount})
+                </button>
 
-                        return (
-                          <tr
-                            key={p.prodCode}
-                            onClick={() => updateUrl({ code: p.prodCode })}
-                            className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                              isSelected
-                                ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
-                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
-                            }`}
-                          >
-                            <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
-                              <div
-                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
-                                  isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
-                                }`}
-                              />
-                              <span className="inline-block font-mono font-semibold text-[#0F172A] dark:text-white transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
-                                {p.prodCode}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#0F172A] dark:text-white leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
-                                {title}
-                              </div>
-                              {detail && (
-                                <div className="text-[11px] text-[#41555f] dark:text-slate-300 leading-snug line-clamp-1 mt-0.5">
-                                  {detail}
-                                </div>
-                              )}
-                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-slate-400 mt-0.5">
-                                {family} &bull; {familyName}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] font-mono text-xs text-[#41555f] dark:text-slate-200 border border-transparent bg-transparent transition-[transform,background-color,border-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5 group-hover/row:bg-white dark:group-hover/row:bg-surface-3 group-hover/row:border-[#CBD5E1] dark:group-hover/row:border-white/30 group-hover/row:shadow-2xs">
-                                {p.unit}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap">
-                              {p.currentUnitPrice !== null ? (
-                                <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-white inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
-                                  <span>{formatPHP(p.currentUnitPrice)}</span>
-                                  <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-white">
-                                    {' '}
-                                    / {p.unit}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] font-mono text-[9px] bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-slate-300 border border-black/10 dark:border-border">
-                                  No price record
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('inactive');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'inactive'
+                      ? 'bg-white dark:bg-slate-700 text-rose-700 dark:text-rose-300 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Inactive ({metrics.inactiveCount})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'all'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  All ({metrics.totalProducts})
+                </button>
+              </div>
             ) : (
-              // PRICE HISTORY VIEW (Section 9.4)
-              paginatedPriceHistory.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#52615B] dark:text-slate-300 space-y-2">
-                  <p className="font-semibold text-[#17231F] dark:text-white">No price records match your filters.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearAllFilters}
-                    className="rounded-[2px] border-black/15 dark:border-white/20 text-xs dark:text-white"
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-sans">
-                    <thead>
-                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2 text-[#41555f] dark:text-white font-mono text-[10px] uppercase tracking-wider">
-                        <th
-                          onClick={() => handleSort('effDate')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Effective date</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'effDate' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                        <th
-                          onClick={() => handleSort('prodCode')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Product Code</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'prodCode' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                        <th
-                          onClick={() => handleSort('description')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none min-w-[200px]"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Description</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'description' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                        <th
-                          onClick={() => handleSort('unitPrice')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Unit price</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'unitPrice' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                        <th
-                          onClick={() => handleSort('status')}
-                          className="group/th py-2.5 px-3 font-semibold cursor-pointer select-none whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Status</span>
-                            <span className="inline-flex transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/th:opacity-100 group-hover/th:-translate-y-0.5">
-                              {sortCol === 'status' ? (
-                                sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-slate-900 dark:text-white" /> : <ArrowDown className="h-3 w-3 text-slate-900 dark:text-white" />
-                              ) : (
-                                <ArrowUpDown className="h-3 w-3 opacity-40 text-slate-500 dark:text-slate-400" />
-                              )}
-                            </span>
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
-                      {paginatedPriceHistory.map((h, i) => {
-                        const { title, detail } = splitDescription(h.description);
-                        const hFamily = getProductFamily(h.prodCode);
-                        const hFamilyName = getFamilyLabel(hFamily);
-                        const isSelected = selectedCode?.toUpperCase() === h.prodCode.toUpperCase();
-
-                        return (
-                          <tr
-                            key={`${h.prodCode}-${h.effDate}-${i}`}
-                            onClick={() => updateUrl({ code: h.prodCode })}
-                            className={`group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                              isSelected
-                                ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
-                                : 'group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
-                            }`}
-                          >
-                            <td className="relative py-2.5 px-3 whitespace-nowrap overflow-hidden">
-                              <div
-                                className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
-                                  isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
-                                }`}
-                              />
-                              <span className="inline-block font-mono text-xs text-[#0F172A] dark:text-white transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
-                                {formatDate(h.effDate)}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 font-mono font-semibold text-[#0F172A] dark:text-white whitespace-nowrap">
-                              {h.prodCode}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <div className="font-semibold text-[#0F172A] dark:text-white leading-tight transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1">
-                                {title}
-                              </div>
-                              {detail && (
-                                <div className="text-[11px] text-[#41555f] dark:text-slate-300 line-clamp-1 mt-0.5">
-                                  {detail}
-                                </div>
-                              )}
-                              <span className="inline-block font-mono text-[9px] uppercase tracking-wider text-[#41555f] dark:text-slate-400 mt-0.5">
-                                {hFamily} &bull; {hFamilyName}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap">
-                              <div className="font-mono font-bold tabular-nums text-[#0F172A] dark:text-white inline-flex items-baseline gap-1 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-x-1">
-                                <span>{formatPHP(h.unitPrice)}</span>
-                                <span className="font-normal font-sans text-[11px] text-slate-400 dark:text-slate-400 transition-colors duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:text-slate-700 dark:group-hover/row:text-white">
-                                  {' '}
-                                  / {h.unit}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap">
-                              <span className="inline-flex transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5">
-                                {h.status === 'Current' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#0F172A] dark:bg-white px-1.5 py-0.5 text-[10px] font-mono text-white dark:text-slate-900 font-semibold">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    Current
-                                  </span>
-                                )}
-                                {h.status === 'Past' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-black/5 dark:bg-surface-2 border border-black/10 dark:border-border px-1.5 py-0.5 text-[10px] font-mono text-[#41555f] dark:text-slate-300">
-                                    <Clock className="h-3 w-3" />
-                                    Past
-                                  </span>
-                                )}
-                                {h.status === 'Future-dated' && (
-                                  <span className="inline-flex items-center gap-1 rounded-[2px] bg-[#FEF08A]/80 dark:bg-warning-soft border border-yellow-400/50 dark:border-warning px-1.5 py-0.5 text-[10px] font-mono text-[#713F12] dark:text-warning">
-                                    <AlertTriangle className="h-3 w-3" />
-                                    Future-dated
-                                  </span>
-                                )}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )
+              <div />
             )}
 
-            {/* Pagination Controls */}
-            {totalCount > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3.5 py-2.5 border-t border-[#DDE3DE] dark:border-border bg-[#FAFBFA] dark:bg-surface-2 gap-2">
-                <span className="text-[11px] text-[#52615B] dark:text-text-muted">
-                  Showing {startIdx + 1}-{endIdx} of {totalCount}
+            {/* Right Controls: Search Input & Add Button */}
+            <div className="flex items-center gap-2 flex-1 md:justify-end">
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Search products..."
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+                />
+              </div>
+
+              {canModify && (
+                <Button
+                  type="button"
+                  onClick={() => setIsAddOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 text-xs px-3 py-1.5 font-medium flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>+ Add Product</span>
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Product Table Container */}
+          <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-850/80 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 font-mono">PROD CODE</th>
+                    <th scope="col" className="px-4 py-3">DESCRIPTION</th>
+                    <th scope="col" className="px-4 py-3 font-mono">UNIT</th>
+                    <th scope="col" className="px-4 py-3 font-mono">CURRENT PRICE</th>
+                    {isAdmin && <th scope="col" className="px-4 py-3">STATUS</th>}
+                    {isAdmin && <th scope="col" className="px-4 py-3">STAMP</th>}
+                    <th scope="col" className="px-4 py-3 text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {paginatedProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={isAdmin ? 7 : 5} className="px-4 py-12 text-center text-slate-400">
+                        <Package className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                        <p className="font-medium text-slate-600 dark:text-slate-300">No products found</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {searchQuery ? 'Try clearing your search query.' : 'No products exist in this category.'}
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedProducts.map((prod) => {
+                      const isDeleted = prod.isDeleted;
+                      return (
+                        <tr
+                          key={prod.prodCode}
+                          className={`transition-colors ${
+                            isDeleted
+                              ? 'bg-rose-50/60 dark:bg-rose-950/20 hover:bg-rose-100/60 dark:hover:bg-rose-950/30'
+                              : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          }`}
+                        >
+                          {/* PROD CODE */}
+                          <td className="px-4 py-3 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                            {prod.prodCode}
+                          </td>
+
+                          {/* DESCRIPTION */}
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100 max-w-sm">
+                            <span className={isDeleted ? 'line-through text-slate-500' : ''}>
+                              {prod.description}
+                            </span>
+                          </td>
+
+                          {/* UNIT */}
+                          <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                            {prod.unit}
+                          </td>
+
+                          {/* CURRENT PRICE (Section 3.4) */}
+                          <td className="px-4 py-3 font-mono font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                            {prod.currentPrice != null ? formatPHP(prod.currentPrice) : '—'}
+                          </td>
+
+                          {/* STATUS (Figure 3.4) */}
+                          {isAdmin && (
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isDeleted ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50">
+                                  Inactive
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
+                                  Active
+                                </span>
+                              )}
+                            </td>
+                          )}
+
+                          {/* STAMP (Figure 3.4) */}
+                          {isAdmin && (
+                            <td className="px-4 py-3 text-[11px] font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                              {prod.stamp || '—'}
+                            </td>
+                          )}
+
+                          {/* ACTIONS */}
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              {/* Prices button (Figure 12 & 13) */}
+                              <button
+                                type="button"
+                                onClick={() => setPricingProduct(prod)}
+                                className="px-2.5 py-1 text-xs rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs cursor-pointer font-medium"
+                              >
+                                Prices
+                              </button>
+
+                              {canModify && (
+                                <>
+                                  {!isDeleted ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingProduct(prod)}
+                                        className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setDeletingProduct(prod)}
+                                        className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRestore(prod)}
+                                      disabled={isSubmitting}
+                                      className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                      <span>Restore</span>
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination / Table Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <span>Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={0}>All ({totalItems})</option>
+                </select>
+                <span className="ml-2 font-mono text-[11px]">
+                  Showing {totalItems === 0 ? 0 : (safePage - 1) * (pageSize || totalItems) + 1}–
+                  {pageSize === 0 ? totalItems : Math.min(safePage * pageSize, totalItems)} of {totalItems}
                 </span>
+              </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[#52615B] dark:text-slate-400">Rows per page:</span>
-                    <select
-                      value={pageSize}
-                      onChange={(e) => updateUrl({ size: e.target.value, page: '1' })}
-                      className="rounded-[2px] border border-[#CCD5CD] dark:border-border bg-white dark:bg-surface-1 px-1.5 py-0.5 text-[11px] text-[#17231F] dark:text-white focus:outline-none"
-                    >
-                      <option value="10">10</option>
-                      <option value="25">25</option>
-                      <option value="50">50</option>
-                    </select>
-                  </div>
-
-                  <span className="text-[11px] text-[#52615B] dark:text-slate-400">
+              {pageSize > 0 && totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-750"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="px-2 text-xs font-mono">
                     {safePage} / {totalPages}
                   </span>
-
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateUrl({ page: String(safePage - 1) })}
-                      disabled={safePage <= 1}
-                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px] dark:border-border dark:text-white"
-                      aria-label="Previous page"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateUrl({ page: String(safePage + 1) })}
-                      disabled={safePage >= totalPages}
-                      className="h-7 w-7 p-0 flex items-center justify-center rounded-[2px] dark:border-border dark:text-white"
-                      aria-label="Next page"
-                    >
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-750"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Detail Panel Column (Desktop >= 1280px) */}
-        {selectedProductDetail && isDesktop && (
-          <div className="xl:col-span-5 2xl:col-span-4">
-            <ProductDetailPanel
-              product={selectedProductDetail}
-              onClose={() => updateUrl({ code: null })}
-              userRole={userRole}
-              availableUnits={metrics.allUnits}
-              isDrawer={false}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Detail Panel Drawer (Mobile / Tablet < 1280px) */}
-      {selectedProductDetail && !isDesktop && (
-        <ProductDetailPanel
-          product={selectedProductDetail}
-          onClose={() => updateUrl({ code: null })}
-          userRole={userRole}
-          availableUnits={metrics.allUnits}
-          isDrawer={true}
-        />
-      )}
-
-      </div>
-
-        {/* Right-Side Portrait KPI Monitoring Panel */}
+        {/* Right Column: Stat Bar Dashboard looking box (Image 2 style) */}
+        {/* Strictly showing "TOTAL PRODUCTS" w/ audit similar to Customer module */}
         <aside className="w-full xl:w-[248px] shrink-0">
           <RightSideKpiPanel
             title="Product Stats Bar"
-            cards={[
-              {
-                id: 'products',
-                title: 'PRODUCTS',
-                value: metrics.totalProducts,
-                subtext: `${metrics.totalFamilies} families`,
-                icon: Package,
-                onClick: () => setActiveAudit('products'),
-                clickable: true,
-              },
-              {
-                id: 'price-records',
-                title: 'PRICE RECORDS',
-                value: metrics.totalPriceRecords,
-                subtext: `${metrics.priceChangesRecorded} price changes`,
-                icon: History,
-                onClick: () => setActiveAudit('price-records'),
-                clickable: true,
-              },
-              {
-                id: 'units-sold',
-                title: 'UNITS SOLD',
-                value: metrics.totalUnitsSold.toLocaleString(),
-                unit: 'pc',
-                subtext: 'Catalog units sold',
-                icon: Layers,
-                onClick: () => setActiveAudit('units-sold'),
-                clickable: true,
-              },
-              {
-                id: 'sales-revenue',
-                title: 'SALES REVENUE',
-                value: formatPHP(metrics.totalSalesRevenue),
-                subtext: 'Historical revenue',
-                icon: DollarSign,
-                onClick: () => setActiveAudit('sales-revenue'),
-                clickable: true,
-              },
-            ]}
+            subtitle="LIVE"
+            cards={statBarCards}
           />
         </aside>
       </div>
-      {/* 1. CATALOG PRODUCTS AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'products'}
-        onClose={() => setActiveAudit(null)}
-        title="Catalog Products Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Active Catalog Inventory
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {metrics.totalProducts} Hardware SKUs
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Product Categories</div>
-              <div className="text-lg font-bold font-mono text-white">{metrics.totalFamilies} families</div>
-            </div>
-          </div>
 
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Product Code</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3">Family</th>
-                    <th className="py-2 px-3 text-center">Unit</th>
-                    <th className="py-2 px-3 text-right">Current Price</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {initialProducts.map((p) => (
-                    <tr key={p.prodCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{p.prodCode}</td>
-                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.description}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300">{p.family}</td>
-                      <td className="py-2 px-3 text-center text-[#41555f] dark:text-slate-300">{p.unit}</td>
-                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
-                        {p.currentUnitPrice ? formatPHP(p.currentUnitPrice) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Catalog Size:</span>
-              <span className="text-[#041a24] dark:text-white text-sm">{metrics.totalProducts} Products across {metrics.totalFamilies} Families</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
+      {/* Add Product Modal */}
+      <AddProductModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        nextSuggestedProdCode={metrics.nextSuggestedProdCode}
+      />
 
-      {/* 2. PRICE RECORDS AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'price-records'}
-        onClose={() => setActiveAudit(null)}
-        title="Price History Records Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Total Price Entries
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {metrics.totalPriceRecords} Recorded Prices
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Price Adjustments</div>
-              <div className="text-lg font-bold font-mono text-white">{metrics.priceChangesRecorded} changes logged</div>
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Effective Date</th>
-                    <th className="py-2 px-3">Product Code</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3 text-center">Status</th>
-                    <th className="py-2 px-3 text-right">Unit Price</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {initialPriceHistory.map((ph, idx) => (
-                    <tr key={`${ph.prodCode}-${ph.effDate}-${idx}`} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-mono text-[#041a24] dark:text-white">{ph.effDate}</td>
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{ph.prodCode}</td>
-                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{ph.description}</td>
-                      <td className="py-2 px-3 text-center">
-                        <span className={`px-1.5 py-0.5 rounded-[2px] text-[10px] font-semibold ${
-                          ph.status === 'Current'
-                            ? 'bg-[#041a24] text-white dark:bg-white dark:text-[#041a24]'
-                            : 'bg-black/5 dark:bg-surface-1 text-text-muted'
-                        }`}>
-                          {ph.status}
-                        </span>
-                      </td>
-                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">
-                        {formatPHP(ph.unitPrice)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Historical Records:</span>
-              <span className="text-[#041a24] dark:text-white text-sm">{metrics.totalPriceRecords} Records in PriceHist</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 3. UNITS SOLD AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'units-sold'}
-        onClose={() => setActiveAudit(null)}
-        title="Catalog Units Sold Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Dispatched Quantity
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {metrics.totalUnitsSold.toLocaleString()} Units Sold
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Catalog SKUs</div>
-              <div className="text-lg font-bold font-mono text-white">{metrics.totalProducts} products</div>
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Product Code</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3 text-center">Unit</th>
-                    <th className="py-2 px-3 text-right">Units Sold</th>
-                    <th className="py-2 px-3 text-right">Revenue Generated</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {unitsSoldAuditList.map((p) => (
-                    <tr key={p.prodCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{p.prodCode}</td>
-                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.description}</td>
-                      <td className="py-2 px-3 text-center text-[#41555f] dark:text-slate-300">{p.unit}</td>
-                      <td className="py-2 px-3 text-right font-bold text-[#041a24] dark:text-white">
-                        {p.unitsSold.toLocaleString()}
-                      </td>
-                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-semibold">
-                        {formatPHP(p.salesRevenue)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Units Dispatched:</span>
-              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{metrics.totalUnitsSold.toLocaleString()} pc</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 4. SALES REVENUE AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'sales-revenue'}
-        onClose={() => setActiveAudit(null)}
-        title="Catalog Revenue Attribution Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Total Catalog Revenue
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {formatPHP(metrics.totalSalesRevenue)}
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Catalog SKUs</div>
-              <div className="text-lg font-bold font-mono text-white">{metrics.totalProducts} products</div>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-[4px] border border-black/10 dark:border-border bg-[#F8F9FA] dark:bg-surface-2 space-y-1">
-            <div className="text-[11px] font-mono font-semibold uppercase text-text">Formula Applied:</div>
-            <div className="font-mono text-[11px] text-[#041a24] dark:text-white bg-white dark:bg-surface-1 p-2 rounded border border-black/5 dark:border-border">
-              Product Revenue = SUM( SalesDetail.quantity &times; Historical PriceHist.unitPrice on Sale Date )
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Product Code</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3 text-right">Units Sold</th>
-                    <th className="py-2 px-3 text-right">Revenue Share</th>
-                    <th className="py-2 px-3 text-right">Total Revenue</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {salesRevenueAuditList.map((p) => {
-                    const share = metrics.totalSalesRevenue > 0
-                      ? ((p.salesRevenue / metrics.totalSalesRevenue) * 100).toFixed(1)
-                      : '0.0';
-                    return (
-                      <tr key={p.prodCode} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                        <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">{p.prodCode}</td>
-                        <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.description}</td>
-                        <td className="py-2 px-3 text-right text-[#41555f] dark:text-slate-300">
-                          {p.unitsSold.toLocaleString()} {p.unit}
-                        </td>
-                        <td className="py-2 px-3 text-right text-[#41555f] dark:text-slate-300 font-mono">
-                          {share}%
-                        </td>
-                        <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
-                          {formatPHP(p.salesRevenue)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Catalog Revenue:</span>
-              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics.totalSalesRevenue)}</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Add Product Modal (Admin only) */}
-      {isAdmin && (
-        <AddProductModal
-          isOpen={isAddProductOpen}
-          onClose={() => setIsAddProductOpen(false)}
-          availableUnits={metrics.allUnits}
-          existingCodes={initialProducts.map((p) => p.prodCode)}
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <EditProductModal
+          isOpen={Boolean(editingProduct)}
+          onClose={() => setEditingProduct(null)}
+          product={editingProduct}
         />
+      )}
+
+      {/* Price History Modal (Figure 12 & 13) */}
+      {pricingProduct && (
+        <PriceHistoryModal
+          isOpen={Boolean(pricingProduct)}
+          onClose={() => setPricingProduct(null)}
+          product={pricingProduct}
+          priceRecords={initialPriceHistory}
+          userRole={userRole}
+        />
+      )}
+
+      {/* Soft Delete Confirmation Modal */}
+      {deletingProduct && (
+        <Modal
+          isOpen={Boolean(deletingProduct)}
+          onClose={() => setDeletingProduct(null)}
+          title="Soft-Delete Product"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <div className="rounded-md bg-rose-50 dark:bg-rose-950/30 p-3 border border-rose-200 dark:border-rose-900/40 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>Soft Deletion & Relational Integrity</span>
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                In compliance with Hope ERP relational architecture (Section 3.4), this will flag product{' '}
+                <span className="font-mono font-bold">#{deletingProduct.prodCode}</span> as{' '}
+                <span className="font-bold">Inactive</span> (<code>is_deleted = 1</code>).
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                Zero data loss: Historical sales line items and previous price entries remain 100% intact. You can restore this catalog item at any time.
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+              <p><span className="text-slate-500">Code:</span> <span className="font-semibold font-mono">{deletingProduct.prodCode}</span></p>
+              <p><span className="text-slate-500">Description:</span> <span>{deletingProduct.description}</span></p>
+              <p><span className="text-slate-500">Unit:</span> <span>{deletingProduct.unit}</span></p>
+              <p><span className="text-slate-500">Current Price:</span> <span>{deletingProduct.currentPrice != null ? formatPHP(deletingProduct.currentPrice) : '—'}</span></p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setDeletingProduct(null)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleConfirmDelete}
+                disabled={isSubmitting}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                {isSubmitting ? 'Deleting...' : 'Confirm Soft Delete'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Total Registered Products Audit Modal */}
+      {isAuditModalOpen && (
+        <Modal
+          isOpen={isAuditModalOpen}
+          onClose={() => setIsAuditModalOpen(false)}
+          title="Total Registered Products Audit"
+          maxWidth="3xl"
+        >
+          <div className="space-y-4 font-sans text-xs">
+            {/* Top Summary Card */}
+            <div className="p-4 rounded-lg bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                  Registered Catalog Items
+                </div>
+                <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                  {metrics.totalProducts} Catalog Products
+                </div>
+                <div className="text-[11px] text-slate-300 mt-1 flex items-center gap-2">
+                  <span className="text-emerald-400 font-semibold">{metrics.activeCount} Active</span>
+                  <span>&bull;</span>
+                  <span className="text-rose-400 font-semibold">{metrics.inactiveCount} Inactive</span>
+                </div>
+              </div>
+              <div className="text-left sm:text-right sm:border-l sm:border-white/10 sm:pl-4">
+                <div className="text-[11px] font-mono text-slate-300">Total Price Records</div>
+                <div className="text-lg font-bold font-mono text-white mt-0.5">
+                  {metrics.totalPriceRecords} Schedules
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                  {Object.entries(metrics.unitCounts).map(([u, cnt]) => `${u}: ${cnt}`).join(' · ')}
+                </div>
+              </div>
+            </div>
+
+            {/* Audit View Mode Switcher */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAuditTab('roster')}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                    auditTab === 'roster'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5 inline mr-1 text-slate-500" />
+                  Catalog Roster ({initialProducts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuditTab('logs')}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                    auditTab === 'logs'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <History className="h-3.5 w-3.5 inline mr-1 text-slate-500" />
+                  System Audit Logs ({recentAudits.length})
+                </button>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                Next Suggested: {metrics.nextSuggestedProdCode}
+              </span>
+            </div>
+
+            {/* Tab 1: Catalog Roster */}
+            {auditTab === 'roster' && (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 text-[10px] font-mono text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="py-2 px-3">PROD CODE</th>
+                        <th className="py-2 px-3">DESCRIPTION</th>
+                        <th className="py-2 px-3">UNIT</th>
+                        <th className="py-2 px-3">CURRENT PRICE</th>
+                        <th className="py-2 px-3">STATUS</th>
+                        <th className="py-2 px-3">STAMP</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {initialProducts.map((p) => (
+                        <tr key={p.prodCode} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="py-2 px-3 font-mono font-bold">{p.prodCode}</td>
+                          <td className="py-2 px-3 font-medium">{p.description}</td>
+                          <td className="py-2 px-3 font-mono">{p.unit}</td>
+                          <td className="py-2 px-3 font-mono">
+                            {p.currentPrice != null ? formatPHP(p.currentPrice) : '—'}
+                          </td>
+                          <td className="py-2 px-3">
+                            {p.isDeleted ? (
+                              <span className="text-[10px] font-medium text-rose-600 dark:text-rose-400">
+                                Inactive
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                                Active
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 font-mono text-[10px] text-slate-400">
+                            {p.stamp || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: System Audit Logs */}
+            {auditTab === 'logs' && (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-md p-3">
+                {recentAudits.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    <Clock className="h-6 w-6 mx-auto mb-1 text-slate-300 dark:text-slate-600" />
+                    No recent mutation log entries found in <code>audit_log</code> table for products or pricing.
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {recentAudits.map((a) => (
+                      <div key={a.auditId} className="py-2.5 flex items-start justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                                a.action === 'ADD'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                                  : a.action === 'EDIT'
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                                  : a.action === 'DELETE'
+                                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              }`}
+                            >
+                              {a.action}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                              {a.tableName}
+                            </span>
+                            <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                              {a.recordKey}
+                            </span>
+                            <span className="text-slate-400 text-[11px]">by {a.actionBy}</span>
+                          </div>
+                          {a.newValues && (
+                            <p className="text-[10px] text-slate-500 font-mono truncate max-w-lg">
+                              {a.newValues}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                          {a.actionAt}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAuditModalOpen(false)}
+              >
+                Close Audit
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

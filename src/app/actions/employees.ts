@@ -4,19 +4,68 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
-import { createClient } from '@/lib/supabase/server';
+import fs from 'node:fs';
 import { getCurrentUser } from './auth';
 
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
+}
+
 function getSqliteDb(): DatabaseSync {
-  const dbPath = path.join(process.cwd(), 'hope.db');
+  const dbPath = getHopeDbPath();
   return new DatabaseSync(dbPath);
 }
 
-function getManilaToday(): string {
-  // Asia/Manila current date in YYYY-MM-DD
+function getStampString(action: 'CREATED' | 'EDITED' | 'DELETED' | 'RESTORED', byUser = 'system'): string {
   const now = new Date();
-  const manilaDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-  return manilaDateStr;
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
+  return `${action} ${byUser} ${dateStr} ${timeStr}`;
+}
+
+function getManilaToday(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+}
+
+async function ensureAdmin() {
+  const user = await getCurrentUser();
+  const role = (user?.role || '').toLowerCase();
+  if (!user || (role !== 'admin' && role !== 'superadmin')) {
+    throw new Error('Access denied. Administrator privileges required.');
+  }
+  return user?.fullName || user?.email?.split('@')[0] || 'admin';
+}
+
+function logAudit(db: DatabaseSync, tableName: string, action: string, recordKey: string, oldValues: any, newValues: any, actionBy: string) {
+  try {
+    db.prepare(`
+      INSERT INTO audit_log (table_name, action, record_key, old_values, new_values, action_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      tableName,
+      action,
+      recordKey,
+      oldValues ? JSON.stringify(oldValues) : null,
+      newValues ? JSON.stringify(newValues) : null,
+      actionBy
+    );
+  } catch {
+    // Non-blocking
+  }
 }
 
 // ========================================================================
@@ -24,81 +73,82 @@ function getManilaToday(): string {
 // ========================================================================
 
 const addEmployeeSchema = z.object({
-  lastName: z.string().trim().min(1, 'Last name is required').max(50),
-  firstName: z.string().trim().min(1, 'First name is required').max(50),
-  gender: z.enum(['M', 'F']),
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid birth date is required'),
-  hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid hire date is required'),
-  jobCode: z.string().trim().min(1, 'Job position is required'),
-  deptCode: z.string().trim().min(1, 'Department is required'),
-  salary: z.number().positive('Salary must be greater than zero'),
+  lastName: z.string().trim().min(1, 'Last name is required').max(15, 'Last name max 15 chars (VARCHAR(15))'),
+  firstName: z.string().trim().min(1, 'First name is required').max(15, 'First name max 15 chars (VARCHAR(15))'),
+  gender: z.enum(['M', 'F', 'm', 'f']),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid birth date (YYYY-MM-DD) is required'),
+  hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid hire date (YYYY-MM-DD) is required'),
+  jobCode: z.string().trim().min(1, 'Job position is required').max(4),
+  deptCode: z.string().trim().min(1, 'Department is required').max(4),
+  salary: z.number().positive('Starting salary must be greater than zero'),
   effDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid effective date is required').optional(),
 });
 
-const addJobRecordSchema = z.object({
-  empNo: z.number().int().positive('Employee number is required'),
-  jobCode: z.string().trim().min(1, 'Job is required'),
-  deptCode: z.string().trim().min(1, 'Department is required'),
-  effDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid effective date is required'),
-  salary: z.number().positive('Salary must be greater than zero'),
-});
-
 const updateEmployeeSchema = z.object({
-  empNo: z.number().int().positive('Employee number is required'),
-  lastName: z.string().trim().min(1, 'Last name is required').max(50),
-  firstName: z.string().trim().min(1, 'First name is required').max(50),
-  gender: z.enum(['M', 'F']),
+  empNo: z.string().trim().min(1, 'Employee number is required').max(5),
+  lastName: z.string().trim().min(1, 'Last name is required').max(15),
+  firstName: z.string().trim().min(1, 'First name is required').max(15),
+  gender: z.enum(['M', 'F', 'm', 'f']),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid birth date is required'),
   hireDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid hire date is required'),
-});
-
-const separateEmployeeSchema = z.object({
-  empNo: z.number().int().positive('Employee number is required'),
-  sepDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid separation date is required'),
-});
-
-const departmentSchema = z.object({
-  deptCode: z.string().trim().min(3).max(10),
-  deptName: z.string().trim().min(2, 'Department name is required').max(100),
+  sepDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid separation date is required').optional().nullable(),
 });
 
 const jobSchema = z.object({
-  jobCode: z.string().trim().min(3).max(10),
-  jobDesc: z.string().trim().min(2, 'Job description is required').max(100),
+  jobCode: z.string().trim().min(1, 'Job code is required').max(4, 'Job code max 4 chars (VARCHAR(4))'),
+  jobDesc: z.string().trim().min(1, 'Job description is required').max(20, 'Job description max 20 chars (VARCHAR(20))'),
+});
+
+const departmentSchema = z.object({
+  deptCode: z.string().trim().min(1, 'Dept code is required').max(3, 'Dept code max 3 chars (VARCHAR(3))'),
+  deptName: z.string().trim().min(1, 'Department name is required').max(20, 'Department name max 20 chars (VARCHAR(20))'),
+});
+
+const jobHistorySchema = z.object({
+  empNo: z.string().trim().min(1, 'Employee number is required').max(5),
+  jobCode: z.string().trim().min(1, 'Job position is required').max(4),
+  deptCode: z.string().trim().min(1, 'Department is required').max(4),
+  effDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid effective date (YYYY-MM-DD) is required'),
+  salary: z.number().positive('Salary must be greater than zero'),
 });
 
 export type AddEmployeeInput = z.infer<typeof addEmployeeSchema>;
-export type AddJobRecordInput = z.infer<typeof addJobRecordSchema>;
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
-export type SeparateEmployeeInput = z.infer<typeof separateEmployeeSchema>;
+export type AddJobInput = z.infer<typeof jobSchema>;
+export type AddDepartmentInput = z.infer<typeof departmentSchema>;
+export type JobHistoryInput = z.infer<typeof jobHistorySchema>;
 
-// Helper: Ensure user is admin
-async function ensureAdmin() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== 'admin') {
-    throw new Error('Access denied. Administrator privileges required.');
-  }
-}
+// Backwards compatibility types
+export type AddJobRecordInput = {
+  empNo: number | string;
+  jobCode: string;
+  deptCode: string;
+  effDate: string;
+  salary: number;
+};
+export type SeparateEmployeeInput = {
+  empNo: number | string;
+  sepDate: string;
+};
 
 // ========================================================================
-// ACTIONS
+// EMPLOYEE ACTIONS
 // ========================================================================
 
 /**
- * 1. Add Employee (Section 9.1: Atomic creation of EMPLOYEE + first JOBHISTORY)
+ * 1. Add Employee (Atomic creation of EMPLOYEE + first JOBHISTORY row)
  */
 export async function addEmployeeAction(input: AddEmployeeInput) {
   try {
-    await ensureAdmin();
+    const userName = await ensureAdmin();
     const validated = addEmployeeSchema.parse(input);
     const manilaToday = getManilaToday();
 
-    // R-03: hireDate cannot be in the future
     if (validated.hireDate > manilaToday) {
       return { error: 'Hire date cannot be in the future.' };
     }
 
-    // R-03: Age >= 18 on hire date
+    // Age >= 18 on hire date
     const bDate = new Date(validated.birthDate);
     const hDate = new Date(validated.hireDate);
     const minHireDate = new Date(bDate.getFullYear() + 18, bDate.getMonth(), bDate.getDate());
@@ -106,65 +156,71 @@ export async function addEmployeeAction(input: AddEmployeeInput) {
       return { error: 'Employee must be at least 18 years old on hire date.' };
     }
 
-    // R-01: First job record effDate defaults to hireDate and cannot be earlier than it
     const effDate = validated.effDate || validated.hireDate;
     if (effDate < validated.hireDate) {
       return { error: `Initial effective date (${effDate}) cannot be earlier than hire date (${validated.hireDate}).` };
     }
-    if (effDate > manilaToday) {
-      return { error: 'Initial effective date cannot be in the future.' };
-    }
-
-    // R-08: Salary > 0
-    if (validated.salary <= 0) {
-      return { error: 'Salary must be greater than zero.' };
-    }
 
     const db = getSqliteDb();
 
-    // Check FKs
-    const jobExists = db.prepare('SELECT 1 FROM JOB WHERE jobCode = ?').get(validated.jobCode);
-    if (!jobExists) return { error: `Job code ${validated.jobCode} does not exist.` };
+    // Verify Job exists
+    const jobExists = db.prepare('SELECT 1 FROM JOB WHERE jobCode = ? AND is_deleted = 0').get(validated.jobCode);
+    if (!jobExists) return { error: `Job code "${validated.jobCode}" is not active or does not exist.` };
 
-    const deptExists = db.prepare('SELECT 1 FROM DEPARTMENT WHERE deptCode = ?').get(validated.deptCode);
-    if (!deptExists) return { error: `Department code ${validated.deptCode} does not exist.` };
+    // Verify Department exists
+    const deptExists = db.prepare('SELECT 1 FROM DEPARTMENT WHERE deptCode = ? AND is_deleted = 0').get(validated.deptCode);
+    if (!deptExists) return { error: `Department code "${validated.deptCode}" is not active or does not exist.` };
 
     db.exec('BEGIN IMMEDIATE');
     try {
-      // R-02: Next empNo sequence
       const maxRow = db.prepare(`
-        SELECT COALESCE(
-          MAX(CAST(empNo AS INTEGER)),
-          0
-        ) + 2 AS nextNum FROM EMPLOYEE
+        SELECT COALESCE(MAX(CAST(empNo AS INTEGER)), 0) + 2 AS nextNum FROM EMPLOYEE
       `).get() as any;
       const nextNum = Number(maxRow?.nextNum || 65);
       const nextEmpNo = String(nextNum).padStart(5, '0');
+      const stampStr = getStampString('CREATED', userName);
 
-      // Insert EMPLOYEE
       db.prepare(`
-        INSERT INTO EMPLOYEE (empNo, lastName, firstName, gender, birthDate, hireDate, sepDate, stamp)
-        VALUES (?, ?, ?, ?, ?, ?, NULL, 'ADD admin ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
+        INSERT INTO EMPLOYEE (empNo, lastName, firstName, gender, birthDate, hireDate, sepDate, is_deleted, stamp)
+        VALUES (?, ?, ?, ?, ?, ?, NULL, 0, ?)
       `).run(
         nextEmpNo,
         validated.lastName,
         validated.firstName,
-        validated.gender,
+        validated.gender.toUpperCase(),
         validated.birthDate,
-        validated.hireDate
+        validated.hireDate,
+        stampStr
       );
 
-      // Insert first JOBHISTORY
       db.prepare(`
-        INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode, stamp)
-        VALUES (?, ?, ?, ?, ?, 'ADD admin ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
+        INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode, is_deleted, stamp)
+        VALUES (?, ?, ?, ?, ?, 0, ?)
       `).run(
         nextEmpNo,
         validated.jobCode,
         effDate,
         validated.salary,
-        validated.deptCode
+        validated.deptCode,
+        stampStr
       );
+
+      logAudit(db, 'EMPLOYEE', 'ADD', nextEmpNo, null, {
+        empNo: nextEmpNo,
+        lastName: validated.lastName,
+        firstName: validated.firstName,
+        gender: validated.gender.toUpperCase(),
+        birthDate: validated.birthDate,
+        hireDate: validated.hireDate,
+      }, userName);
+
+      logAudit(db, 'JOBHISTORY', 'ADD', `${nextEmpNo}:${validated.jobCode}:${effDate}`, null, {
+        empNo: nextEmpNo,
+        jobCode: validated.jobCode,
+        effDate,
+        salary: validated.salary,
+        deptCode: validated.deptCode,
+      }, userName);
 
       db.exec('COMMIT');
       revalidatePath('/employees');
@@ -182,93 +238,11 @@ export async function addEmployeeAction(input: AddEmployeeInput) {
 }
 
 /**
- * 2. New Job Record (Section 9.2: Promotions, transfers, salary updates)
- */
-export async function addJobRecordAction(input: AddJobRecordInput) {
-  try {
-    await ensureAdmin();
-    const validated = addJobRecordSchema.parse(input);
-    const manilaToday = getManilaToday();
-
-    if (validated.effDate > manilaToday) {
-      return { error: 'Effective date cannot be in the future.' };
-    }
-
-    if (validated.salary <= 0) {
-      return { error: 'Salary must be greater than zero.' };
-    }
-
-    const db = getSqliteDb();
-
-    // Check employee exists
-    const emp = db.prepare('SELECT * FROM EMPLOYEE WHERE empNo = ?').get(validated.empNo) as any;
-    if (!emp) return { error: `Employee ${validated.empNo} not found.` };
-
-    // R-11: Separated employee cannot receive new job records
-    if (emp.sepDate != null) {
-      return { error: `Employee ${validated.empNo} is separated and cannot receive new job records.` };
-    }
-
-    // Check FKs
-    const jobExists = db.prepare('SELECT 1 FROM JOB WHERE jobCode = ?').get(validated.jobCode);
-    if (!jobExists) return { error: `Job code ${validated.jobCode} does not exist.` };
-
-    const deptExists = db.prepare('SELECT 1 FROM DEPARTMENT WHERE deptCode = ?').get(validated.deptCode);
-    if (!deptExists) return { error: `Department code ${validated.deptCode} does not exist.` };
-
-    // R-05: effDate must be later than latest existing effDate
-    const latestJh = db.prepare(`
-      SELECT MAX(effDate) AS latestEffDate
-      FROM JOBHISTORY
-      WHERE empNo = ?
-    `).get(validated.empNo) as any;
-
-    if (latestJh?.latestEffDate && validated.effDate <= latestJh.latestEffDate) {
-      return { error: `The effective date must be after the latest record (${latestJh.latestEffDate}).` };
-    }
-
-    // R-06: effDate must be later than latest sale date
-    const latestSale = db.prepare(`
-      SELECT MAX(salesDate) AS latestSaleDate
-      FROM SALES
-      WHERE empNo = ?
-    `).get(validated.empNo) as any;
-
-    if (latestSale?.latestSaleDate && validated.effDate <= latestSale.latestSaleDate) {
-      return {
-        error: `This employee has sales dated ${latestSale.latestSaleDate}. The effective date must be after it, so past sales keep their original department.`
-      };
-    }
-
-    // Insert new JOBHISTORY row
-    db.prepare(`
-      INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(
-      validated.empNo,
-      validated.jobCode,
-      validated.effDate,
-      validated.salary,
-      validated.deptCode
-    );
-
-    revalidatePath('/employees');
-    revalidatePath(`/employees/${validated.empNo}`);
-    return { success: true };
-  } catch (err: any) {
-    if (err instanceof z.ZodError) {
-      return { error: err.errors[0]?.message || 'Invalid job record parameters' };
-    }
-    return { error: err?.message || 'Failed to add job record.' };
-  }
-}
-
-/**
- * 3. Edit Employee (Section 9.3: Updates personal information)
+ * 2. Update Employee Personal Details
  */
 export async function updateEmployeeAction(input: UpdateEmployeeInput) {
   try {
-    await ensureAdmin();
+    const userName = await ensureAdmin();
     const validated = updateEmployeeSchema.parse(input);
     const manilaToday = getManilaToday();
 
@@ -276,7 +250,6 @@ export async function updateEmployeeAction(input: UpdateEmployeeInput) {
       return { error: 'Hire date cannot be in the future.' };
     }
 
-    // R-03: Age >= 18 on hire date
     const bDate = new Date(validated.birthDate);
     const hDate = new Date(validated.hireDate);
     const minHireDate = new Date(bDate.getFullYear() + 18, bDate.getMonth(), bDate.getDate());
@@ -284,34 +257,23 @@ export async function updateEmployeeAction(input: UpdateEmployeeInput) {
       return { error: 'Employee must be at least 18 years old on hire date.' };
     }
 
+    const cleanEmpNo = String(validated.empNo).trim().padStart(5, '0');
     const db = getSqliteDb();
-    const emp = db.prepare('SELECT * FROM EMPLOYEE WHERE empNo = ?').get(validated.empNo) as any;
-    if (!emp) return { error: `Employee ${validated.empNo} not found.` };
+    const existing = db.prepare('SELECT * FROM EMPLOYEE WHERE empNo = ?').get(cleanEmpNo) as any;
+    if (!existing) return { error: `Employee ${cleanEmpNo} not found.` };
 
-    // R-04: hireDate cannot be moved later than earliest JOBHISTORY effDate or earliest sale date
     const earliestJh = db.prepare(`
       SELECT MIN(effDate) AS earliestEffDate
       FROM JOBHISTORY
       WHERE empNo = ?
-    `).get(validated.empNo) as any;
+    `).get(cleanEmpNo) as any;
 
     if (earliestJh?.earliestEffDate && validated.hireDate > earliestJh.earliestEffDate) {
       return { error: `Hire date cannot be later than earliest job history record (${earliestJh.earliestEffDate}).` };
     }
 
-    const earliestSale = db.prepare(`
-      SELECT MIN(salesDate) AS earliestSaleDate
-      FROM SALES
-      WHERE empNo = ?
-    `).get(validated.empNo) as any;
-
-    if (earliestSale?.earliestSaleDate && validated.hireDate > earliestSale.earliestSaleDate) {
-      return { error: `Hire date cannot be later than earliest recorded sale (${earliestSale.earliestSaleDate}).` };
-    }
-
-    if (emp.sepDate != null && validated.hireDate > emp.sepDate) {
-      return { error: `Hire date cannot be later than separation date (${emp.sepDate}).` };
-    }
+    const stampStr = getStampString('EDITED', userName);
+    const sepVal = validated.sepDate && validated.sepDate.trim() !== '' ? validated.sepDate.trim() : null;
 
     db.prepare(`
       UPDATE EMPLOYEE
@@ -319,19 +281,38 @@ export async function updateEmployeeAction(input: UpdateEmployeeInput) {
           firstName = ?,
           gender = ?,
           birthDate = ?,
-          hireDate = ?
+          hireDate = ?,
+          sepDate = ?,
+          stamp = ?
       WHERE empNo = ?
     `).run(
       validated.lastName,
       validated.firstName,
-      validated.gender,
+      validated.gender.toUpperCase(),
       validated.birthDate,
       validated.hireDate,
-      validated.empNo
+      sepVal,
+      stampStr,
+      cleanEmpNo
     );
 
+    logAudit(db, 'EMPLOYEE', 'EDIT', cleanEmpNo, {
+      lastName: existing.lastName,
+      firstName: existing.firstName,
+      gender: existing.gender,
+      birthDate: existing.birthDate,
+      hireDate: existing.hireDate,
+      sepDate: existing.sepDate,
+    }, {
+      lastName: validated.lastName,
+      firstName: validated.firstName,
+      gender: validated.gender.toUpperCase(),
+      birthDate: validated.birthDate,
+      hireDate: validated.hireDate,
+      sepDate: sepVal,
+    }, userName);
+
     revalidatePath('/employees');
-    revalidatePath(`/employees/${validated.empNo}`);
     return { success: true };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
@@ -342,142 +323,96 @@ export async function updateEmployeeAction(input: UpdateEmployeeInput) {
 }
 
 /**
- * 4. Separate Employee (Section 9.4: Marks employee separated with sepDate)
+ * 3. Soft-delete Employee
  */
-export async function separateEmployeeAction(input: SeparateEmployeeInput) {
+export async function deleteEmployeeAction(empNo: string) {
   try {
-    await ensureAdmin();
-    const validated = separateEmployeeSchema.parse(input);
-    const manilaToday = getManilaToday();
-
-    if (validated.sepDate > manilaToday) {
-      return { error: 'Separation date cannot be in the future.' };
-    }
+    const userName = await ensureAdmin();
+    const cleanEmpNo = String(empNo).trim().padStart(5, '0');
+    const stampStr = getStampString('DELETED', userName);
 
     const db = getSqliteDb();
-    const emp = db.prepare('SELECT * FROM EMPLOYEE WHERE empNo = ?').get(validated.empNo) as any;
-    if (!emp) return { error: `Employee ${validated.empNo} not found.` };
+    const existing = db.prepare('SELECT is_deleted, sepDate FROM EMPLOYEE WHERE empNo = ?').get(cleanEmpNo) as any;
+    if (!existing) return { error: `Employee ${cleanEmpNo} not found.` };
 
-    if (emp.sepDate != null) {
-      return { error: `Employee ${validated.empNo} is already separated on ${emp.sepDate}.` };
-    }
-
-    // R-10: sepDate cannot be before hireDate, latest effDate or latest sale date
-    if (validated.sepDate < emp.hireDate) {
-      return { error: `The separation date cannot be earlier than hire date (${emp.hireDate}).` };
-    }
-
-    const latestJh = db.prepare(`
-      SELECT MAX(effDate) AS latestEffDate
-      FROM JOBHISTORY
+    db.prepare(`
+      UPDATE EMPLOYEE
+      SET is_deleted = 1, stamp = ?
       WHERE empNo = ?
-    `).get(validated.empNo) as any;
+    `).run(stampStr, cleanEmpNo);
 
-    if (latestJh?.latestEffDate && validated.sepDate < latestJh.latestEffDate) {
-      return { error: `The separation date cannot be earlier than latest job record (${latestJh.latestEffDate}).` };
-    }
-
-    const latestSale = db.prepare(`
-      SELECT MAX(salesDate) AS latestSaleDate
-      FROM SALES
-      WHERE empNo = ?
-    `).get(validated.empNo) as any;
-
-    if (latestSale?.latestSaleDate && validated.sepDate < latestSale.latestSaleDate) {
-      return {
-        error: `The separation date cannot be earlier than ${latestSale.latestSaleDate} (employee has sales recorded on this date).`
-      };
-    }
-
-    db.prepare('UPDATE EMPLOYEE SET sepDate = ? WHERE empNo = ?').run(
-      validated.sepDate,
-      validated.empNo
-    );
+    logAudit(db, 'EMPLOYEE', 'DELETE', cleanEmpNo, { is_deleted: 0 }, { is_deleted: 1 }, userName);
 
     revalidatePath('/employees');
-    revalidatePath(`/employees/${validated.empNo}`);
     return { success: true };
   } catch (err: any) {
-    if (err instanceof z.ZodError) {
-      return { error: err.errors[0]?.message || 'Invalid separation date' };
-    }
-    return { error: err?.message || 'Failed to separate employee.' };
+    return { error: err?.message || 'Failed to soft-delete employee.' };
   }
 }
 
 /**
- * 5. Department Management (Section 9.5: Add & Rename)
+ * 4. Restore Soft-deleted Employee
  */
-export async function addDepartmentAction(deptCode: string, deptName: string) {
+export async function restoreEmployeeAction(empNo: string) {
   try {
-    await ensureAdmin();
-    const validated = departmentSchema.parse({ deptCode, deptName });
-    const code = validated.deptCode.toUpperCase();
-    const name = validated.deptName.trim();
+    const userName = await ensureAdmin();
+    const cleanEmpNo = String(empNo).trim().padStart(5, '0');
+    const stampStr = getStampString('RESTORED', userName);
 
     const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM EMPLOYEE WHERE empNo = ?').get(cleanEmpNo) as any;
+    if (!existing) return { error: `Employee ${cleanEmpNo} not found.` };
 
-    // Check code unique
-    const codeExists = db.prepare('SELECT 1 FROM DEPARTMENT WHERE deptCode = ?').get(code);
-    if (codeExists) return { error: `Department code ${code} already exists.` };
+    db.prepare(`
+      UPDATE EMPLOYEE
+      SET is_deleted = 0, stamp = ?
+      WHERE empNo = ?
+    `).run(stampStr, cleanEmpNo);
 
-    // R-14: Case-insensitive unique name
-    const nameExists = db.prepare('SELECT 1 FROM DEPARTMENT WHERE LOWER(TRIM(deptName)) = LOWER(TRIM(?))').get(name);
-    if (nameExists) return { error: `A department named "${name}" already exists.` };
+    logAudit(db, 'EMPLOYEE', 'RESTORE', cleanEmpNo, { is_deleted: 1 }, { is_deleted: 0 }, userName);
 
-    db.prepare('INSERT INTO DEPARTMENT (deptCode, deptName) VALUES (?, ?)').run(code, name);
     revalidatePath('/employees');
     return { success: true };
   } catch (err: any) {
-    if (err instanceof z.ZodError) return { error: err.errors[0]?.message };
-    return { error: err?.message || 'Failed to add department.' };
+    return { error: err?.message || 'Failed to restore employee.' };
   }
 }
 
-export async function renameDepartmentAction(deptCode: string, newDeptName: string) {
-  try {
-    await ensureAdmin();
-    const name = newDeptName.trim();
-    if (name.length < 2) return { error: 'Department name must be at least 2 characters.' };
-
-    const db = getSqliteDb();
-    const dept = db.prepare('SELECT 1 FROM DEPARTMENT WHERE deptCode = ?').get(deptCode);
-    if (!dept) return { error: `Department ${deptCode} not found.` };
-
-    // R-14: Case-insensitive unique name
-    const duplicate = db.prepare(
-      'SELECT 1 FROM DEPARTMENT WHERE LOWER(TRIM(deptName)) = LOWER(TRIM(?)) AND deptCode != ?'
-    ).get(name, deptCode);
-    if (duplicate) return { error: `A department named "${name}" already exists.` };
-
-    db.prepare('UPDATE DEPARTMENT SET deptName = ? WHERE deptCode = ?').run(name, deptCode);
-    revalidatePath('/employees');
-    return { success: true };
-  } catch (err: any) {
-    return { error: err?.message || 'Failed to rename department.' };
-  }
-}
+// ========================================================================
+// JOB ACTIONS
+// ========================================================================
 
 /**
- * 6. Job Management (Section 9.5: Add & Rename)
+ * 5. Add Job
  */
 export async function addJobAction(jobCode: string, jobDesc: string) {
   try {
-    await ensureAdmin();
+    const userName = await ensureAdmin();
     const validated = jobSchema.parse({ jobCode, jobDesc });
     const code = validated.jobCode.toUpperCase();
     const desc = validated.jobDesc.trim();
+    const stampStr = getStampString('CREATED', userName);
 
     const db = getSqliteDb();
+    const existing = db.prepare('SELECT jobCode, is_deleted FROM JOB WHERE jobCode = ?').get(code) as any;
+    if (existing) {
+      if (existing.is_deleted === 1) {
+        // If previously soft-deleted, reactivate
+        db.prepare('UPDATE JOB SET jobDesc = ?, is_deleted = 0, stamp = ? WHERE jobCode = ?').run(desc, stampStr, code);
+        logAudit(db, 'JOB', 'RESTORE', code, { is_deleted: 1 }, { is_deleted: 0, jobDesc: desc }, userName);
+        revalidatePath('/employees');
+        return { success: true };
+      }
+      return { error: `Job code "${code}" already exists.` };
+    }
 
-    const codeExists = db.prepare('SELECT 1 FROM JOB WHERE jobCode = ?').get(code);
-    if (codeExists) return { error: `Job code ${code} already exists.` };
+    db.prepare(`
+      INSERT INTO JOB (jobCode, jobDesc, is_deleted, stamp)
+      VALUES (?, ?, 0, ?)
+    `).run(code, desc, stampStr);
 
-    // R-14: Case-insensitive unique description
-    const descExists = db.prepare('SELECT 1 FROM JOB WHERE LOWER(TRIM(jobDesc)) = LOWER(TRIM(?))').get(desc);
-    if (descExists) return { error: `A job described as "${desc}" already exists.` };
+    logAudit(db, 'JOB', 'ADD', code, null, { jobCode: code, jobDesc: desc }, userName);
 
-    db.prepare('INSERT INTO JOB (jobCode, jobDesc) VALUES (?, ?)').run(code, desc);
     revalidatePath('/employees');
     return { success: true };
   } catch (err: any) {
@@ -486,26 +421,431 @@ export async function addJobAction(jobCode: string, jobDesc: string) {
   }
 }
 
-export async function renameJobAction(jobCode: string, newJobDesc: string) {
+/**
+ * 6. Update Job Description
+ */
+export async function updateJobAction(jobCode: string, jobDesc: string) {
   try {
-    await ensureAdmin();
-    const desc = newJobDesc.trim();
-    if (desc.length < 2) return { error: 'Job description must be at least 2 characters.' };
+    const userName = await ensureAdmin();
+    const code = String(jobCode).trim().toUpperCase();
+    const desc = String(jobDesc).trim();
+    if (desc.length < 1 || desc.length > 20) {
+      return { error: 'Job description must be 1 to 20 characters (VARCHAR(20)).' };
+    }
 
+    const stampStr = getStampString('EDITED', userName);
     const db = getSqliteDb();
-    const job = db.prepare('SELECT 1 FROM JOB WHERE jobCode = ?').get(jobCode);
-    if (!job) return { error: `Job ${jobCode} not found.` };
+    const existing = db.prepare('SELECT jobDesc FROM JOB WHERE jobCode = ?').get(code) as any;
+    if (!existing) return { error: `Job ${code} not found.` };
 
-    // R-14: Case-insensitive unique description
-    const duplicate = db.prepare(
-      'SELECT 1 FROM JOB WHERE LOWER(TRIM(jobDesc)) = LOWER(TRIM(?)) AND jobCode != ?'
-    ).get(desc, jobCode);
-    if (duplicate) return { error: `A job described as "${desc}" already exists.` };
+    db.prepare('UPDATE JOB SET jobDesc = ?, stamp = ? WHERE jobCode = ?').run(desc, stampStr, code);
 
-    db.prepare('UPDATE JOB SET jobDesc = ? WHERE jobCode = ?').run(desc, jobCode);
+    logAudit(db, 'JOB', 'EDIT', code, { jobDesc: existing.jobDesc }, { jobDesc: desc }, userName);
+
     revalidatePath('/employees');
     return { success: true };
   } catch (err: any) {
-    return { error: err?.message || 'Failed to rename job.' };
+    return { error: err?.message || 'Failed to update job.' };
   }
+}
+
+/**
+ * 7. Soft-delete Job
+ */
+export async function deleteJobAction(jobCode: string) {
+  try {
+    const userName = await ensureAdmin();
+    const code = String(jobCode).trim().toUpperCase();
+    const stampStr = getStampString('DELETED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM JOB WHERE jobCode = ?').get(code) as any;
+    if (!existing) return { error: `Job ${code} not found.` };
+
+    db.prepare('UPDATE JOB SET is_deleted = 1, stamp = ? WHERE jobCode = ?').run(stampStr, code);
+
+    logAudit(db, 'JOB', 'DELETE', code, { is_deleted: 0 }, { is_deleted: 1 }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to soft-delete job.' };
+  }
+}
+
+/**
+ * 8. Restore Job
+ */
+export async function restoreJobAction(jobCode: string) {
+  try {
+    const userName = await ensureAdmin();
+    const code = String(jobCode).trim().toUpperCase();
+    const stampStr = getStampString('RESTORED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM JOB WHERE jobCode = ?').get(code) as any;
+    if (!existing) return { error: `Job ${code} not found.` };
+
+    db.prepare('UPDATE JOB SET is_deleted = 0, stamp = ? WHERE jobCode = ?').run(stampStr, code);
+
+    logAudit(db, 'JOB', 'RESTORE', code, { is_deleted: 1 }, { is_deleted: 0 }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore job.' };
+  }
+}
+
+// ========================================================================
+// DEPARTMENT ACTIONS
+// ========================================================================
+
+/**
+ * 9. Add Department
+ */
+export async function addDepartmentAction(deptCode: string, deptName: string) {
+  try {
+    const userName = await ensureAdmin();
+    const validated = departmentSchema.parse({ deptCode, deptName });
+    const code = validated.deptCode.toUpperCase();
+    const name = validated.deptName.trim();
+    const stampStr = getStampString('CREATED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT deptCode, is_deleted FROM DEPARTMENT WHERE deptCode = ?').get(code) as any;
+    if (existing) {
+      if (existing.is_deleted === 1) {
+        db.prepare('UPDATE DEPARTMENT SET deptName = ?, is_deleted = 0, stamp = ? WHERE deptCode = ?').run(name, stampStr, code);
+        logAudit(db, 'DEPARTMENT', 'RESTORE', code, { is_deleted: 1 }, { is_deleted: 0, deptName: name }, userName);
+        revalidatePath('/employees');
+        return { success: true };
+      }
+      return { error: `Department code "${code}" already exists.` };
+    }
+
+    db.prepare(`
+      INSERT INTO DEPARTMENT (deptCode, deptName, is_deleted, stamp)
+      VALUES (?, ?, 0, ?)
+    `).run(code, name, stampStr);
+
+    logAudit(db, 'DEPARTMENT', 'ADD', code, null, { deptCode: code, deptName: name }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return { error: err.errors[0]?.message };
+    return { error: err?.message || 'Failed to add department.' };
+  }
+}
+
+/**
+ * 10. Update Department
+ */
+export async function updateDepartmentAction(deptCode: string, deptName: string) {
+  try {
+    const userName = await ensureAdmin();
+    const code = String(deptCode).trim().toUpperCase();
+    const name = String(deptName).trim();
+    if (name.length < 1 || name.length > 20) {
+      return { error: 'Department name must be 1 to 20 characters (VARCHAR(20)).' };
+    }
+
+    const stampStr = getStampString('EDITED', userName);
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT deptName FROM DEPARTMENT WHERE deptCode = ?').get(code) as any;
+    if (!existing) return { error: `Department ${code} not found.` };
+
+    db.prepare('UPDATE DEPARTMENT SET deptName = ?, stamp = ? WHERE deptCode = ?').run(name, stampStr, code);
+
+    logAudit(db, 'DEPARTMENT', 'EDIT', code, { deptName: existing.deptName }, { deptName: name }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to update department.' };
+  }
+}
+
+/**
+ * 11. Soft-delete Department
+ */
+export async function deleteDepartmentAction(deptCode: string) {
+  try {
+    const userName = await ensureAdmin();
+    const code = String(deptCode).trim().toUpperCase();
+    const stampStr = getStampString('DELETED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM DEPARTMENT WHERE deptCode = ?').get(code) as any;
+    if (!existing) return { error: `Department ${code} not found.` };
+
+    db.prepare('UPDATE DEPARTMENT SET is_deleted = 1, stamp = ? WHERE deptCode = ?').run(stampStr, code);
+
+    logAudit(db, 'DEPARTMENT', 'DELETE', code, { is_deleted: 0 }, { is_deleted: 1 }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to soft-delete department.' };
+  }
+}
+
+/**
+ * 12. Restore Department
+ */
+export async function restoreDepartmentAction(deptCode: string) {
+  try {
+    const userName = await ensureAdmin();
+    const code = String(deptCode).trim().toUpperCase();
+    const stampStr = getStampString('RESTORED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare('SELECT is_deleted FROM DEPARTMENT WHERE deptCode = ?').get(code) as any;
+    if (!existing) return { error: `Department ${code} not found.` };
+
+    db.prepare('UPDATE DEPARTMENT SET is_deleted = 0, stamp = ? WHERE deptCode = ?').run(stampStr, code);
+
+    logAudit(db, 'DEPARTMENT', 'RESTORE', code, { is_deleted: 1 }, { is_deleted: 0 }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore department.' };
+  }
+}
+
+// ========================================================================
+// JOB HISTORY ACTIONS (Figures 16 & 17)
+// ========================================================================
+
+/**
+ * 13. Add Job History Record
+ */
+export async function addJobHistoryAction(input: JobHistoryInput) {
+  try {
+    const userName = await ensureAdmin();
+    const validated = jobHistorySchema.parse(input);
+    const cleanEmpNo = String(validated.empNo).trim().padStart(5, '0');
+    const cleanJobCode = validated.jobCode.toUpperCase();
+    const cleanDeptCode = validated.deptCode.toUpperCase();
+    const stampStr = getStampString('CREATED', userName);
+
+    const db = getSqliteDb();
+    // Verify employee
+    const emp = db.prepare('SELECT empNo, hireDate, sepDate FROM EMPLOYEE WHERE empNo = ?').get(cleanEmpNo) as any;
+    if (!emp) return { error: `Employee ${cleanEmpNo} not found.` };
+    if (emp.sepDate != null && emp.sepDate !== '') {
+      return { error: `Employee ${cleanEmpNo} is separated and cannot receive new job history records.` };
+    }
+
+    if (validated.effDate < emp.hireDate) {
+      return { error: `Effective date (${validated.effDate}) cannot be earlier than hire date (${emp.hireDate}).` };
+    }
+
+    // Check composite primary key (empNo, jobCode, effDate)
+    const existing = db.prepare(`
+      SELECT is_deleted FROM JOBHISTORY 
+      WHERE empNo = ? AND jobCode = ? AND effDate = ?
+    `).get(cleanEmpNo, cleanJobCode, validated.effDate) as any;
+
+    if (existing) {
+      if (existing.is_deleted === 1) {
+        db.prepare(`
+          UPDATE JOBHISTORY 
+          SET salary = ?, deptCode = ?, is_deleted = 0, stamp = ?
+          WHERE empNo = ? AND jobCode = ? AND effDate = ?
+        `).run(validated.salary, cleanDeptCode, stampStr, cleanEmpNo, cleanJobCode, validated.effDate);
+
+        logAudit(db, 'JOBHISTORY', 'RESTORE', `${cleanEmpNo}:${cleanJobCode}:${validated.effDate}`, null, {
+          salary: validated.salary,
+          deptCode: cleanDeptCode,
+        }, userName);
+
+        revalidatePath('/employees');
+        return { success: true };
+      }
+      return { error: `A job history record for ${cleanJobCode} on ${validated.effDate} already exists for this employee.` };
+    }
+
+    db.prepare(`
+      INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode, is_deleted, stamp)
+      VALUES (?, ?, ?, ?, ?, 0, ?)
+    `).run(cleanEmpNo, cleanJobCode, validated.effDate, validated.salary, cleanDeptCode, stampStr);
+
+    logAudit(db, 'JOBHISTORY', 'ADD', `${cleanEmpNo}:${cleanJobCode}:${validated.effDate}`, null, {
+      empNo: cleanEmpNo,
+      jobCode: cleanJobCode,
+      effDate: validated.effDate,
+      salary: validated.salary,
+      deptCode: cleanDeptCode,
+    }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    if (err instanceof z.ZodError) return { error: err.errors[0]?.message };
+    return { error: err?.message || 'Failed to add job history record.' };
+  }
+}
+
+/**
+ * 14. Update Job History Record
+ */
+export async function updateJobHistoryAction(input: {
+  empNo: string;
+  jobCode: string;
+  effDate: string;
+  salary: number;
+  deptCode: string;
+}) {
+  try {
+    const userName = await ensureAdmin();
+    const cleanEmpNo = String(input.empNo).trim().padStart(5, '0');
+    const cleanJobCode = String(input.jobCode).trim().toUpperCase();
+    const cleanEffDate = String(input.effDate).trim();
+    const cleanDeptCode = String(input.deptCode).trim().toUpperCase();
+
+    if (input.salary <= 0) {
+      return { error: 'Salary must be greater than zero.' };
+    }
+
+    const stampStr = getStampString('EDITED', userName);
+    const db = getSqliteDb();
+
+    const existing = db.prepare(`
+      SELECT salary, deptCode FROM JOBHISTORY
+      WHERE empNo = ? AND jobCode = ? AND effDate = ?
+    `).get(cleanEmpNo, cleanJobCode, cleanEffDate) as any;
+
+    if (!existing) {
+      return { error: 'Job history record not found.' };
+    }
+
+    db.prepare(`
+      UPDATE JOBHISTORY
+      SET salary = ?, deptCode = ?, stamp = ?
+      WHERE empNo = ? AND jobCode = ? AND effDate = ?
+    `).run(input.salary, cleanDeptCode, stampStr, cleanEmpNo, cleanJobCode, cleanEffDate);
+
+    logAudit(db, 'JOBHISTORY', 'EDIT', `${cleanEmpNo}:${cleanJobCode}:${cleanEffDate}`, {
+      salary: existing.salary,
+      deptCode: existing.deptCode,
+    }, {
+      salary: input.salary,
+      deptCode: cleanDeptCode,
+    }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to update job history record.' };
+  }
+}
+
+/**
+ * 15. Soft-delete Job History Record
+ */
+export async function deleteJobHistoryAction(empNo: string, jobCode: string, effDate: string) {
+  try {
+    const userName = await ensureAdmin();
+    const cleanEmpNo = String(empNo).trim().padStart(5, '0');
+    const cleanJobCode = String(jobCode).trim().toUpperCase();
+    const cleanEffDate = String(effDate).trim();
+    const stampStr = getStampString('DELETED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare(`
+      SELECT is_deleted FROM JOBHISTORY
+      WHERE empNo = ? AND jobCode = ? AND effDate = ?
+    `).get(cleanEmpNo, cleanJobCode, cleanEffDate) as any;
+
+    if (!existing) return { error: 'Job history record not found.' };
+
+    db.prepare(`
+      UPDATE JOBHISTORY
+      SET is_deleted = 1, stamp = ?
+      WHERE empNo = ? AND jobCode = ? AND effDate = ?
+    `).run(stampStr, cleanEmpNo, cleanJobCode, cleanEffDate);
+
+    logAudit(db, 'JOBHISTORY', 'DELETE', `${cleanEmpNo}:${cleanJobCode}:${cleanEffDate}`, { is_deleted: 0 }, { is_deleted: 1 }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to soft-delete job history record.' };
+  }
+}
+
+/**
+ * 16. Restore Job History Record
+ */
+export async function restoreJobHistoryAction(empNo: string, jobCode: string, effDate: string) {
+  try {
+    const userName = await ensureAdmin();
+    const cleanEmpNo = String(empNo).trim().padStart(5, '0');
+    const cleanJobCode = String(jobCode).trim().toUpperCase();
+    const cleanEffDate = String(effDate).trim();
+    const stampStr = getStampString('RESTORED', userName);
+
+    const db = getSqliteDb();
+    const existing = db.prepare(`
+      SELECT is_deleted FROM JOBHISTORY
+      WHERE empNo = ? AND jobCode = ? AND effDate = ?
+    `).get(cleanEmpNo, cleanJobCode, cleanEffDate) as any;
+
+    if (!existing) return { error: 'Job history record not found.' };
+
+    db.prepare(`
+      UPDATE JOBHISTORY
+      SET is_deleted = 0, stamp = ?
+      WHERE empNo = ? AND jobCode = ? AND effDate = ?
+    `).run(stampStr, cleanEmpNo, cleanJobCode, cleanEffDate);
+
+    logAudit(db, 'JOBHISTORY', 'RESTORE', `${cleanEmpNo}:${cleanJobCode}:${cleanEffDate}`, { is_deleted: 1 }, { is_deleted: 0 }, userName);
+
+    revalidatePath('/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore job history record.' };
+  }
+}
+
+// ========================================================================
+// BACKWARD COMPATIBILITY ALIASES
+// ========================================================================
+
+export async function addJobRecordAction(input: AddJobRecordInput) {
+  return addJobHistoryAction({
+    empNo: String(input.empNo),
+    jobCode: input.jobCode,
+    deptCode: input.deptCode,
+    effDate: input.effDate,
+    salary: input.salary,
+  });
+}
+
+export async function separateEmployeeAction(input: SeparateEmployeeInput) {
+  const db = getSqliteDb();
+  const cleanEmpNo = String(input.empNo).trim().padStart(5, '0');
+  const existing = db.prepare('SELECT * FROM EMPLOYEE WHERE empNo = ?').get(cleanEmpNo) as any;
+  if (!existing) return { error: `Employee ${cleanEmpNo} not found.` };
+
+  return updateEmployeeAction({
+    empNo: cleanEmpNo,
+    lastName: existing.lastName,
+    firstName: existing.firstName,
+    gender: existing.gender,
+    birthDate: existing.birthDate,
+    hireDate: existing.hireDate,
+    sepDate: input.sepDate,
+  });
+}
+
+export async function renameJobAction(jobCode: string, newJobDesc: string) {
+  return updateJobAction(jobCode, newJobDesc);
+}
+
+export async function renameDepartmentAction(deptCode: string, newDeptName: string) {
+  return updateDepartmentAction(deptCode, newDeptName);
 }

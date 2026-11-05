@@ -14,9 +14,9 @@ interface HeaderProps {
   title?: string;
 }
 
-export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso' }: HeaderProps) {
+export function Header({ userRole = 'Admin', userName = 'Administrator' }: HeaderProps) {
   const pathname = usePathname();
-  const [dateString, setDateString] = useState<string>('Nov 2, 2026');
+  const [dateString, setDateString] = useState<string>('Nov 6, 2026');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { toggleMobileSidebar } = useSidebar();
@@ -54,20 +54,25 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
   }, [isMenuOpen]);
 
   // Compute dynamic breadcrumb based on route
-  let breadcrumb = 'OVERVIEW';
-  if (pathname.startsWith('/customers')) breadcrumb = 'CUSTOMERS & PAYMENTS';
+  let breadcrumb = 'DASHBOARD';
+  if (pathname.startsWith('/customers')) breadcrumb = 'CUSTOMERS';
   else if (pathname.startsWith('/sales')) breadcrumb = 'SALES';
-  else if (pathname.startsWith('/products')) breadcrumb = 'PRODUCTS & PRICING';
-  else if (pathname.startsWith('/employees')) breadcrumb = 'EMPLOYEES';
-  else if (pathname.startsWith('/payments') || pathname.startsWith('/receipts')) breadcrumb = 'PAYMENTS & RECEIPTS';
+  else if (pathname.startsWith('/products')) breadcrumb = 'PRODUCTS';
+  else if (pathname.startsWith('/employees')) breadcrumb = 'HUMAN RESOURCES';
+  else if (pathname.startsWith('/reports')) breadcrumb = 'REPORTS';
+  else if (pathname.startsWith('/users')) breadcrumb = 'USER MANAGEMENT';
+  else if (pathname.startsWith('/payments') || pathname.startsWith('/receipts')) breadcrumb = 'PAYMENTS';
 
-  const roleLabels: Record<UserRole, string> = {
+  const roleLabels: Record<string, string> = {
+    Superadmin: 'Superadmin',
+    Admin: 'Administrator',
+    User: 'User (Staff)',
     admin: 'Administrator',
-    sales: 'Sales Specialist',
-    cashier: 'Billing Cashier',
+    sales: 'User (Sales)',
+    cashier: 'User (Billing)',
   };
 
-  const roleLabel = roleLabels[userRole] || 'Staff Member';
+  const roleLabel = roleLabels[String(userRole)] || String(userRole);
 
   return (
     <header className="h-14 bg-surface-1 border-b border-border px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 shrink-0 select-none relative z-30 font-sans transition-colors duration-150">
@@ -83,23 +88,23 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
         </button>
 
         <nav className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-text-muted select-none">
-          <span>DATABASE</span>
+          <span>HOPE ERP</span>
           <span className="opacity-40">/</span>
           <span className="font-semibold text-text">{breadcrumb}</span>
         </nav>
       </div>
 
-      {/* Right Controls: Live Status Pill, Theme Toggle, Notification Bell, User Name in Editorial Italic */}
+      {/* Right Controls */}
       <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
-        {/* Live Status Pill matching Stitch */}
+        {/* Live Status Pill */}
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] border border-border bg-surface-2 font-mono text-[10px] text-text-muted shadow-2xs">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold text-emerald-600 dark:text-emerald-400">LIVE</span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">ACTIVE</span>
           <span className="opacity-30">|</span>
           <span>{dateString}</span>
         </div>
 
-        {/* Modern Pill Capsule Theme Toggle */}
+        {/* Pill Capsule Theme Toggle */}
         <ThemeToggle variant="pill" />
 
         {/* Notification Bell */}
@@ -112,7 +117,7 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
           <Bell className="w-4 h-4" />
         </button>
 
-        {/* User Profile Dropdown Menu in Editorial Italic */}
+        {/* User Profile Dropdown */}
         <div className="relative" ref={menuRef}>
           <button
             type="button"
@@ -121,7 +126,7 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
             aria-haspopup="true"
             className="flex items-center gap-1.5 pl-2 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
           >
-            <span className="font-editorial italic text-sm text-text group-hover:text-accent">
+            <span className="font-editorial text-sm text-text group-hover:text-accent">
               {userName}
             </span>
             <ChevronDown
@@ -134,7 +139,6 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
           {/* Interactive Dropdown Menu */}
           {isMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-surface-1 rounded-[4px] shadow-md border border-border py-2 z-50 animate-in fade-in-50 duration-150 font-sans text-xs">
-              {/* User Header Info */}
               <div className="px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-primary-bg text-primary-fg flex items-center justify-center font-mono font-bold text-xs shrink-0 ring-1 ring-border">
@@ -150,12 +154,10 @@ export function Header({ userRole = 'admin', userName = 'Jeptah Ashley Ildefonso
                 </div>
               </div>
 
-              {/* Theme Selector Inside Dropdown */}
               <div className="border-b border-border pb-1">
                 <ThemeToggle variant="menu-item" />
               </div>
 
-              {/* Actions Section */}
               <div className="p-1 pt-1.5">
                 <form action={logoutAction}>
                   <button

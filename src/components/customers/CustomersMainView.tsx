@@ -1,760 +1,732 @@
 'use client';
 
-import React, { useState, useMemo, useTransition, useDeferredValue } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import React, { useState, useMemo, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { RecordPaymentDialog } from '@/components/payments/RecordPaymentDialog';
 import { Modal } from '@/components/ui/Modal';
-import { RightSideKpiPanel } from '@/components/ui/RightSideKpiPanel';
-import { formatPHP, formatDate } from '@/lib/utils';
-import type {
-  CustomerOverviewItem,
-  PaymentLedgerItem,
-  CustomerSalesSummaryItem,
-  CustomerSummaryMetrics,
-} from '@/lib/data/customers';
+import { RightSideKpiPanel, type KpiCardItem } from '@/components/ui/RightSideKpiPanel';
+import { AddCustomerModal } from './AddCustomerModal';
+import { EditCustomerModal } from './EditCustomerModal';
+import { deleteCustomerAction, restoreCustomerAction } from '@/app/actions/customers';
+import type { CustomerItem, CustomerMetrics, CustomerAuditLogItem } from '@/lib/data/customers';
 import {
   Search,
-  Receipt,
-  ExternalLink,
-  ArrowUpRight,
+  UserPlus,
+  RotateCcw,
   Users,
-  DollarSign,
-  CreditCard,
+  AlertCircle,
+  Clock,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  History,
+  FileText,
 } from 'lucide-react';
 
 interface CustomersMainViewProps {
-  initialCustomers: CustomerOverviewItem[];
-  initialPayments: PaymentLedgerItem[];
-  initialSales: CustomerSalesSummaryItem[];
-  metrics: CustomerSummaryMetrics;
+  initialCustomers: CustomerItem[];
+  metrics: CustomerMetrics;
+  recentAudits?: CustomerAuditLogItem[];
   userRole?: string;
 }
 
 export function CustomersMainView({
   initialCustomers,
-  initialPayments,
-  initialSales,
   metrics,
-  userRole = 'sales',
+  recentAudits = [],
+  userRole = 'admin',
 }: CustomersMainViewProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
 
-  const isAdmin = userRole.toLowerCase() === 'admin';
-  const isCashier = userRole.toLowerCase() === 'cashier' || isAdmin;
+  const roleUpper = userRole.toUpperCase();
+  const canModify = ['ADMIN', 'SUPERADMIN', 'SALES'].includes(roleUpper);
 
-  // Search query for customer list with deferred filtering for instant typing
+  // Status Filter: 'active' | 'inactive' | 'all'
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+
+  // Search Query
   const [searchQuery, setSearchQuery] = useState('');
-  const deferredSearch = useDeferredValue(searchQuery);
 
-  // Selected customer state (URL synced ?custNo=)
-  const custNoParam = searchParams.get('custNo');
-  const initialCustNo = custNoParam
-    ? custNoParam
-    : initialCustomers[0]?.custNo || '';
+  // Pagination
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Modal state
-  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  // Modals
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerItem | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState<CustomerItem | null>(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditTab, setAuditTab] = useState<'roster' | 'logs'>('roster');
 
-  // Stats Bar Audit Modals State
-  type CustomerAuditType = 'customers' | 'payments' | 'collected' | 'terms' | null;
-  const [activeAudit, setActiveAudit] = useState<CustomerAuditType>(null);
+  // Action status
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const paymentsRunningLedger = useMemo(() => {
-    let running = 0;
-    return initialPayments.map((p) => {
-      running += p.amount;
-      return {
-        ...p,
-        runningTotal: running,
-        runningTotalFormatted: formatPHP(running),
-      };
-    });
-  }, [initialPayments]);
-
-  const termsAuditList = useMemo(() => {
-    const map = new Map<string, { term: string; count: number; customers: string[] }>();
-    initialCustomers.forEach((c) => {
-      const term = c.payTerms || 'Standard';
-      const existing = map.get(term);
-      if (existing) {
-        existing.count += 1;
-        existing.customers.push(c.custName);
-      } else {
-        map.set(term, {
-          term,
-          count: 1,
-          customers: [c.custName],
-        });
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [initialCustomers]);
-
-  // Update URL helper (removes any 'tab' parameter and manages 'custNo')
-  const updateUrl = (updates: Record<string, string | null>) => {
-    startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('tab');
-      Object.entries(updates).forEach(([key, val]) => {
-        if (val === null || val === undefined || val === '') {
-          params.delete(key);
-        } else {
-          params.set(key, val);
-        }
-      });
-      const qs = params.toString();
-      router.replace(qs ? `/customers?${qs}` : '/customers', { scroll: false });
-    });
+  // Format display for payment terms (Net 30, Net 45, COD)
+  const formatPayTermDisplay = (term: string) => {
+    const t = (term || '').trim().toUpperCase();
+    if (t === '30D' || t === 'NET 30') return 'Net 30';
+    if (t === '45D' || t === 'NET 45') return 'Net 45';
+    if (t === 'COD') return 'COD';
+    return term || 'COD';
   };
 
-  // Filtered customers in left list (uses deferredSearch)
+  // Filtered customer list
   const filteredCustomers = useMemo(() => {
-    if (!deferredSearch.trim()) return initialCustomers;
-    const q = deferredSearch.toLowerCase().trim();
-    return initialCustomers.filter(
-      (c) =>
-        c.custName.toLowerCase().includes(q) ||
-        String(c.custNo).includes(q) ||
-        c.address.toLowerCase().includes(q)
-    );
-  }, [initialCustomers, deferredSearch]);
+    let result = initialCustomers;
 
-  // Selected customer object
-  const selectedCustomer = useMemo(() => {
-    if (!initialCustNo) return initialCustomers[0] || null;
-    const found = initialCustomers.find(
-      (c) => String(c.custNo) === String(initialCustNo) || String(c.custNo).replace(/\D/g, '') === String(initialCustNo).replace(/\D/g, '')
-    );
-    return found || initialCustomers[0] || null;
-  }, [initialCustomers, initialCustNo]);
+    // 1. Status Filter
+    if (statusFilter === 'active') {
+      result = result.filter((c) => !c.isDeleted);
+    } else if (statusFilter === 'inactive') {
+      result = result.filter((c) => c.isDeleted);
+    }
 
-  // Payments for the selected customer
-  const customerPayments = useMemo(() => {
-    if (!selectedCustomer) return [];
-    return initialPayments.filter((p) => String(p.custNo) === String(selectedCustomer.custNo));
-  }, [initialPayments, selectedCustomer]);
+    // 2. Search Query Filter
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter((c) => {
+        const custNoMatch = c.custNo.toLowerCase().includes(q);
+        const nameMatch = c.custName.toLowerCase().includes(q);
+        const addrMatch = c.address.toLowerCase().includes(q);
+        const termMatch = c.payterm.toLowerCase().includes(q) || formatPayTermDisplay(c.payterm).toLowerCase().includes(q);
+        const stampMatch = c.stamp ? c.stamp.toLowerCase().includes(q) : false;
+        return custNoMatch || nameMatch || addrMatch || termMatch || stampMatch;
+      });
+    }
 
-  // Payments total sum for selected customer
-  const customerTotalPaid = useMemo(() => {
-    return customerPayments.reduce((acc, p) => acc + p.amount, 0);
-  }, [customerPayments]);
+    return result;
+  }, [initialCustomers, statusFilter, searchQuery]);
 
-  // Export CSV of selected customer's payments
-  const handleExportPaymentsCSV = () => {
-    if (!selectedCustomer) return;
-    const today = new Date().toISOString().split('T')[0];
-    const headers = ['OR #', 'Payment date', 'Sale #', 'Customer no.', 'Customer name', 'Amount'];
-    const rows = customerPayments.map((p) => [
-      p.orNo,
-      p.payDate,
-      p.transNo,
-      selectedCustomer.custNo,
-      `"${selectedCustomer.custName.replace(/"/g, '""')}"`,
-      p.amount.toFixed(2),
-    ]);
+  // Pagination calculation
+  const totalItems = filteredCustomers.length;
+  const effectivePageSize = pageSize === 0 ? totalItems : pageSize;
+  const totalPages = effectivePageSize > 0 ? Math.ceil(totalItems / effectivePageSize) : 1;
+  const safePage = Math.min(Math.max(1, currentPage), Math.max(1, totalPages));
 
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `customer-${selectedCustomer.custNo}-payments-${today}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const paginatedCustomers = useMemo(() => {
+    if (pageSize === 0) return filteredCustomers;
+    const start = (safePage - 1) * pageSize;
+    return filteredCustomers.slice(start, start + pageSize);
+  }, [filteredCustomers, safePage, pageSize]);
+
+  // Handle Soft Delete
+  const handleConfirmDelete = async () => {
+    if (!deletingCustomer) return;
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      const res = await deleteCustomerAction(deletingCustomer.custNo);
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      setDeletingCustomer(null);
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError('Failed to soft-delete customer.');
+      setIsSubmitting(false);
+    }
   };
+
+  // Handle Restore
+  const handleRestore = async (customer: CustomerItem) => {
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      const res = await restoreCustomerAction(customer.custNo);
+      if (res.error) {
+        setActionError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      setIsSubmitting(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setActionError('Failed to restore customer.');
+      setIsSubmitting(false);
+    }
+  };
+
+  // Right-Side Dashboard Stat Bar KPI Cards (Image 2 style)
+  // Strictly showing "TOTAL REGISTERED" w/ audit as requested
+  const statBarCards: KpiCardItem[] = useMemo(() => [
+    {
+      id: 'total-registered',
+      title: 'TOTAL REGISTERED',
+      value: metrics.totalCustomers,
+      subtext: `${metrics.activeCount} active · ${metrics.inactiveCount} inactive`,
+      icon: Users,
+      onClick: () => setIsAuditModalOpen(true),
+      clickable: true,
+    },
+  ], [metrics.totalCustomers, metrics.activeCount, metrics.inactiveCount]);
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* ── Stitch Masthead (Matching Screen 3bd9ff66a0d8417dbe2cfcd0abe72180) ── */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 border-b border-black/10 dark:border-border pb-5">
-        <div className="space-y-1.5 max-w-2xl">
-          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#041a24] dark:text-white tracking-tight leading-tight">
-            Customers &amp; Payments
+    <div className="space-y-6">
+      {/* Top Header Row with Title and Role */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
+            Customer Management
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-[#41555f] dark:text-slate-300 leading-relaxed">
-            Directory of accounts, structured credit limits, payment schedules, and verified official receipt settlements.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Canonical 3NF module managing company client entities, address directory, and credit terms.
           </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsAuditModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-sm cursor-pointer"
+          >
+            <History className="h-3.5 w-3.5 text-slate-500" />
+            <span>Audit Trail</span>
+          </button>
+
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-semibold uppercase rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            <span>{roleUpper}</span>
+          </div>
         </div>
       </div>
 
-      {/* 2-Column Desktop Layout: Main Master-Detail Area (Left) + Right-Side Portrait KPI Panel (Right) */}
-      <div className="flex flex-col xl:flex-row items-start gap-6">
+      {actionError && (
+        <div className="rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="text-xs underline hover:no-underline font-semibold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Main Content Area: Left Table & Right Stat Bar (Image 2 style) */}
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
+        {/* Left Column: Customer CRUD Table */}
         <div className="flex-1 min-w-0 w-full space-y-4">
-          {/* ── Master-Detail Grid Layout ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* ── Left Column (Customer Index) ── */}
-        <div className="lg:col-span-4 space-y-3">
-          <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 p-4 shadow-2xs space-y-3.5">
-            {/* Header: Customer Index + Count badge + All registered */}
-            <div className="flex items-center justify-between pb-1 border-b border-black/5 dark:border-border">
-              <div className="flex items-center gap-2">
-                <h2 className="font-editorial text-base sm:text-lg font-normal text-[#041a24] dark:text-text">
-                  Customer Index
-                </h2>
-                <span className="font-mono text-[10px] text-[#41555f] dark:text-text-muted bg-black/5 dark:bg-surface-2 border border-black/10 dark:border-border px-1.5 py-0.2 rounded-[2px]">
-                  {filteredCustomers.length}
-                </span>
+          {/* Controls Bar (Filter Tabs, Search, Add Button) strictly following Figure 3.3 */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+            {/* Status Filter Tabs (Item 1 in Fig 3.3) */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-md text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('active');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                  statusFilter === 'active'
+                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-semibold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Active ({metrics.activeCount})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('inactive');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                  statusFilter === 'inactive'
+                    ? 'bg-white dark:bg-slate-700 text-rose-700 dark:text-rose-300 font-semibold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Inactive ({metrics.inactiveCount})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('all');
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                  statusFilter === 'all'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                All ({metrics.totalCustomers})
+              </button>
+            </div>
+
+            {/* Right Controls: Search Input & Add Button (Items 2 & 3 in Fig 3.3) */}
+            <div className="flex items-center gap-2 flex-1 md:justify-end">
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Search customers..."
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+                />
               </div>
-              <span className="font-mono text-[10px] text-[#41555f] dark:text-text-muted">
-                All registered
-              </span>
-            </div>
 
-            {/* Inner Search Box with ENTER ↵ Badge */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-black/40 dark:text-text-faint" />
-              <input
-                type="text"
-                placeholder="Globus Medical"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-8 pl-8 pr-16 text-xs rounded-[3px] border border-black/15 dark:border-border bg-white dark:bg-surface-1 text-[#041a24] dark:text-text placeholder:text-[#41555f]/50 dark:placeholder:text-text-muted/50 focus:border-[#041a24] dark:focus:border-border-control focus:outline-none transition-all"
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[9px] text-black/40 dark:text-text-faint select-none">
-                ENTER &crarr;
-              </span>
-            </div>
-
-            {/* Customer List Stream */}
-            <div className="group/stream divide-y divide-black/5 dark:divide-border max-h-[580px] overflow-y-auto -mx-1 px-1">
-              {filteredCustomers.length === 0 ? (
-                <div className="p-6 text-center font-mono text-xs text-[#41555f] dark:text-text-muted">
-                  No customers found.
-                </div>
-              ) : (
-                filteredCustomers.map((c) => {
-                  const isSelected = selectedCustomer?.custNo === c.custNo;
-                  return (
-                    <button
-                      key={c.custNo}
-                      type="button"
-                      onClick={() => updateUrl({ custNo: String(c.custNo) })}
-                      className={`relative overflow-hidden group/row w-full text-left px-3 py-2.5 transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center justify-between cursor-pointer rounded-[2px] ${
-                        isSelected
-                          ? 'bg-black/5 dark:bg-surface-2 !opacity-100 font-medium'
-                          : 'group-hover/stream:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2'
-                      }`}
-                    >
-                      <div
-                        className={`absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none ${
-                          isSelected ? 'scale-y-100' : 'scale-y-0 group-hover/row:scale-y-100'
-                        }`}
-                      />
-                      <div className="min-w-0 pr-2 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
-                        <p className={`text-xs leading-snug truncate ${isSelected ? 'font-bold text-[#041a24] dark:text-text' : 'font-medium text-[#041a24] dark:text-text'}`}>
-                          {c.custName}
-                        </p>
-                        <p className="font-mono text-[10px] text-[#41555f] dark:text-text-muted mt-0.5">
-                          {c.custNo}
-                        </p>
-                      </div>
-
-                      {/* Payment Terms Tag */}
-                      <div className="shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:-translate-y-0.5">
-                        <span
-                          className={`font-mono text-[9px] px-1.5 py-0.5 rounded-[2px] ${
-                            isSelected
-                              ? 'bg-[#041a24] dark:bg-white text-white dark:text-[#041a24] font-medium'
-                              : 'bg-black/5 dark:bg-surface-2 text-[#41555f] dark:text-slate-300 border border-black/10 dark:border-border'
-                          }`}
-                        >
-                          {c.payTerms}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })
+              {canModify && (
+                <Button
+                  type="button"
+                  onClick={() => setIsAddOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 text-xs px-3 py-1.5 font-medium flex items-center gap-1.5 shadow-sm"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span>+ Add Customer</span>
+                </Button>
               )}
             </div>
+          </div>
 
-            {/* Pagination Controls */}
-            <div className="pt-2.5 border-t border-black/10 dark:border-border flex items-center justify-between text-xs font-mono">
-              <span className="text-[10px] text-[#41555f] dark:text-slate-400">
-                1-{Math.min(10, filteredCustomers.length)} OF {filteredCustomers.length}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 dark:border-border rounded-[2px] text-black/40 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-surface-2 cursor-pointer"
+          {/* Customer Table Container */}
+          <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-850/80 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 font-mono">CUST NO</th>
+                    <th scope="col" className="px-4 py-3">CUSTOMER NAME</th>
+                    <th scope="col" className="px-4 py-3">ADDRESS</th>
+                    <th scope="col" className="px-4 py-3">PAY TERMS</th>
+                    <th scope="col" className="px-4 py-3">STATUS</th>
+                    <th scope="col" className="px-4 py-3">STAMP</th>
+                    <th scope="col" className="px-4 py-3 text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {paginatedCustomers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                        <Users className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                        <p className="font-medium text-slate-600 dark:text-slate-300">No customers found</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {searchQuery ? 'Try clearing your search query.' : 'No customers exist in this category.'}
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedCustomers.map((cust) => {
+                      const isDeleted = cust.isDeleted;
+                      return (
+                        <tr
+                          key={cust.custNo}
+                          className={`transition-colors ${
+                            isDeleted
+                              ? 'bg-rose-50/60 dark:bg-rose-950/20 hover:bg-rose-100/60 dark:hover:bg-rose-950/30'
+                              : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          }`}
+                        >
+                          {/* CUST NO */}
+                          <td className="px-4 py-3 font-mono font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                            {cust.custNo}
+                          </td>
+
+                          {/* CUSTOMER NAME */}
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                            <span className={isDeleted ? 'line-through text-slate-500' : ''}>
+                              {cust.custName}
+                            </span>
+                          </td>
+
+                          {/* ADDRESS */}
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate" title={cust.address}>
+                            {cust.address}
+                          </td>
+
+                          {/* PAY TERMS */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              {formatPayTermDisplay(cust.payterm)}
+                            </span>
+                          </td>
+
+                          {/* STATUS (Item 4 in Fig 3.3) */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {isDeleted ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50">
+                                Inactive
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
+                                Active
+                              </span>
+                            )}
+                          </td>
+
+                          {/* STAMP (Item 5 in Fig 3.3) */}
+                          <td className="px-4 py-3 text-[11px] font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                            {cust.stamp || '—'}
+                          </td>
+
+                          {/* ACTIONS (Item 6 in Fig 3.3) */}
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            {canModify && (
+                              <div className="inline-flex items-center justify-end gap-1.5">
+                                {!isDeleted ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingCustomer(cust)}
+                                      className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingCustomer(cust)}
+                                      className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestore(cust)}
+                                    disabled={isSubmitting}
+                                    className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                    <span>Restore</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination / Table Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <span>Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500"
                 >
-                  PREV
-                </button>
-                <span className="w-5 h-5 flex items-center justify-center text-[10px] font-mono border border-black/15 dark:border-border bg-white dark:bg-surface-2 text-[#041a24] dark:text-white rounded-[2px] font-semibold">
-                  1
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={0}>All ({totalItems})</option>
+                </select>
+                <span className="ml-2 font-mono text-[11px]">
+                  Showing {totalItems === 0 ? 0 : (safePage - 1) * (pageSize || totalItems) + 1}–
+                  {pageSize === 0 ? totalItems : Math.min(safePage * pageSize, totalItems)} of {totalItems}
                 </span>
-                <button
-                  type="button"
-                  className="px-2 py-0.5 text-[9px] uppercase font-mono border border-black/10 dark:border-border rounded-[2px] text-black/40 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-surface-2 cursor-pointer"
-                >
-                  NEXT
-                </button>
               </div>
+
+              {pageSize > 0 && totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-750"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="px-2 text-xs font-mono">
+                    {safePage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="p-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-750"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* ── Right Column (Customer Dossier & Receipts Ledger) ── */}
-        <div className="lg:col-span-8 space-y-4">
-          {selectedCustomer ? (
-            <div className="rounded-[4px] border border-black/10 dark:border-border bg-white dark:bg-surface-1 p-5 sm:p-6 shadow-2xs space-y-5">
-              {/* Header Badges & Actions */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-[2px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30">
-                    ACTIVE ACCOUNT
-                  </span>
-                </div>
+        {/* Right Column: Stat Bar Dashboard looking boxes (Image 2 style) */}
+        {/* Only showing Total Registered w/ audit as explicitly requested */}
+        <aside className="w-full xl:w-[248px] shrink-0">
+          <RightSideKpiPanel
+            title="Customer Stats Bar"
+            subtitle="LIVE"
+            cards={statBarCards}
+          />
+        </aside>
+      </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {isCashier && (
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setIsRecordPaymentOpen(true)}
-                      className="bg-[#041a24] dark:bg-primary-bg hover:bg-[#1c313b] dark:hover:opacity-90 text-white dark:text-primary-fg rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    >
-                      <Receipt className="h-3.5 w-3.5" />
-                      <span>Record Payment</span>
-                    </Button>
-                  )}
+      {/* Add Customer Modal */}
+      <AddCustomerModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        nextSuggestedCustNo={metrics.nextSuggestedCustNo}
+      />
 
-                  {customerPayments.length > 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportPaymentsCSV}
-                      className="bg-white dark:bg-surface-1 border border-black/15 dark:border-border hover:bg-black/5 dark:hover:bg-surface-2 text-[#041a24] dark:text-text rounded-[2px] px-3.5 py-1.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    >
-                      <span>Export CSV</span>
-                      <ExternalLink className="h-3 w-3 text-black/50 dark:text-text-faint" />
-                    </Button>
-                  )}
-                </div>
+      {/* Edit Customer Modal */}
+      {editingCustomer && (
+        <EditCustomerModal
+          isOpen={Boolean(editingCustomer)}
+          onClose={() => setEditingCustomer(null)}
+          customer={editingCustomer}
+        />
+      )}
+
+      {/* Soft Delete Confirmation Modal */}
+      {deletingCustomer && (
+        <Modal
+          isOpen={Boolean(deletingCustomer)}
+          onClose={() => setDeletingCustomer(null)}
+          title="Soft-Delete Customer"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <div className="rounded-md bg-rose-50 dark:bg-rose-950/30 p-3 border border-rose-200 dark:border-rose-900/40 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>Soft Deletion & Referential Integrity</span>
               </div>
+              <p className="text-[11px] leading-relaxed">
+                In compliance with Hope ERP relational architecture (Section 3.3), this will flag customer{' '}
+                <span className="font-mono font-bold">#{deletingCustomer.custNo}</span> as{' '}
+                <span className="font-bold">Inactive</span> (<code>is_deleted = 1</code>).
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                Zero data loss: Historical sales and invoices remain 100% intact and will not trigger foreign key constraint errors. You can restore this record at any time.
+              </p>
+            </div>
 
-              {/* Customer Details */}
-              <div className="space-y-2">
-                <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[#041a24] dark:text-text tracking-tight leading-tight">
-                  {selectedCustomer.custName}
-                </h2>
-                <div className="flex items-center gap-2 text-xs text-[#41555f] dark:text-text-muted font-sans">
-                  <span>Customer ID:</span>
-                  <span className="font-mono font-bold text-[#041a24] dark:text-text">{selectedCustomer.custNo}</span>
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+              <p><span className="text-slate-500">Customer:</span> <span className="font-semibold">{deletingCustomer.custName}</span></p>
+              <p><span className="text-slate-500">Address:</span> <span>{deletingCustomer.address}</span></p>
+              <p><span className="text-slate-500">Terms:</span> <span>{formatPayTermDisplay(deletingCustomer.payterm)}</span></p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setDeletingCustomer(null)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleConfirmDelete}
+                disabled={isSubmitting}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                {isSubmitting ? 'Deleting...' : 'Confirm Soft Delete'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Customer Audit Trail & Total Registered Audit Modal */}
+      {isAuditModalOpen && (
+        <Modal
+          isOpen={isAuditModalOpen}
+          onClose={() => setIsAuditModalOpen(false)}
+          title="Total Registered Customers Audit"
+          maxWidth="3xl"
+        >
+          <div className="space-y-4 font-sans text-xs">
+            {/* Top Summary Card */}
+            <div className="p-4 rounded-lg bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
+                  Registered Commercial Accounts
+                </div>
+                <div className="text-2xl font-bold font-mono text-white mt-0.5">
+                  {metrics.totalCustomers} Commercial Clients
+                </div>
+                <div className="text-[11px] text-slate-300 mt-1 flex items-center gap-2">
+                  <span className="text-emerald-400 font-semibold">{metrics.activeCount} Active</span>
                   <span>&bull;</span>
-                  <span>Payment terms:</span>
-                  <span className="font-mono font-semibold text-[#041a24] dark:text-text">{selectedCustomer.payTerms}</span>
-                </div>
-                <div className="flex items-start gap-2 text-xs text-[#41555f] dark:text-text-muted pt-0.5">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-[#41555f] dark:text-text-muted shrink-0 mt-0.5">
-                    ADDRESS
-                  </span>
-                  <span className="text-[#041a24] dark:text-text font-medium leading-relaxed">
-                    {selectedCustomer.address}
-                  </span>
+                  <span className="text-rose-400 font-semibold">{metrics.inactiveCount} Inactive</span>
                 </div>
               </div>
-
-              {/* Broadsheet Rule Hairline Divider */}
-              <div className="border-t border-black/10 dark:border-border" />
-
-              {/* Payment History Sub-Header */}
-              <div className="flex items-center justify-between">
-                <h3 className="font-editorial text-base sm:text-lg font-normal text-[#041a24] dark:text-text">
-                  Payment History
-                </h3>
-                <div className="border border-black/10 dark:border-border bg-[#F4F4F0]/60 dark:bg-surface-2/60 px-2.5 py-1 rounded-[2px] font-mono text-xs font-semibold text-[#041a24] dark:text-text tabular-nums">
-                  TOTAL SETTLED: {formatPHP(customerTotalPaid)}
+              <div className="text-left sm:text-right sm:border-l sm:border-white/10 sm:pl-4">
+                <div className="text-[11px] font-mono text-slate-300">Credit Terms Breakdown</div>
+                <div className="text-xs font-mono text-white mt-1 space-y-0.5">
+                  <div>Net 30: <span className="font-bold">{metrics.termCounts['30D'] || 0}</span></div>
+                  <div>Net 45: <span className="font-bold">{metrics.termCounts['45D'] || 0}</span></div>
+                  <div>COD: <span className="font-bold">{metrics.termCounts['COD'] || 0}</span></div>
                 </div>
               </div>
+            </div>
 
-              {/* Receipts Table */}
-              {customerPayments.length === 0 ? (
-                <div className="py-12 text-center text-xs text-[#41555f] dark:text-text-muted space-y-1 font-mono">
-                  <p className="font-semibold text-[#041a24] dark:text-text">No payments recorded for this customer.</p>
-                  <p className="text-[11px] text-[#41555f] dark:text-text-muted">
-                    Use the &ldquo;Record Payment&rdquo; button above to record an official receipt.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-[3px] border border-black/10 dark:border-border">
-                  <table className="w-full text-left text-xs font-sans">
-                    <thead>
-                      <tr className="border-b border-black/10 dark:border-border bg-[#F4F4F0]/70 dark:bg-surface-2/70 text-[#41555f] dark:text-text-muted font-mono text-[10px] uppercase tracking-wider">
-                        <th className="py-2.5 px-3 font-semibold whitespace-nowrap">OR #</th>
-                        <th className="py-2.5 px-3 font-semibold whitespace-nowrap">DATE</th>
-                        <th className="py-2.5 px-3 font-semibold whitespace-nowrap">SALE REF</th>
-                        <th className="py-2.5 px-3 font-semibold text-right whitespace-nowrap">AMOUNT (PHP)</th>
-                        <th className="py-2.5 px-3 font-semibold text-center whitespace-nowrap">ACTION</th>
+            {/* Audit View Mode Switcher */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAuditTab('roster')}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                    auditTab === 'roster'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5 inline mr-1 text-slate-500" />
+                  Directory Roster ({initialCustomers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuditTab('logs')}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                    auditTab === 'logs'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <History className="h-3.5 w-3.5 inline mr-1 text-slate-500" />
+                  System Audit Logs ({recentAudits.length})
+                </button>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                Next ID: {metrics.nextSuggestedCustNo}
+              </span>
+            </div>
+
+            {/* Tab 1: Directory Roster */}
+            {auditTab === 'roster' && (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
+                <div className="max-h-72 overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 text-[10px] font-mono text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th className="py-2 px-3">CUST NO</th>
+                        <th className="py-2 px-3">NAME</th>
+                        <th className="py-2 px-3">PAY TERM</th>
+                        <th className="py-2 px-3">STATUS</th>
+                        <th className="py-2 px-3">AUDIT STAMP</th>
                       </tr>
                     </thead>
-                    <tbody className="group/tbody divide-y divide-black/5 dark:divide-border">
-                      {customerPayments.map((p) => (
-                        <tr
-                          key={p.orNo}
-                          className="group/row cursor-pointer transition-[opacity,background-color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/tbody:opacity-[0.62] hover:!opacity-100 hover:bg-[#F3F2EE] dark:hover:bg-surface-2"
-                        >
-                          <td className="relative py-2.5 px-3 font-mono font-semibold text-[#041a24] dark:text-text whitespace-nowrap overflow-hidden">
-                            <div className="absolute inset-y-0 left-0 w-[3px] bg-[#0F172A] dark:bg-white origin-center transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none scale-y-0 group-hover/row:scale-y-100" />
-                            <span className="inline-block transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/row:translate-x-1.5">
-                              {p.orNo}
-                            </span>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {initialCustomers.map((c) => (
+                        <tr key={c.custNo} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="py-2 px-3 font-mono font-bold">{c.custNo}</td>
+                          <td className="py-2 px-3 font-medium">{c.custName}</td>
+                          <td className="py-2 px-3 font-mono text-slate-600 dark:text-slate-400">
+                            {formatPayTermDisplay(c.payterm)}
                           </td>
-                          <td className="py-2.5 px-3 font-mono text-xs text-[#41555f] dark:text-text-muted whitespace-nowrap tabular-nums">
-                            {formatDate(p.payDate)}
+                          <td className="py-2 px-3">
+                            {c.isDeleted ? (
+                              <span className="text-[10px] font-medium text-rose-600 dark:text-rose-400">
+                                Inactive
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                                Active
+                              </span>
+                            )}
                           </td>
-                          <td className="py-2.5 px-3 font-mono text-xs text-[#041a24] dark:text-text whitespace-nowrap">
-                            <Link
-                              href={`/sales/${p.transNo}`}
-                              className="hover:underline inline-flex items-center gap-0.5"
-                            >
-                              <span>{p.transNo}</span>
-                              <ArrowUpRight className="w-3 h-3 text-black/40 dark:text-text-faint" />
-                            </Link>
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono tabular-nums font-bold text-[#041a24] dark:text-text whitespace-nowrap">
-                            {formatPHP(p.amount)}
-                          </td>
-                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                            <Link
-                              href={`/receipts/${p.orNo}`}
-                              className="inline-flex items-center gap-0.5 font-mono text-[11px] text-[#041a24] hover:underline"
-                            >
-                              <span>Receipt</span>
-                              <ArrowUpRight className="w-3 h-3 text-black/40" />
-                            </Link>
+                          <td className="py-2 px-3 font-mono text-[10px] text-slate-400">
+                            {c.stamp || '—'}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              )}
-
-              {/* Table Footer Status Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] font-mono text-[#41555f] pt-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="uppercase tracking-wider">
-                    ALL {customerPayments.length} RECEIPTS BALANCED &amp; RECONCILED
-                  </span>
-                </div>
-                <div className="text-[#41555f]">
-                  AUDIT LOG REF #{String(selectedCustomer.custNo).replace(/\D/g, '') || '94031'}
-                </div>
               </div>
-            </div>
-          ) : (
-            <div className="p-8 text-center text-xs text-[#41555f] border border-black/10 bg-white rounded-[4px] font-mono">
-              Select a customer from the left to view payment records.
-            </div>
-          )}
-        </div>
-      </div>
+            )}
 
-        </div>
+            {/* Tab 2: System Audit Logs */}
+            {auditTab === 'logs' && (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-md p-3">
+                {recentAudits.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    <Clock className="h-6 w-6 mx-auto mb-1 text-slate-300 dark:text-slate-600" />
+                    No recent mutation log entries found in <code>audit_log</code> table.
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {recentAudits.map((a) => (
+                      <div key={a.auditId} className="py-2.5 flex items-start justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                                a.action === 'ADD'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                                  : a.action === 'EDIT'
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                                  : a.action === 'DELETE'
+                                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              }`}
+                            >
+                              {a.action}
+                            </span>
+                            <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                              {a.recordKey}
+                            </span>
+                            <span className="text-slate-400 text-[11px]">by {a.actionBy}</span>
+                          </div>
+                          {a.newValues && (
+                            <p className="text-[10px] text-slate-500 font-mono truncate max-w-lg">
+                              {a.newValues}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                          {a.actionAt}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-        {/* Right-Side Portrait KPI Monitoring Panel */}
-        <aside className="w-full xl:w-[248px] shrink-0">
-          <RightSideKpiPanel
-            title="Customer Stats Bar"
-            cards={[
-              {
-                id: 'customers',
-                title: 'TOTAL DIRECTORY',
-                value: metrics?.totalCustomers || initialCustomers.length,
-                subtext: '5 client accounts',
-                icon: Users,
-                onClick: () => setActiveAudit('customers'),
-                clickable: true,
-              },
-              {
-                id: 'payments',
-                title: 'TOTAL PAYMENTS',
-                value: metrics?.totalPayments || initialPayments.length,
-                subtext: '14 receipts recorded',
-                icon: Receipt,
-                onClick: () => setActiveAudit('payments'),
-                clickable: true,
-              },
-              {
-                id: 'collected',
-                title: 'TOTAL COLLECTED',
-                value: formatPHP(metrics?.totalCollected || customerTotalPaid),
-                subtext: 'Settled receipts sum',
-                icon: DollarSign,
-                onClick: () => setActiveAudit('collected'),
-                clickable: true,
-              },
-              {
-                id: 'terms',
-                title: 'PAYMENT TERMS',
-                value: metrics?.totalTermsCount || 4,
-                subtext: 'Active credit terms',
-                icon: CreditCard,
-                onClick: () => setActiveAudit('terms'),
-                clickable: true,
-              },
-            ]}
-          />
-        </aside>
-      </div>
-      {/* 1. CUSTOMER DIRECTORY AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'customers'}
-        onClose={() => setActiveAudit(null)}
-        title="Customer Directory Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Registered Commercial Accounts
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {initialCustomers.length} Commercial Clients
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Transactions Handled</div>
-              <div className="text-lg font-bold font-mono text-white">15 orders across 5 accounts</div>
+            <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAuditModalOpen(false)}
+              >
+                Close Audit
+              </Button>
             </div>
           </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Cust #</th>
-                    <th className="py-2 px-3">Company Name</th>
-                    <th className="py-2 px-3">Billing Address</th>
-                    <th className="py-2 px-3">Terms</th>
-                    <th className="py-2 px-3 text-center">Orders</th>
-                    <th className="py-2 px-3 text-right">Total Remitted</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {initialCustomers.map((c) => (
-                    <tr key={c.custNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">#{c.custNo}</td>
-                      <td className="py-2 px-3 font-sans font-medium text-[#041a24] dark:text-white">{c.custName}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 truncate max-w-[160px]">{c.address}</td>
-                      <td className="py-2 px-3 font-mono text-[#41555f] dark:text-slate-300">{c.payTerms}</td>
-                      <td className="py-2 px-3 text-center font-bold text-[#041a24] dark:text-white">{c.ordersPlaced}</td>
-                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
-                        {formatPHP(c.totalPaid)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Commercial Accounts:</span>
-              <span className="text-[#041a24] dark:text-white text-sm">{initialCustomers.length} Enterprise Clients</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 2. PAYMENT RECEIPTS AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'payments'}
-        onClose={() => setActiveAudit(null)}
-        title="Payment Receipts Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Recorded Official Receipts
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {initialPayments.length} Official Receipts
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Total Remitted</div>
-              <div className="text-lg font-bold font-mono text-white">{formatPHP(metrics?.totalCollected || 1140470)}</div>
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Receipt OR #</th>
-                    <th className="py-2 px-3">Payment Date</th>
-                    <th className="py-2 px-3">Customer Entity</th>
-                    <th className="py-2 px-3">Applied To Sale</th>
-                    <th className="py-2 px-3 text-right">Amount Paid</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {initialPayments.map((p) => (
-                    <tr key={p.orNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">OR#{p.orNo}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 font-mono">{p.payDate}</td>
-                      <td className="py-2 px-3 font-sans text-[#041a24] dark:text-white">{p.custName || 'Direct Client'}</td>
-                      <td className="py-2 px-3 text-[#041a24] dark:text-white">Sale #{p.transNo}</td>
-                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
-                        {formatPHP(p.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Receipts Collected:</span>
-              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics?.totalCollected || 1140470)}</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 3. TOTAL COLLECTED AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'collected'}
-        onClose={() => setActiveAudit(null)}
-        title="Collections & Receivables Audit"
-        maxWidth="3xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-white/10">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
-                Total Billed
-              </div>
-              <div className="text-lg font-bold font-mono text-white mt-0.5">
-                ₱1,620,950.00
-              </div>
-            </div>
-            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-emerald-500/40">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-medium">
-                Total Collected
-              </div>
-              <div className="text-lg font-bold font-mono text-emerald-400 mt-0.5">
-                {formatPHP(metrics?.totalCollected || 1140470)}
-              </div>
-            </div>
-            <div className="p-3.5 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white border border-amber-500/40">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-medium">
-                Outstanding Balance
-              </div>
-              <div className="text-lg font-bold font-mono text-amber-400 mt-0.5">
-                ₱480,480.00
-              </div>
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-60 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Receipt OR #</th>
-                    <th className="py-2 px-3">Payment Date</th>
-                    <th className="py-2 px-3">Applied To Trans</th>
-                    <th className="py-2 px-3 text-right">Amount Paid</th>
-                    <th className="py-2 px-3 text-right">Running Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {paymentsRunningLedger.map((p) => (
-                    <tr key={p.orNo} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white">OR#{p.orNo}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 font-mono">{p.payDate}</td>
-                      <td className="py-2 px-3 text-[#041a24] dark:text-white">Sale #{p.transNo}</td>
-                      <td className="py-2 px-3 text-right text-[#041a24] dark:text-white font-semibold">
-                        {formatPHP(p.amount)}
-                      </td>
-                      <td className="py-2 px-3 text-right text-emerald-700 dark:text-emerald-400 font-bold">
-                        {p.runningTotalFormatted}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Settled:</span>
-              <span className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPHP(metrics?.totalCollected || 1140470)}</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 4. PAYMENT TERMS AUDIT MODAL */}
-      <Modal
-        isOpen={activeAudit === 'terms'}
-        onClose={() => setActiveAudit(null)}
-        title="Payment Terms Schedule Audit"
-        maxWidth="2xl"
-      >
-        <div className="space-y-4 font-sans text-xs">
-          <div className="p-4 rounded-[4px] bg-[#041a24] dark:bg-surface-2 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                Payment Terms Policies
-              </div>
-              <div className="text-2xl font-bold font-mono text-white mt-0.5">
-                {termsAuditList.length} Defined Terms
-              </div>
-            </div>
-            <div className="text-right sm:border-l sm:border-white/10 sm:pl-4">
-              <div className="text-[11px] font-mono text-slate-300">Accounts Bound</div>
-              <div className="text-lg font-bold font-mono text-white">{initialCustomers.length} accounts</div>
-            </div>
-          </div>
-
-          <div className="border border-black/10 dark:border-border rounded-[4px] overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#FAFAFA] dark:bg-surface-2 sticky top-0 text-[10px] font-mono text-text-muted border-b border-black/5 dark:border-border">
-                  <tr>
-                    <th className="py-2 px-3">Terms Schedule</th>
-                    <th className="py-2 px-3 text-center">Accounts</th>
-                    <th className="py-2 px-3">Associated Customers</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5 dark:divide-border font-mono text-xs">
-                  {termsAuditList.map((t) => (
-                    <tr key={t.term} className="hover:bg-black/5 dark:hover:bg-surface-2">
-                      <td className="py-2 px-3 font-semibold text-[#041a24] dark:text-white font-mono">{t.term}</td>
-                      <td className="py-2 px-3 text-center font-bold text-[#041a24] dark:text-white">{t.count}</td>
-                      <td className="py-2 px-3 text-[#41555f] dark:text-slate-300 font-sans">{t.customers.join(', ')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-2.5 bg-[#F4F4F0] dark:bg-surface-2 border-t border-black/10 dark:border-border flex items-center justify-between font-mono text-xs font-bold text-text">
-              <span>Total Terms Policies:</span>
-              <span className="text-[#041a24] dark:text-white text-sm">{termsAuditList.length} Active Credit Terms</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Shared Record Payment Dialog */}
-      {isRecordPaymentOpen && selectedCustomer && (
-        <RecordPaymentDialog
-          isOpen={isRecordPaymentOpen}
-          onClose={() => setIsRecordPaymentOpen(false)}
-          fixedCustNo={selectedCustomer.custNo}
-        />
+        </Modal>
       )}
     </div>
   );

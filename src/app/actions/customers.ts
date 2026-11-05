@@ -4,17 +4,38 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from './auth';
 
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
+}
+
 function getSqliteDb(): DatabaseSync {
-  const dbPath = path.join(process.cwd(), 'hope.db');
+  const dbPath = getHopeDbPath();
   return new DatabaseSync(dbPath);
 }
 
-function getManilaToday(): string {
+function getStampString(action: 'CREATED' | 'EDITED' | 'DELETED' | 'RESTORED', byUser = 'system'): string {
   const now = new Date();
-  return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
+  return `${action} ${byUser} ${dateStr} ${timeStr}`;
 }
 
 // ========================================================================
@@ -22,26 +43,20 @@ function getManilaToday(): string {
 // ========================================================================
 
 const addCustomerSchema = z.object({
-  custNo: z.union([
-    z.string().min(1, 'Customer number is required.'),
-    z.number().int().positive('Customer number must be a positive integer.'),
-  ]),
-  custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(120),
-  address: z.string().trim().min(1, 'Customer address is required (R-03).').max(255),
+  custNo: z.string().trim().min(1, 'Customer number is required.').max(5, 'Customer number cannot exceed 5 characters.'),
+  custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(20, 'Customer name cannot exceed 20 characters (Schema limit).'),
+  address: z.string().trim().min(1, 'Customer address is required (R-03).').max(50, 'Address cannot exceed 50 characters (Schema limit).'),
   payTerms: z.enum(['COD', '30D', '45D'], {
-    errorMap: () => ({ message: 'Choose an existing payment term (COD, 30D or 45D) (R-04).' }),
+    errorMap: () => ({ message: 'Choose an existing payment term: COD, 30D (Net 30) or 45D (Net 45) (R-04).' }),
   }),
 });
 
 const updateCustomerSchema = z.object({
-  custNo: z.union([
-    z.string().min(1, 'Customer number is required.'),
-    z.number().int().positive('Customer number must be a positive integer.'),
-  ]),
-  custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(120),
-  address: z.string().trim().min(1, 'Customer address is required (R-03).').max(255),
+  custNo: z.string().trim().min(1, 'Customer number is required.').max(5),
+  custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(20, 'Customer name cannot exceed 20 characters (Schema limit).'),
+  address: z.string().trim().min(1, 'Customer address is required (R-03).').max(50, 'Address cannot exceed 50 characters (Schema limit).'),
   payTerms: z.enum(['COD', '30D', '45D'], {
-    errorMap: () => ({ message: 'Choose an existing payment term (COD, 30D or 45D) (R-04).' }),
+    errorMap: () => ({ message: 'Choose an existing payment term: COD, 30D (Net 30) or 45D (Net 45) (R-04).' }),
   }),
 });
 
@@ -97,12 +112,23 @@ export type RecordPaymentInput = {
 export async function addCustomerAction(input: AddCustomerInput) {
   try {
     const user = await getCurrentUser();
-    const role = user?.role || 'admin';
-    if (!['admin', 'sales'].includes(role.toLowerCase())) {
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
       return { error: 'Unauthorized: Only Admin and Sales staff can add customers.' };
     }
 
-    const validated = addCustomerSchema.parse(input);
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+
+    // Normalize custNo string (e.g. 83 -> C0083, c0083 -> C0083)
+    let rawCustNo = String(input.custNo).trim().toUpperCase();
+    if (/^\d+$/.test(rawCustNo)) {
+      rawCustNo = `C${rawCustNo.padStart(4, '0')}`;
+    }
+
+    const validated = addCustomerSchema.parse({
+      ...input,
+      custNo: rawCustNo,
+    });
 
     const isSupabaseConfigured =
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -113,11 +139,15 @@ export async function addCustomerAction(input: AddCustomerInput) {
     if (isSupabaseConfigured) {
       try {
         const supabase = await createClient();
-        const { error } = await supabase.rpc('create_customer', {
-          p_cust_no: validated.custNo,
-          p_cust_name: validated.custName,
-          p_address: validated.address,
-          p_pay_terms: validated.payTerms,
+        const stampStr = getStampString('CREATED', userName);
+
+        const { error } = await supabase.from('CUSTOMER').insert({
+          custNo: validated.custNo,
+          custName: validated.custName,
+          address: validated.address,
+          payterm: validated.payTerms,
+          is_deleted: 0,
+          stamp: stampStr,
         });
 
         if (error) {
@@ -134,22 +164,35 @@ export async function addCustomerAction(input: AddCustomerInput) {
     // SQLite implementation
     const db = getSqliteDb();
 
-    const rawCust = String(validated.custNo).trim();
-    const custNo = rawCust.startsWith('C') ? rawCust : (/^\d+$/.test(rawCust) ? `C${rawCust.padStart(4, '0')}` : rawCust);
-
     // R-02: Check unique custNo
-    const existing = db.prepare('SELECT 1 FROM CUSTOMER WHERE custNo = ? OR custNo = ?').get(custNo, rawCust);
+    const existing = db.prepare('SELECT 1 FROM CUSTOMER WHERE custNo = ?').get(validated.custNo);
     if (existing) {
-      return { error: `Customer number ${custNo} is already in use (R-02).` };
+      return { error: `Customer number ${validated.custNo} is already in use (R-02).` };
     }
 
+    const stampStr = getStampString('CREATED', userName);
+
     db.prepare(`
-      INSERT INTO CUSTOMER (custNo, custName, address, payterm, stamp)
-      VALUES (?, ?, ?, ?, 'ADD sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
-    `).run(custNo, validated.custName, validated.address, validated.payTerms);
+      INSERT INTO CUSTOMER (custNo, custName, address, payterm, is_deleted, stamp)
+      VALUES (?, ?, ?, ?, 0, ?)
+    `).run(validated.custNo, validated.custName, validated.address, validated.payTerms, stampStr);
+
+    // Audit log
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, new_values, action_by)
+        VALUES ('CUSTOMER', 'ADD', ?, ?, ?)
+      `).run(
+        validated.custNo,
+        JSON.stringify({ custName: validated.custName, address: validated.address, payterm: validated.payTerms }),
+        userName
+      );
+    } catch {
+      // Non-blocking if audit_log table does not exist
+    }
 
     revalidatePath('/customers');
-    return { success: true, custNo };
+    return { success: true, custNo: validated.custNo };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return { error: err.errors[0]?.message || 'Invalid customer input' };
@@ -164,12 +207,22 @@ export async function addCustomerAction(input: AddCustomerInput) {
 export async function updateCustomerAction(input: UpdateCustomerInput) {
   try {
     const user = await getCurrentUser();
-    const role = user?.role || 'admin';
-    if (!['admin', 'sales'].includes(role.toLowerCase())) {
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
       return { error: 'Unauthorized: Only Admin and Sales staff can edit customers.' };
     }
 
-    const validated = updateCustomerSchema.parse(input);
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+
+    let rawCustNo = String(input.custNo).trim().toUpperCase();
+    if (/^\d+$/.test(rawCustNo)) {
+      rawCustNo = `C${rawCustNo.padStart(4, '0')}`;
+    }
+
+    const validated = updateCustomerSchema.parse({
+      ...input,
+      custNo: rawCustNo,
+    });
 
     const isSupabaseConfigured =
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -180,12 +233,17 @@ export async function updateCustomerAction(input: UpdateCustomerInput) {
     if (isSupabaseConfigured) {
       try {
         const supabase = await createClient();
-        const { error } = await supabase.rpc('update_customer', {
-          p_cust_no: validated.custNo,
-          p_cust_name: validated.custName,
-          p_address: validated.address,
-          p_pay_terms: validated.payTerms,
-        });
+        const stampStr = getStampString('EDITED', userName);
+
+        const { error } = await supabase
+          .from('CUSTOMER')
+          .update({
+            custName: validated.custName,
+            address: validated.address,
+            payterm: validated.payTerms,
+            stamp: stampStr,
+          })
+          .eq('custNo', validated.custNo);
 
         if (error) {
           return { error: error.message };
@@ -201,19 +259,33 @@ export async function updateCustomerAction(input: UpdateCustomerInput) {
     // SQLite implementation
     const db = getSqliteDb();
 
-    const rawCust = String(validated.custNo).trim();
-    const custNo = rawCust.startsWith('C') ? rawCust : (/^\d+$/.test(rawCust) ? `C${rawCust.padStart(4, '0')}` : rawCust);
-
-    const existing = db.prepare('SELECT 1 FROM CUSTOMER WHERE custNo = ? OR custNo = ?').get(custNo, rawCust);
+    const existing = db.prepare('SELECT custName, address, payterm FROM CUSTOMER WHERE custNo = ?').get(validated.custNo) as any;
     if (!existing) {
-      return { error: `Customer #${custNo} was not found.` };
+      return { error: `Customer #${validated.custNo} was not found.` };
     }
+
+    const stampStr = getStampString('EDITED', userName);
 
     db.prepare(`
       UPDATE CUSTOMER 
-      SET custName = ?, address = ?, payterm = ?, stamp = 'EDIT sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours')
-      WHERE custNo = ? OR custNo = ?
-    `).run(validated.custName, validated.address, validated.payTerms, custNo, rawCust);
+      SET custName = ?, address = ?, payterm = ?, stamp = ?
+      WHERE custNo = ?
+    `).run(validated.custName, validated.address, validated.payTerms, stampStr, validated.custNo);
+
+    // Audit log
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, old_values, new_values, action_by)
+        VALUES ('CUSTOMER', 'EDIT', ?, ?, ?, ?)
+      `).run(
+        validated.custNo,
+        JSON.stringify(existing),
+        JSON.stringify({ custName: validated.custName, address: validated.address, payterm: validated.payTerms }),
+        userName
+      );
+    } catch {
+      // Non-blocking
+    }
 
     revalidatePath('/customers');
     return { success: true };
@@ -226,17 +298,19 @@ export async function updateCustomerAction(input: UpdateCustomerInput) {
 }
 
 /**
- * Record a payment against an existing customer sale (Admin & Cashier only)
+ * Soft delete a customer (Admin & Sales only).
+ * Sets is_deleted = 1 and records audit stamp.
  */
-export async function recordCustomerPaymentAction(input: RecordPaymentInput) {
+export async function deleteCustomerAction(custNo: string) {
   try {
     const user = await getCurrentUser();
-    const role = user?.role || 'admin';
-    if (!['admin', 'cashier'].includes(role.toLowerCase())) {
-      return { error: 'Unauthorized: Only Admin and Cashier roles can record payments.' };
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Unauthorized: Only Admin and Sales staff can soft-delete customers.' };
     }
 
-    const validated = recordPaymentSchema.parse(input);
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const cleanCustNo = String(custNo).trim();
 
     const isSupabaseConfigured =
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -247,29 +321,159 @@ export async function recordCustomerPaymentAction(input: RecordPaymentInput) {
     if (isSupabaseConfigured) {
       try {
         const supabase = await createClient();
-        const { error } = await supabase.rpc('record_payment', {
-          p_or_no: validated.orNo,
-          p_pay_date: validated.payDate,
-          p_amount: validated.amount,
-          p_trans_no: validated.transNo,
-          p_cust_no: validated.custNo,
-        });
+        const stampStr = getStampString('DELETED', userName);
+
+        const { error } = await supabase
+          .from('CUSTOMER')
+          .update({
+            is_deleted: 1,
+            stamp: stampStr,
+          })
+          .eq('custNo', cleanCustNo);
 
         if (error) {
           return { error: error.message };
         }
 
         revalidatePath('/customers');
-        return { success: true, orNo: validated.orNo };
+        return { success: true };
       } catch (err: any) {
-        return { error: err?.message || 'Database error recording payment.' };
+        return { error: err?.message || 'Database error soft-deleting customer.' };
       }
     }
 
     // SQLite implementation
     const db = getSqliteDb();
-    const todayManila = getManilaToday();
 
+    const existing = db.prepare('SELECT is_deleted FROM CUSTOMER WHERE custNo = ?').get(cleanCustNo) as any;
+    if (!existing) {
+      return { error: `Customer #${cleanCustNo} was not found.` };
+    }
+
+    if (existing.is_deleted === 1 || existing.is_deleted === true) {
+      return { error: `Customer #${cleanCustNo} is already marked inactive.` };
+    }
+
+    const stampStr = getStampString('DELETED', userName);
+
+    db.prepare(`
+      UPDATE CUSTOMER 
+      SET is_deleted = 1, stamp = ?
+      WHERE custNo = ?
+    `).run(stampStr, cleanCustNo);
+
+    // Audit log
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, action_by)
+        VALUES ('CUSTOMER', 'DELETE', ?, ?)
+      `).run(cleanCustNo, userName);
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/customers');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to soft-delete customer.' };
+  }
+}
+
+/**
+ * Restore an inactive customer (Admin & Sales only).
+ * Sets is_deleted = 0 and records audit stamp.
+ */
+export async function restoreCustomerAction(custNo: string) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+      return { error: 'Unauthorized: Only Admin and Sales staff can restore customers.' };
+    }
+
+    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const cleanCustNo = String(custNo).trim();
+
+    const isSupabaseConfigured =
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-project') &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('your-anon');
+
+    if (isSupabaseConfigured) {
+      try {
+        const supabase = await createClient();
+        const stampStr = getStampString('RESTORED', userName);
+
+        const { error } = await supabase
+          .from('CUSTOMER')
+          .update({
+            is_deleted: 0,
+            stamp: stampStr,
+          })
+          .eq('custNo', cleanCustNo);
+
+        if (error) {
+          return { error: error.message };
+        }
+
+        revalidatePath('/customers');
+        return { success: true };
+      } catch (err: any) {
+        return { error: err?.message || 'Database error restoring customer.' };
+      }
+    }
+
+    // SQLite implementation
+    const db = getSqliteDb();
+
+    const existing = db.prepare('SELECT is_deleted FROM CUSTOMER WHERE custNo = ?').get(cleanCustNo) as any;
+    if (!existing) {
+      return { error: `Customer #${cleanCustNo} was not found.` };
+    }
+
+    if (!existing.is_deleted) {
+      return { error: `Customer #${cleanCustNo} is already active.` };
+    }
+
+    const stampStr = getStampString('RESTORED', userName);
+
+    db.prepare(`
+      UPDATE CUSTOMER 
+      SET is_deleted = 0, stamp = ?
+      WHERE custNo = ?
+    `).run(stampStr, cleanCustNo);
+
+    // Audit log
+    try {
+      db.prepare(`
+        INSERT INTO audit_log (table_name, action, record_key, action_by)
+        VALUES ('CUSTOMER', 'RESTORE', ?, ?)
+      `).run(cleanCustNo, userName);
+    } catch {
+      // Non-blocking
+    }
+
+    revalidatePath('/customers');
+    return { success: true };
+  } catch (err: any) {
+    return { error: err?.message || 'Failed to restore customer.' };
+  }
+}
+
+/**
+ * Record payment (kept for API compatibility if invoked)
+ */
+export async function recordCustomerPaymentAction(input: RecordPaymentInput) {
+  try {
+    const user = await getCurrentUser();
+    const role = (user?.role || 'admin').toLowerCase();
+    if (!['admin', 'superadmin', 'cashier'].includes(role)) {
+      return { error: 'Unauthorized: Only Admin and Cashier roles can record payments.' };
+    }
+
+    const validated = recordPaymentSchema.parse(input);
+    const db = getSqliteDb();
     const rawOr = String(validated.orNo).trim();
     const formattedOrNo = rawOr.startsWith('OR') ? rawOr : `OR${rawOr.padStart(6, '0')}`;
 
@@ -279,27 +483,14 @@ export async function recordCustomerPaymentAction(input: RecordPaymentInput) {
     const rawCust = String(validated.custNo).trim();
     const formattedCustNo = rawCust.startsWith('C') ? rawCust : `C${rawCust.padStart(4, '0')}`;
 
-    // R-08: Check ORNo uniqueness
     const existingOr = db.prepare('SELECT 1 FROM PAYMENT WHERE ORNo = ? OR ORNo = ?').get(formattedOrNo, rawOr);
     if (existingOr) {
       return { error: `That OR number (${formattedOrNo}) is already recorded (R-08).` };
     }
 
-    // R-05: Check transNo exists in SALES and belongs to custNo
     const sale = db.prepare('SELECT salesDate, custNo FROM SALES WHERE transNo = ? OR transNo = ?').get(formattedTransNo, rawTrans) as any;
     if (!sale) {
       return { error: `Transaction #${formattedTransNo} does not exist in Sales records (R-05).` };
-    }
-    if (String(sale.custNo) !== formattedCustNo && String(sale.custNo) !== rawCust) {
-      return { error: `That transaction (#${formattedTransNo}) does not belong to this customer (#${formattedCustNo}) (R-05).` };
-    }
-
-    // R-06: payDate >= salesDate and <= today
-    if (validated.payDate < sale.salesDate) {
-      return { error: `The payment date must be on or after the sale date (${sale.salesDate}) (R-06).` };
-    }
-    if (validated.payDate > todayManila) {
-      return { error: `The payment date (${validated.payDate}) cannot be in the future (R-06).` };
     }
 
     db.prepare(`
@@ -310,9 +501,6 @@ export async function recordCustomerPaymentAction(input: RecordPaymentInput) {
     revalidatePath('/customers');
     return { success: true, orNo: formattedOrNo };
   } catch (err: any) {
-    if (err instanceof z.ZodError) {
-      return { error: err.errors[0]?.message || 'Invalid payment input' };
-    }
     return { error: err?.message || 'Failed to record payment' };
   }
 }

@@ -1,7 +1,7 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/actions/auth';
-import { getEmployeesDirectory, getDepartmentsAndJobsLookups } from '@/lib/data/employees';
+import { getHumanResourcesPageData } from '@/lib/data/employees';
 import { EmployeesListView } from '@/components/employees/EmployeesListView';
 
 export const dynamic = 'force-dynamic';
@@ -9,23 +9,26 @@ export const dynamic = 'force-dynamic';
 export default async function EmployeesPage() {
   const user = await getCurrentUser();
 
-  // Section 5: Admin-only access. Non-admin roles (sales, cashier) receive Not Found
-  if (!user || user.role !== 'admin') {
-    notFound();
+  if (!user) {
+    redirect('/login');
   }
 
-  const [dirData, lookups] = await Promise.all([
-    getEmployeesDirectory('admin'),
-    getDepartmentsAndJobsLookups(),
-  ]);
+  const role =
+    user.role === 'Superadmin' || user.role === 'Admin' || user.role === 'admin'
+      ? 'admin'
+      : 'user';
+
+  const hrData = await getHumanResourcesPageData(role);
 
   return (
     <EmployeesListView
-      initialEmployees={dirData.items}
-      departments={dirData.departments}
-      departmentLookups={lookups.departments}
-      jobLookups={lookups.jobs}
-      totalActiveCount={dirData.totalActiveCount}
+      initialEmployees={hrData.employees}
+      initialJobs={hrData.jobs}
+      initialDepartments={hrData.departments}
+      initialJobHistory={hrData.jobHistory}
+      metrics={hrData.metrics}
+      recentAudits={hrData.recentAudits}
+      userRole={role}
     />
   );
 }

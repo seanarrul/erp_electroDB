@@ -1,70 +1,75 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
 import { createClient } from '@/lib/supabase/server';
-import { getProductFamily } from '@/lib/products';
 
-export interface ProductOverviewItem {
+export interface ProductItem {
   prodCode: string;
   description: string;
   unit: string;
-  family: string;
-  currentUnitPrice: number | null;
-  priceSince: string | null;
-  previousPrice: number | null;
-  priceRecordCount: number;
-  unitsSold: number;
-  salesRevenue: number;
-  lastSold: string | null;
+  currentPrice: number | null;
+  currentPriceEffDate: string | null;
+  priceCount: number;
+  isDeleted: boolean;
+  status: 'Active' | 'Inactive';
+  stamp: string | null;
 }
 
-export interface PriceHistoryItem {
-  prodCode: string;
-  description: string;
-  unit: string;
+export interface PriceRecordItem {
   effDate: string;
-  unitPrice: number;
-  previousPrice: number | null;
-  status: 'Current' | 'Past' | 'Future-dated';
-}
-
-export interface ProductDetailPriceRow {
   prodCode: string;
-  effDate: string;
   unitPrice: number;
-  previousPrice: number | null;
-  status: 'Current' | 'Past' | 'Future-dated';
-  canCorrectPrice: boolean;
+  isDeleted: boolean;
+  status: 'Active' | 'Inactive';
+  stamp: string | null;
 }
 
-export interface ProductDetailItem {
-  prodCode: string;
-  description: string;
-  unit: string;
-  family: string;
-  currentUnitPrice: number | null;
-  priceSince: string | null;
-  previousPrice: number | null;
-  priceRecordCount: number;
-  unitsSold: number;
-  salesRevenue: number;
-  lastSold: string | null;
-  hasSales: boolean;
-  priceHistory: ProductDetailPriceRow[];
-}
-
-export interface ProductsSummaryMetrics {
+export interface ProductsMetrics {
   totalProducts: number;
-  totalFamilies: number;
+  activeCount: number;
+  inactiveCount: number;
   totalPriceRecords: number;
-  priceChangesRecorded: number;
-  totalUnitsSold: number;
-  totalSalesRevenue: number;
-  familyCounts: Record<string, number>;
-  allUnits: string[];
+  unitCounts: Record<string, number>;
+  nextSuggestedProdCode: string;
+}
+
+export interface ProductAuditLogItem {
+  auditId: number;
+  tableName: 'PRODUCT' | 'PRICEHIST' | string;
+  action: 'ADD' | 'EDIT' | 'DELETE' | 'RESTORE';
+  recordKey: string;
+  oldValues: string | null;
+  newValues: string | null;
+  actionBy: string;
+  actionAt: string;
+}
+
+// Backwards compatibility interfaces
+export type ProductOverviewItem = any;
+export type PriceHistoryItem = any;
+export type ProductsSummaryMetrics = any;
+export type ProductDetailItem = any;
+
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
 }
 
 function getSqliteDb(): DatabaseSync {
-  const dbPath = path.join(process.cwd(), 'hope.db');
+  const dbPath = getHopeDbPath();
   return new DatabaseSync(dbPath);
 }
 
@@ -78,191 +83,208 @@ function isSupabaseLive(): boolean {
 }
 
 /**
- * Fetch products overview list, price history list, and summary metrics.
+ * Fetch products list with derived current price, price history records, and audit log.
  */
 export async function getProductsPageData(): Promise<{
-  products: ProductOverviewItem[];
-  priceHistory: PriceHistoryItem[];
-  metrics: ProductsSummaryMetrics;
+  products: ProductItem[];
+  priceHistory: PriceRecordItem[];
+  metrics: ProductsMetrics;
+  recentAudits: ProductAuditLogItem[];
 }> {
   if (isSupabaseLive()) {
     try {
       const supabase = await createClient();
-
-      const [prodsRes, histRes, unitsRes] = await Promise.all([
-        supabase.from('v_product_overview').select('*').order('prodCode', { ascending: true }),
-        supabase.from('v_price_history').select('*').order('effDate', { ascending: false }),
-        supabase.from('PRODUCT').select('unit'),
+      const [prodsRes, pricesRes] = await Promise.all([
+        supabase.from('PRODUCT').select('*').order('prodCode', { ascending: true }),
+        supabase.from('PRICEHIST').select('*').order('effDate', { ascending: false }),
       ]);
 
-      if (!prodsRes.error && !histRes.error) {
-        const products: ProductOverviewItem[] = (prodsRes.data || []).map((r: any) => ({
-          prodCode: String(r.prodCode),
-          description: String(r.description || ''),
-          unit: String(r.unit || 'pc'),
-          family: getProductFamily(String(r.prodCode)),
-          currentUnitPrice: r.currentUnitPrice != null ? Number(r.currentUnitPrice) : null,
-          priceSince: r.priceSince ? String(r.priceSince) : null,
-          previousPrice: r.previousPrice != null ? Number(r.previousPrice) : null,
-          priceRecordCount: Number(r.priceRecordCount || 0),
-          unitsSold: Number(r.unitsSold || 0),
-          salesRevenue: Number(r.salesRevenue || 0),
-          lastSold: r.lastSold ? String(r.lastSold) : null,
+      if (!prodsRes.error && prodsRes.data) {
+        const rawPrices: PriceRecordItem[] = (pricesRes.data || []).map((p: any) => ({
+          effDate: String(p.effDate),
+          prodCode: String(p.prodCode),
+          unitPrice: Number(p.unitPrice),
+          isDeleted: Boolean(p.is_deleted === 1 || p.is_deleted === true || p.is_deleted === '1'),
+          status: (p.is_deleted === 1 || p.is_deleted === true || p.is_deleted === '1') ? 'Inactive' : 'Active',
+          stamp: p.stamp ? String(p.stamp) : null,
         }));
 
-        const priceHistory: PriceHistoryItem[] = (histRes.data || []).map((r: any) => ({
-          prodCode: String(r.prodCode),
-          description: String(r.description || ''),
-          unit: String(r.unit || 'pc'),
-          effDate: String(r.effDate),
-          unitPrice: Number(r.unitPrice),
-          previousPrice: r.previousPrice != null ? Number(r.previousPrice) : null,
-          status: (r.status || 'Past') as 'Current' | 'Past' | 'Future-dated',
-        }));
+        const todayManila = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
-        // Calculate family counts
-        const familyCounts: Record<string, number> = { ALL: products.length };
+        const products: ProductItem[] = prodsRes.data.map((r: any) => {
+          const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+          const pPrices = rawPrices.filter((ph) => ph.prodCode === r.prodCode && !ph.isDeleted && ph.effDate <= todayManila);
+          pPrices.sort((a, b) => b.effDate.localeCompare(a.effDate));
+          const currentRec = isDeleted ? null : pPrices[0];
+
+          return {
+            prodCode: String(r.prodCode),
+            description: String(r.description || ''),
+            unit: String(r.unit || 'pc'),
+            currentPrice: currentRec ? currentRec.unitPrice : null,
+            currentPriceEffDate: currentRec ? currentRec.effDate : null,
+            priceCount: rawPrices.filter((ph) => ph.prodCode === r.prodCode).length,
+            isDeleted,
+            status: isDeleted ? 'Inactive' : 'Active',
+            stamp: r.stamp ? String(r.stamp) : null,
+          };
+        });
+
+        const activeCount = products.filter((p) => !p.isDeleted).length;
+        const inactiveCount = products.filter((p) => p.isDeleted).length;
+
+        const unitCounts: Record<string, number> = {};
         for (const p of products) {
-          familyCounts[p.family] = (familyCounts[p.family] || 0) + 1;
+          unitCounts[p.unit] = (unitCounts[p.unit] || 0) + 1;
         }
-
-        const distinctFamilies = Object.keys(familyCounts).filter((k) => k !== 'ALL');
-        const totalPriceRecords = priceHistory.length;
-        const totalUnitsSold = products.reduce((acc, p) => acc + p.unitsSold, 0);
-        const totalSalesRevenue = products.reduce((acc, p) => acc + p.salesRevenue, 0);
-
-        const unitsSet = new Set<string>();
-        for (const u of unitsRes.data || []) {
-          if (u.unit) unitsSet.add(String(u.unit).trim());
-        }
-        if (unitsSet.size === 0) unitsSet.add('CPU');
 
         return {
           products,
-          priceHistory,
+          priceHistory: rawPrices,
           metrics: {
             totalProducts: products.length,
-            totalFamilies: distinctFamilies.length,
-            totalPriceRecords,
-            priceChangesRecorded: Math.max(0, totalPriceRecords - products.length),
-            totalUnitsSold,
-            totalSalesRevenue,
-            familyCounts,
-            allUnits: Array.from(unitsSet).sort(),
+            activeCount,
+            inactiveCount,
+            totalPriceRecords: rawPrices.length,
+            unitCounts,
+            nextSuggestedProdCode: `P-${String(products.length + 1).padStart(3, '0')}`,
           },
+          recentAudits: [],
         };
       }
     } catch {
-      // Fall through to SQLite
+      // Fallback to SQLite
     }
   }
 
-  // SQLite fallback
+  // SQLite implementation
   const db = getSqliteDb();
 
-  const rawProducts = db.prepare(`SELECT * FROM v_product_overview ORDER BY prodCode ASC`).all() as any[];
-  const rawHist = db.prepare(`SELECT * FROM v_price_history ORDER BY effDate DESC, prodCode ASC`).all() as any[];
-  const rawUnits = db.prepare(`SELECT DISTINCT unit FROM PRODUCT WHERE unit IS NOT NULL`).all() as any[];
+  const prodRows = db.prepare(`
+    SELECT 
+      p.prodCode, 
+      p.description, 
+      p.unit, 
+      p.is_deleted, 
+      p.stamp,
+      (
+        SELECT ph.unitPrice 
+        FROM PRICEHIST ph 
+        WHERE ph.prodCode = p.prodCode 
+          AND ph.effDate <= date('now', '+8 hours')
+          AND ph.is_deleted = 0
+        ORDER BY ph.effDate DESC 
+        LIMIT 1
+      ) AS currentPrice,
+      (
+        SELECT ph.effDate 
+        FROM PRICEHIST ph 
+        WHERE ph.prodCode = p.prodCode 
+          AND ph.effDate <= date('now', '+8 hours')
+          AND ph.is_deleted = 0
+        ORDER BY ph.effDate DESC 
+        LIMIT 1
+      ) AS currentPriceEffDate,
+      (
+        SELECT count(*) 
+        FROM PRICEHIST ph 
+        WHERE ph.prodCode = p.prodCode
+      ) AS priceCount
+    FROM PRODUCT p
+    ORDER BY p.prodCode ASC
+  `).all() as any[];
 
-  const products: ProductOverviewItem[] = rawProducts.map((r: any) => ({
-    prodCode: String(r.prodCode),
-    description: String(r.description || ''),
-    unit: String(r.unit || 'pc'),
-    family: getProductFamily(String(r.prodCode)),
-    currentUnitPrice: r.currentUnitPrice != null ? Number(r.currentUnitPrice) : null,
-    priceSince: r.priceSince ? String(r.priceSince) : null,
-    previousPrice: r.previousPrice != null ? Number(r.previousPrice) : null,
-    priceRecordCount: Number(r.priceRecordCount || 0),
-    unitsSold: Number(r.unitsSold || 0),
-    salesRevenue: Number(r.salesRevenue || 0),
-    lastSold: r.lastSold ? String(r.lastSold) : null,
-  }));
+  const priceRows = db.prepare(`
+    SELECT effDate, prodCode, unitPrice, is_deleted, stamp
+    FROM PRICEHIST
+    ORDER BY effDate DESC, prodCode ASC
+  `).all() as any[];
 
-  const priceHistory: PriceHistoryItem[] = rawHist.map((r: any) => ({
-    prodCode: String(r.prodCode),
-    description: String(r.description || ''),
-    unit: String(r.unit || 'pc'),
-    effDate: String(r.effDate),
-    unitPrice: Number(r.unitPrice),
-    previousPrice: r.previousPrice != null ? Number(r.previousPrice) : null,
-    status: (r.status || 'Past') as 'Current' | 'Past' | 'Future-dated',
-  }));
+  const priceHistory: PriceRecordItem[] = priceRows.map((r) => {
+    const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+    return {
+      effDate: String(r.effDate),
+      prodCode: String(r.prodCode),
+      unitPrice: Number(r.unitPrice),
+      isDeleted,
+      status: isDeleted ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : null,
+    };
+  });
 
-  const familyCounts: Record<string, number> = { ALL: products.length };
+  const products: ProductItem[] = prodRows.map((r) => {
+    const isDeleted = Boolean(r.is_deleted === 1 || r.is_deleted === true || r.is_deleted === '1');
+    return {
+      prodCode: String(r.prodCode),
+      description: String(r.description || ''),
+      unit: String(r.unit || 'pc'),
+      // If product is soft-deleted, current price is displayed as null ("—")
+      currentPrice: isDeleted ? null : (r.currentPrice != null ? Number(r.currentPrice) : null),
+      currentPriceEffDate: isDeleted ? null : (r.currentPriceEffDate ? String(r.currentPriceEffDate) : null),
+      priceCount: Number(r.priceCount || 0),
+      isDeleted,
+      status: isDeleted ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : null,
+    };
+  });
+
+  const activeCount = products.filter((p) => !p.isDeleted).length;
+  const inactiveCount = products.filter((p) => p.isDeleted).length;
+
+  const unitCounts: Record<string, number> = {};
   for (const p of products) {
-    familyCounts[p.family] = (familyCounts[p.family] || 0) + 1;
+    unitCounts[p.unit] = (unitCounts[p.unit] || 0) + 1;
   }
-  const distinctFamilies = Object.keys(familyCounts).filter((k) => k !== 'ALL');
-  const totalPriceRecords = priceHistory.length;
-  const totalUnitsSold = products.reduce((acc, p) => acc + p.unitsSold, 0);
-  const totalSalesRevenue = products.reduce((acc, p) => acc + p.salesRevenue, 0);
 
-  const units = rawUnits.map((u: any) => String(u.unit).trim()).filter(Boolean);
-  if (units.length === 0) units.push('CPU');
+  // Calculate next suggested product code
+  // If codes are like P-001, find max. If AD0001, find next.
+  let maxPNum = 0;
+  for (const p of products) {
+    const m = p.prodCode.match(/^P-?(\d+)$/i);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (!isNaN(n) && n > maxPNum) maxPNum = n;
+    }
+  }
+  const nextSuggestedProdCode = maxPNum > 0 
+    ? `P-${String(maxPNum + 1).padStart(3, '0')}`
+    : `P-${String(products.length + 1).padStart(3, '0')}`;
+
+  let recentAudits: ProductAuditLogItem[] = [];
+  try {
+    const auditRows = db.prepare(`
+      SELECT audit_id, table_name, action, record_key, old_values, new_values, action_by, action_at
+      FROM audit_log
+      WHERE table_name IN ('PRODUCT', 'PRICEHIST')
+      ORDER BY audit_id DESC
+      LIMIT 30
+    `).all() as any[];
+
+    recentAudits = auditRows.map((a) => ({
+      auditId: Number(a.audit_id),
+      tableName: String(a.table_name),
+      action: a.action,
+      recordKey: String(a.record_key || ''),
+      oldValues: a.old_values ? String(a.old_values) : null,
+      newValues: a.new_values ? String(a.new_values) : null,
+      actionBy: String(a.action_by || 'system'),
+      actionAt: String(a.action_at || ''),
+    }));
+  } catch {
+    // Audit table empty or optional
+  }
 
   return {
     products,
     priceHistory,
     metrics: {
       totalProducts: products.length,
-      totalFamilies: distinctFamilies.length,
-      totalPriceRecords,
-      priceChangesRecorded: Math.max(0, totalPriceRecords - products.length),
-      totalUnitsSold,
-      totalSalesRevenue,
-      familyCounts,
-      allUnits: Array.from(new Set(units)).sort(),
+      activeCount,
+      inactiveCount,
+      totalPriceRecords: priceHistory.length,
+      unitCounts,
+      nextSuggestedProdCode,
     },
-  };
-}
-
-/**
- * Fetch full details and price history for a single product.
- */
-export async function getProductDetailData(prodCode: string): Promise<ProductDetailItem | null> {
-  const cleanCode = prodCode.trim().toUpperCase();
-
-  const { products } = await getProductsPageData();
-  const prod = products.find((p) => p.prodCode.toUpperCase() === cleanCode);
-  if (!prod) return null;
-
-  const db = getSqliteDb();
-
-  // Fetch all price records for this product, ordered newest first
-  const rows = db.prepare(`
-    SELECT * FROM v_price_history
-    WHERE prodCode = ?
-    ORDER BY effDate DESC
-  `).all(cleanCode) as any[];
-
-  // Find latest effDate among all rows
-  const latestEffDate = rows.length > 0 ? rows[0].effDate : null;
-
-  // Check if any sale exists on or after latestEffDate (for R-09 eligibility)
-  const hasSaleAfterLatest = latestEffDate
-    ? Boolean(
-        db.prepare(`
-          SELECT 1 FROM SALESDETAIL sd
-          JOIN SALES s ON s.transNo = sd.transNo
-          WHERE sd.prodCode = ? AND s.salesDate >= ?
-          LIMIT 1
-        `).get(cleanCode, latestEffDate)
-      )
-    : true;
-
-  const priceHistory: ProductDetailPriceRow[] = rows.map((r, idx) => ({
-    prodCode: String(r.prodCode),
-    effDate: String(r.effDate),
-    unitPrice: Number(r.unitPrice),
-    previousPrice: r.previousPrice != null ? Number(r.previousPrice) : null,
-    status: (r.status || 'Past') as 'Current' | 'Past' | 'Future-dated',
-    // Only latest row (idx === 0) can be corrected, and ONLY if no sale on or after its effDate
-    canCorrectPrice: idx === 0 && !hasSaleAfterLatest,
-  }));
-
-  return {
-    ...prod,
-    hasSales: prod.unitsSold > 0,
-    priceHistory,
+    recentAudits,
   };
 }

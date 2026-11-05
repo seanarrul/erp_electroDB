@@ -20,3 +20,9 @@
 ### 4. No Changing or Replication
 - **No unauthorized data modification:** Do not edit, rewrite, or overwrite existing historical values (e.g. historical sales dates, past prices, original payment amounts).
 - **No data replication / duplication:** Never duplicate, clone, or replicate existing database records. All operations must be strictly idempotent with duplicate prevention.
+
+---
+
+## 📖 Canonical System Architecture & Specification Reference
+- Refer strictly to [**`HOPE_ERP_SYSTEM_GUIDELINES.md`**](file:///c:/Development/PROJECTS/HopeERD/HOPE_ERP_SYSTEM_GUIDELINES.md) for the authoritative specification of the 6 core modules, 3 roles (`Superadmin`, `Admin`, `User`), 36 canonical rights, 7 reports, and UI/CRUD contracts.
+- Any new features, screens, or refactorings must remain faithful to this document while preserving your custom sidebar design (`ElectronDB` / `MONITORING • HOPEERD`).

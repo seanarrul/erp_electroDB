@@ -1,48 +1,77 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { updateProductAction } from '@/app/actions/products';
-import { AlertCircle, Lock } from 'lucide-react';
+import { X, Edit2, AlertCircle, Lock } from 'lucide-react';
+import type { ProductItem } from '@/lib/data/products';
 
-interface EditProductModalProps {
+export interface EditProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  prodCode: string;
-  initialDescription: string;
-  initialUnit: string;
-  hasSales: boolean;
+  product?: ProductItem;
+  prodCode?: string;
+  initialDescription?: string;
+  initialUnit?: string;
+  hasSales?: boolean;
   availableUnits?: string[];
 }
+
+const PERMITTED_UNITS = [
+  { value: 'pc', label: 'pc (Piece)' },
+  { value: 'ea', label: 'ea (Each)' },
+  { value: 'mtr', label: 'mtr (Meter)' },
+  { value: 'pkg', label: 'pkg (Package)' },
+  { value: 'ltr', label: 'ltr (Liter)' },
+];
 
 export function EditProductModal({
   isOpen,
   onClose,
-  prodCode,
-  initialDescription,
-  initialUnit,
-  hasSales,
-  availableUnits = ['pc'],
+  product,
+  prodCode: propCode,
+  initialDescription = '',
+  initialUnit = 'pc',
 }: EditProductModalProps) {
   const router = useRouter();
 
-  const [description, setDescription] = useState(initialDescription);
-  const [unit, setUnit] = useState(initialUnit);
+  const code = product?.prodCode || propCode || '';
+  const [description, setDescription] = useState(product?.description || initialDescription);
+  const [unit, setUnit] = useState(product?.unit || initialUnit);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDescription(product?.description || initialDescription);
+      setUnit(product?.unit || initialUnit || 'pc');
+      setErrorMsg(null);
+    }
+  }, [isOpen, product, initialDescription, initialUnit]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
+    if (!description.trim()) {
+      setErrorMsg('Product description is required.');
+      return;
+    }
+    if (description.trim().length > 30) {
+      setErrorMsg('Description cannot exceed 30 characters (Schema limit: VARCHAR(30)).');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const result = await updateProductAction({
-        prodCode,
+        prodCode: code,
         description: description.trim(),
-        unit: unit.trim(),
+        unit: unit as any,
       });
 
       if (result.error) {
@@ -54,108 +83,118 @@ export function EditProductModal({
       setIsSubmitting(false);
       onClose();
       router.refresh();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Failed to update product.');
+    } catch {
+      setErrorMsg('An unexpected error occurred while updating product.');
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Edit Product"
-      description={`Update description and measurement unit for ${prodCode}.`}
-      maxWidth="md"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+      <div
+        className="w-full max-w-md rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5"
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Edit Product
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
         {errorMsg && (
-          <div className="flex items-start gap-2 rounded-[4px] border border-[rgba(134,37,37,0.3)] bg-[#FCECEC] p-3 text-xs text-[#862525]">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p className="leading-snug">{errorMsg}</p>
+          <div className="rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* Product Code (Read-Only) */}
-        <div>
-          <label className="block text-xs font-semibold text-[#17231F] mb-1">
-            Product code (Permanent)
-          </label>
-          <input
-            type="text"
-            value={prodCode}
-            disabled
-            className="w-full rounded-md border border-[#DDE3DE] bg-[#F5F6F4] px-3 py-2 text-xs font-mono uppercase text-[#52615B] cursor-not-allowed"
-          />
-          <p className="mt-1 text-[11px] text-[#52615B]">
-            Product codes cannot be modified after registration.
-          </p>
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="block text-xs font-semibold text-[#17231F] mb-1">
-            Description
-          </label>
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:outline-none focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-            required
-            autoFocus
-          />
-        </div>
-
-        {/* Unit */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs font-semibold text-[#17231F]">
-              Unit of measurement
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
+          {/* Product Code (Locked) */}
+          <div className="space-y-1">
+            <label className="block font-semibold text-slate-800 dark:text-slate-200">
+              Product Code (Immutable PK)
             </label>
-            {hasSales && (
-              <span className="flex items-center gap-1 text-[11px] text-[#956316] font-medium">
-                <Lock className="h-3 w-3" />
-                Locked (has sales)
-              </span>
-            )}
+            <div className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 px-3 py-2 text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+              <Lock className="h-3.5 w-3.5 text-slate-400" />
+              <span>{code}</span>
+            </div>
+            <p className="text-[10px] text-slate-400">
+              Primary key cannot be modified to preserve historical sales and price integrity.
+            </p>
           </div>
-          <select
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            disabled={hasSales}
-            className={`w-full rounded-md border px-3 py-2 text-xs focus:outline-none transition-all ${
-              hasSales
-                ? 'border-[#DDE3DE] bg-[#F5F6F4] text-[#52615B] cursor-not-allowed'
-                : 'border-[#CCD5CD] bg-white text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30'
-            }`}
-          >
-            {availableUnits.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </select>
-          {hasSales ? (
-            <p className="mt-1 text-[11px] text-[#52615B]">
-              The unit cannot be changed because this product has already been sold (R-12).
-            </p>
-          ) : (
-            <p className="mt-1 text-[11px] text-[#52615B]">
-              Units can only be changed before the product is used in any sale.
-            </p>
-          )}
-        </div>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#DDE3DE]">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Update product'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          {/* Description */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Description <span className="text-rose-500">*</span>
+              </label>
+              <span className={`text-[10px] font-mono ${description.length >= 30 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                {description.length}/30
+              </span>
+            </div>
+            <input
+              type="text"
+              required
+              maxLength={30}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+            />
+          </div>
+
+          {/* Unit of Measurement */}
+          <div className="space-y-1">
+            <label className="block font-semibold text-slate-800 dark:text-slate-200">
+              Unit of Measurement <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value as any)}
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+            >
+              {PERMITTED_UNITS.map((u) => (
+                <option key={u.value} value={u.value}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

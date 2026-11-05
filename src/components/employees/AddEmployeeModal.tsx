@@ -1,271 +1,283 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import { addEmployeeAction } from '@/app/actions/employees';
-import type { DepartmentItem, JobItem } from '@/lib/data/employees';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { X, AlertCircle, Loader2 } from 'lucide-react';
+import { addEmployeeAction } from '@/app/actions/employees';
+import type { JobItem, DepartmentItem } from '@/lib/data/employees';
 
 interface AddEmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  departments: DepartmentItem[];
+  nextSuggestedEmpNo?: string;
   jobs: JobItem[];
-  onSuccess?: () => void;
+  departments: DepartmentItem[];
 }
 
 export function AddEmployeeModal({
   isOpen,
   onClose,
-  departments,
+  nextSuggestedEmpNo = '00065',
   jobs,
-  onSuccess,
+  departments,
 }: AddEmployeeModalProps) {
   const router = useRouter();
-
-  const getToday = () => new Date().toISOString().slice(0, 10);
 
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [gender, setGender] = useState<'M' | 'F'>('M');
   const [birthDate, setBirthDate] = useState('1995-01-01');
-  const [hireDate, setHireDate] = useState(getToday());
+  const [hireDate, setHireDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [jobCode, setJobCode] = useState(jobs[0]?.jobCode || '');
   const [deptCode, setDeptCode] = useState(departments[0]?.deptCode || '');
-  const [effDate, setEffDate] = useState(getToday());
-  const [salary, setSalary] = useState('25000');
+  const [salary, setSalary] = useState('45000');
 
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sync effDate with hireDate by default when hireDate changes
-  const handleHireDateChange = (val: string) => {
-    setHireDate(val);
-    setEffDate(val);
-  };
-
-  useEffect(() => {
-    if (jobs.length > 0 && !jobCode) setJobCode(jobs[0].jobCode);
-    if (departments.length > 0 && !deptCode) setDeptCode(departments[0].deptCode);
-  }, [jobs, departments, jobCode, deptCode]);
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setIsSubmitting(true);
+    setError(null);
 
+    const salNum = parseFloat(salary);
+    if (isNaN(salNum) || salNum <= 0) {
+      setError('Salary must be greater than zero.');
+      return;
+    }
+
+    if (!jobCode) {
+      setError('Please select an initial job position.');
+      return;
+    }
+
+    if (!deptCode) {
+      setError('Please select a department.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const res = await addEmployeeAction({
-        lastName,
-        firstName,
+        lastName: lastName.trim(),
+        firstName: firstName.trim(),
         gender,
         birthDate,
         hireDate,
         jobCode,
         deptCode,
-        salary: Number(salary),
-        effDate,
+        salary: salNum,
       });
 
       if (res.error) {
-        setErrorMsg(res.error);
+        setError(res.error);
         setIsSubmitting(false);
-      } else {
-        setIsSubmitting(false);
-        onClose();
-        if (onSuccess) onSuccess();
-        router.refresh();
+        return;
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Failed to add employee.');
+
+      setIsSubmitting(false);
+      onClose();
+      router.refresh();
+    } catch {
+      setError('An unexpected error occurred while creating employee.');
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Add Employee"
-      description="Create a new employee profile and their initial job history assignment."
-      maxWidth="lg"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {errorMsg && (
-          <div className="flex items-start gap-2.5 rounded-md border border-[#FDECEA] bg-[#FDECEA]/60 p-3 text-xs text-[#B42318]">
-            <AlertCircle className="h-4 w-4 shrink-0 text-[#B42318] mt-0.5" />
-            <p className="leading-relaxed">{errorMsg}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden font-sans">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 font-sans">
+              Add New Employee
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Sequence auto-assigned:{' '}
+              <span className="font-mono font-semibold text-[#001A2B] dark:text-blue-300">
+                {nextSuggestedEmpNo}
+              </span>
+            </p>
           </div>
-        )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-        {/* Section: Personal Information */}
-        <div className="space-y-3 border-b border-[#DDE3DE] pb-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#17231F] uppercase tracking-wider">
-              1. Employee Information
-            </span>
-            <span className="text-[11px] font-mono text-[#52615B]">
-              Emp No: Auto-assigned sequence
-            </span>
-          </div>
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Last name <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Last Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
+                maxLength={15}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="e.g. Santos"
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
               />
+              <span className="text-[10px] text-slate-400">Max 15 chars (VARCHAR(15))</span>
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                First name <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                First Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
+                maxLength={15}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="e.g. Maria"
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
               />
+              <span className="text-[10px] text-slate-400">Max 15 chars (VARCHAR(15))</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Gender <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Gender <span className="text-rose-500">*</span>
               </label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as 'M' | 'F')}
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] bg-white focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
               >
-                <option value="M">Male</option>
-                <option value="F">Female</option>
+                <option value="M">Male (M)</option>
+                <option value="F">Female (F)</option>
               </select>
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Birth date <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Birth Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Hire date <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Hire Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={hireDate}
-                onChange={(e) => handleHireDateChange(e.target.value)}
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
+                onChange={(e) => setHireDate(e.target.value)}
+                className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
               />
             </div>
           </div>
-        </div>
 
-        {/* Section: First Job Record */}
-        <div className="space-y-3">
-          <span className="text-xs font-semibold text-[#17231F] uppercase tracking-wider block">
-            2. Initial Job Record (JOBHISTORY)
-          </span>
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+              Initial Assignment & Compensation
+            </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Job position <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={jobCode}
-                onChange={(e) => setJobCode(e.target.value)}
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] bg-white focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-              >
-                {jobs.map((j) => (
-                  <option key={j.jobCode} value={j.jobCode}>
-                    {j.jobDesc} ({j.jobCode})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Department <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={deptCode}
-                onChange={(e) => setDeptCode(e.target.value)}
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] bg-white focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-              >
-                {departments.map((d) => (
-                  <option key={d.deptCode} value={d.deptCode}>
-                    {d.deptName} ({d.deptCode})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Job Position <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={jobCode}
+                  onChange={(e) => setJobCode(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
+                >
+                  {jobs.filter((j) => !j.isDeleted).map((j) => (
+                    <option key={j.jobCode} value={j.jobCode}>
+                      {j.jobCode} — {j.jobDesc}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Effective date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={effDate}
-                onChange={(e) => setEffDate(e.target.value)}
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs text-[#17231F] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-              />
-              <p className="text-[11px] text-[#52615B] mt-0.5">
-                Defaults to hire date. Cannot precede hire date.
-              </p>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Department <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={deptCode}
+                  onChange={(e) => setDeptCode(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
+                >
+                  {departments.filter((d) => !d.isDeleted).map((d) => (
+                    <option key={d.deptCode} value={d.deptCode}>
+                      {d.deptCode} — {d.deptName}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-[#17231F] mb-1">
-                Salary (PHP) <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Starting Monthly Salary (PHP) <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                required
-                value={salary}
-                onChange={(e) => setSalary(e.target.value)}
-                placeholder="25000.00"
-                className="w-full h-9 rounded-md border border-[#CCD5CD] px-3 text-xs font-mono text-[#17231F] focus:outline-none focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 transition-all"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">
+                  ₱
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1"
+                  required
+                  value={salary}
+                  onChange={(e) => setSalary(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-7 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-[#001A2B] focus:ring-1 focus:ring-[#001A2B]/40 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#DDE3DE]">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Add Employee'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          {/* Modal Actions Footer with #001A2B button */}
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-4 mt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-3.5 py-1.5 text-xs font-medium rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-1.5 text-xs font-medium rounded-md bg-[#001A2B] hover:bg-[#00263E] text-white shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>Save Employee</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

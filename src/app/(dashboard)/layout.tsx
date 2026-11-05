@@ -16,12 +16,12 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  const displayName = user.fullName || 'Jeptah Ashley Ildefonso';
+  const displayName = user.fullName || 'Administrator';
 
   return (
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden bg-bg text-text font-sans transition-colors duration-150">
-        {/* Left Rail: Collapsible Navigation Sidebar connected to user account */}
+        {/* Left Rail: Navigation Sidebar connected to user account */}
         <Sidebar userRole={user.role} userName={displayName} />
 
         {/* Center Main Channel */}
@@ -34,14 +34,17 @@ export default async function DashboardLayout({
 
             {/* Global Broadsheet Footer */}
             <footer className="w-full mt-auto bg-[#041a24] dark:bg-surface-1 text-white/80 dark:text-text-muted border-t border-[#041a24] dark:border-border select-none shrink-0 transition-colors duration-150">
-              <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
+              <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
                 <div className="flex items-center space-x-2.5">
-                  <span className="font-editorial italic text-base text-white dark:text-text font-normal">
-                    ElectronDB
+                  <div className="w-5 h-5 rounded bg-[#0284C7] flex items-center justify-center font-bold text-white text-[11px]">
+                    H
+                  </div>
+                  <span className="font-editorial text-sm text-white dark:text-text font-normal">
+                    Hope, Inc. ERP
                   </span>
                   <span className="text-white/30 dark:text-border-control">&bull;</span>
                   <span className="text-[10px] uppercase tracking-wider text-white/70 dark:text-text-muted font-mono">
-                    G4 HOPEERD &bull; MONITORING SYSTEM
+                    Enterprise Resource Planning &bull; 10 Tables &bull; 3 Roles
                   </span>
                 </div>
                 <div className="text-[10px] text-white/50 dark:text-text-faint tracking-wider">

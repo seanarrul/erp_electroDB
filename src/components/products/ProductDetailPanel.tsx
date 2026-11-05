@@ -233,7 +233,7 @@ export function ProductDetailPanel({
       {/* Inline SVG Price Trend (Shown when >= 2 price records) */}
       {product.priceHistory.length >= 2 && (
         <ProductPriceTrend
-          records={product.priceHistory.map((r) => ({
+          records={product.priceHistory.map((r: any) => ({
             effDate: r.effDate,
             unitPrice: r.unitPrice,
           }))}
@@ -266,7 +266,7 @@ export function ProductDetailPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E9EDEA] dark:divide-border">
-                {product.priceHistory.map((row, idx) => {
+                {product.priceHistory.map((row: any, idx: number) => {
                   const change = formatPriceChange(row.unitPrice, row.previousPrice);
                   const isCurrent = row.status === 'Current';
                   const isFuture = row.status === 'Future-dated';

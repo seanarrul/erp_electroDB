@@ -2,8 +2,9 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import type { UserRole, UserSession } from '@/lib/types';
+import type { UserRole, UserSession, UserAccount } from '@/lib/types';
 import {
   ensureAuthDb,
   findAccountByEmail,
@@ -11,6 +12,9 @@ import {
   insertAccount,
   hashPassword,
   verifyPassword,
+  getAllUsers,
+  toggleBlockUser,
+  updateUserRights,
 } from '@/lib/auth-db';
 
 /**
@@ -24,11 +28,16 @@ export async function getCurrentUser(): Promise<UserSession | null> {
 
   if (demoRole && demoEmail) {
     const account = findAccountByEmail(demoEmail);
+    if (account?.isBlocked) {
+      return null;
+    }
     return {
-      id: account ? `staff-${account.id}` : 'demo-user-id',
+      id: account?.userId || (account ? `staff-${account.id}` : 'demo-user-id'),
       email: demoEmail,
       role: account ? account.role : demoRole,
       fullName: account ? account.fullName : demoName || 'Staff Member',
+      isBlocked: account?.isBlocked,
+      rights: account?.rights || [],
     };
   }
 
@@ -42,7 +51,7 @@ export async function getCurrentUser(): Promise<UserSession | null> {
 
     if (error || !user) return null;
 
-    const role = (user.app_metadata?.role as UserRole) || 'admin';
+    const role = (user.app_metadata?.role as UserRole) || 'Admin';
     const fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
 
     return {
@@ -50,6 +59,7 @@ export async function getCurrentUser(): Promise<UserSession | null> {
       email: user.email || '',
       role,
       fullName,
+      rights: [],
     };
   } catch {
     return null;
@@ -73,6 +83,11 @@ export async function loginAction(formData: FormData) {
   const account = findAccountByEmail(email);
 
   if (account) {
+    // Check if user is blocked (§3.8)
+    if (account.isBlocked) {
+      return { error: 'Your account has been blocked by an administrator.' };
+    }
+
     // 2. Verify password against bcrypt hash
     const isValid = await verifyPassword(password, account.passwordHash);
     if (!isValid) {
@@ -84,7 +99,7 @@ export async function loginAction(formData: FormData) {
     cookieStore.set('hope_demo_role', account.role, {
       path: '/',
       httpOnly: true,
-      maxAge: 86400 * 7, // 7 days session
+      maxAge: 86400 * 7,
       sameSite: 'lax',
     });
     cookieStore.set('hope_demo_email', account.email, {
@@ -103,52 +118,44 @@ export async function loginAction(formData: FormData) {
     redirect('/');
   }
 
-  // 4. Fallback to Supabase Auth if account not in local auth.db
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  // Fallback demo accounts if running prototype mode
+  const demoFallback: Record<string, { role: UserRole; name: string }> = {
+    'superadmin@hope.com': { role: 'Superadmin', name: 'Michael Superadmin' },
+    'admin@hope.com': { role: 'Admin', name: 'Lisa Park' },
+    'user@hope.com': { role: 'User', name: 'Alex Rivera' },
+  };
 
-    if (error) {
-      return { error: 'Invalid email or password.' };
-    }
-
-    if (data.user) {
-      const cookieStore = await cookies();
-      cookieStore.delete('hope_demo_role');
-      cookieStore.delete('hope_demo_email');
-      cookieStore.delete('hope_demo_name');
-      redirect('/');
-    }
-  } catch {
-    return { error: 'Invalid email or password.' };
+  if (demoFallback[email]) {
+    const info = demoFallback[email];
+    const cookieStore = await cookies();
+    cookieStore.set('hope_demo_role', info.role, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
+    cookieStore.set('hope_demo_email', email, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
+    cookieStore.set('hope_demo_name', info.name, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
+    redirect('/');
   }
 
-  redirect('/');
+  return { error: 'Invalid email or password.' };
 }
 
 /**
- * Handles new staff account registration with bcrypt password hashing and auth.db persistence.
+ * Handles new account registration.
+ * In the Student Guide (§1.2 & §3.1, Fig 3):
+ * "New accounts are always created as User; Superadmin and Admin roles can only be assigned by existing administrators."
  */
 export async function registerAction(formData: FormData) {
-  const fullName = (formData.get('fullName') as string)?.trim();
+  const firstName = (formData.get('firstName') as string)?.trim() || '';
+  const lastName = (formData.get('lastName') as string)?.trim() || '';
+  const fullNameRaw = (formData.get('fullName') as string)?.trim();
+  const fullName = fullNameRaw || `${firstName} ${lastName}`.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
-  const role = ((formData.get('role') as string) || 'admin') as UserRole;
 
   if (!fullName || !email || !password) {
     return { error: 'Please provide full name, email address, and password.' };
   }
 
-  const validRoles: UserRole[] = ['admin', 'sales', 'cashier'];
-  if (!validRoles.includes(role)) {
-    return { error: 'Please select a valid staff role.' };
-  }
-
-  if (password.length < 6) {
-    return { error: 'Password must be at least 6 characters.' };
+  if (password.length < 4) {
+    return { error: 'Password must be at least 4 characters.' };
   }
 
   ensureAuthDb();
@@ -158,36 +165,19 @@ export async function registerAction(formData: FormData) {
     return { error: 'An account with this email address already exists. Please sign in.' };
   }
 
-  // 2. Hash password with bcrypt salt (unhackable, non-reversible)
+  // 2. Hash password with bcrypt salt
   const passwordHash = await hashPassword(password);
 
-  // 3. Persist new account to auth.db
+  // 3. New registrations strictly get role 'User'
   try {
-    insertAccount(email, passwordHash, fullName, role);
+    insertAccount(email, passwordHash, fullName, 'User');
   } catch (err: any) {
     return { error: err?.message || 'Failed to save account to database.' };
   }
 
-  // 4. Optional Supabase Auth sign-up in background
-  try {
-    const supabase = await createClient();
-    await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role,
-        },
-      },
-    });
-  } catch {
-    // Supabase offline fallback
-  }
-
-  // 5. Establish authenticated session immediately
+  // 4. Establish authenticated session immediately
   const cookieStore = await cookies();
-  cookieStore.set('hope_demo_role', role, {
+  cookieStore.set('hope_demo_role', 'User', {
     path: '/',
     httpOnly: true,
     maxAge: 86400 * 7,
@@ -210,18 +200,21 @@ export async function registerAction(formData: FormData) {
 }
 
 /**
- * Instant one-click demo login for defense panel and grading evaluations.
+ * Instant demo login for prototype evaluation (§3.1, Fig 4).
  */
-export async function demoLoginAction(role: UserRole) {
+export async function demoLoginAction(role: 'Superadmin' | 'Admin' | 'User' | UserRole) {
   const cookieStore = await cookies();
-  const emailMap: Record<UserRole, { email: string; name: string }> = {
-    admin: { email: 'admin@hope.demo', name: 'Maria Santos (Admin)' },
-    sales: { email: 'sales@hope.demo', name: 'Juan Reyes (Sales Rep)' },
-    cashier: { email: 'cashier@hope.demo', name: 'Carlos Dizon (Cashier)' },
+  const emailMap: Record<string, { email: string; name: string; role: UserRole }> = {
+    Superadmin: { email: 'superadmin@hope.com', name: 'Michael Superadmin', role: 'Superadmin' },
+    Admin: { email: 'admin@hope.com', name: 'Lisa Park', role: 'Admin' },
+    User: { email: 'user@hope.com', name: 'Alex Rivera', role: 'User' },
+    admin: { email: 'admin@hope.com', name: 'Lisa Park', role: 'Admin' },
+    sales: { email: 'user@hope.com', name: 'Alex Rivera', role: 'User' },
+    cashier: { email: 'user@hope.com', name: 'Alex Rivera', role: 'User' },
   };
 
-  const info = emailMap[role];
-  cookieStore.set('hope_demo_role', role, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
+  const info = emailMap[role] || emailMap.User;
+  cookieStore.set('hope_demo_role', info.role, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
   cookieStore.set('hope_demo_email', info.email, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
   cookieStore.set('hope_demo_name', info.name, { path: '/', httpOnly: true, maxAge: 86400 * 7, sameSite: 'lax' });
 
@@ -229,7 +222,7 @@ export async function demoLoginAction(role: UserRole) {
 }
 
 /**
- * Destroys session and returns to login.
+ * Destroys session and returns to public landing / login.
  */
 export async function logoutAction() {
   const cookieStore = await cookies();
@@ -244,5 +237,53 @@ export async function logoutAction() {
     // Ignore signout errors on client
   }
 
-  redirect('/login');
+  redirect('/');
+}
+
+// ========================================================================
+// USER MANAGEMENT ACTIONS (§3.8)
+// ========================================================================
+
+export async function fetchUsersAction(): Promise<{ users: UserAccount[]; error?: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'Superadmin' && user.role !== 'Admin' && user.role !== 'admin')) {
+      return { users: [], error: 'Access denied: Administrator privileges required.' };
+    }
+
+    const users = getAllUsers(user.role);
+    return { users };
+  } catch (err: any) {
+    return { users: [], error: err?.message || 'Failed to fetch users.' };
+  }
+}
+
+export async function toggleBlockUserAction(targetUserId: string): Promise<{ success: boolean; isBlocked?: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || (currentUser.role !== 'Superadmin' && currentUser.role !== 'Admin' && currentUser.role !== 'admin')) {
+      return { success: false, error: 'Access denied: Only administrators can block or unblock users.' };
+    }
+
+    const res = toggleBlockUser(targetUserId, currentUser.fullName || 'Admin');
+    revalidatePath('/users');
+    return res;
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to toggle block status.' };
+  }
+}
+
+export async function updateUserRightsAction(targetUserId: string, rightCodes: string[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || (currentUser.role !== 'Superadmin' && currentUser.role !== 'Admin' && currentUser.role !== 'admin')) {
+      return { success: false, error: 'Access denied: Only administrators can update user rights.' };
+    }
+
+    const res = updateUserRights(targetUserId, rightCodes, currentUser.fullName || 'Admin');
+    revalidatePath('/users');
+    return res;
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to update user rights.' };
+  }
 }

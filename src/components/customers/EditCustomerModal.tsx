@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateCustomerAction } from '@/app/actions/customers';
 import { Button } from '@/components/ui/Button';
-import { X, Edit2, AlertCircle } from 'lucide-react';
+import { X, Edit2, AlertCircle, Lock } from 'lucide-react';
 
 interface EditCustomerModalProps {
   isOpen: boolean;
@@ -13,7 +13,8 @@ interface EditCustomerModalProps {
     custNo: string | number;
     custName: string;
     address: string;
-    payTerms: string;
+    payterm?: string;
+    payTerms?: string;
   };
 }
 
@@ -26,9 +27,7 @@ export function EditCustomerModal({
 
   const [custName, setCustName] = useState(customer.custName);
   const [address, setAddress] = useState(customer.address);
-  const [payTerms, setPayTerms] = useState<'COD' | '30D' | '45D'>(
-    (customer.payTerms as any) || '30D'
-  );
+  const [payTerms, setPayTerms] = useState<'COD' | '30D' | '45D'>('30D');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -37,7 +36,12 @@ export function EditCustomerModal({
     if (isOpen) {
       setCustName(customer.custName);
       setAddress(customer.address);
-      setPayTerms((customer.payTerms as any) || '30D');
+      const initialTerm = (customer.payterm || customer.payTerms || '30D').toUpperCase();
+      if (initialTerm === 'COD' || initialTerm === '30D' || initialTerm === '45D') {
+        setPayTerms(initialTerm);
+      } else {
+        setPayTerms('30D');
+      }
       setErrorMsg(null);
     }
   }, [isOpen, customer]);
@@ -49,19 +53,27 @@ export function EditCustomerModal({
     setErrorMsg(null);
 
     if (!custName.trim()) {
-      setErrorMsg('Customer name is required (R-03).');
+      setErrorMsg('Customer name is required.');
+      return;
+    }
+    if (custName.trim().length > 20) {
+      setErrorMsg('Customer name cannot exceed 20 characters (Schema limit: VARCHAR(20)).');
       return;
     }
 
     if (!address.trim()) {
-      setErrorMsg('Customer address is required (R-03).');
+      setErrorMsg('Customer address is required.');
+      return;
+    }
+    if (address.trim().length > 50) {
+      setErrorMsg('Address cannot exceed 50 characters (Schema limit: VARCHAR(50)).');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const result = await updateCustomerAction({
-        custNo: customer.custNo,
+        custNo: String(customer.custNo),
         custName: custName.trim(),
         address: address.trim(),
         payTerms,
@@ -83,31 +95,31 @@ export function EditCustomerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17231F]/50 p-4 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
       <div
-        className="w-full max-w-md rounded-lg border border-[#DDE3DE] bg-white p-6 shadow-xl space-y-5"
+        className="w-full max-w-md rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#DDE3DE] pb-3">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <Edit2 className="h-4 w-4 text-[#245B48]" />
-            <h3 className="text-lg font-semibold text-[#17231F]">
+            <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Edit Customer
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-[#52615B] hover:text-[#17231F] p-1 rounded-md hover:bg-[#F0F3F0] transition-colors"
+            className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {errorMsg && (
-          <div className="rounded-md border border-[#FDECEA] bg-[#FDECEA]/60 p-3 text-xs text-[#B42318] flex items-center gap-2">
+          <div className="rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -116,68 +128,76 @@ export function EditCustomerModal({
         <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
           {/* Customer Number (Immutable) */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Customer no. (Read-only)
+            <label className="block font-semibold text-slate-800 dark:text-slate-200">
+              Customer No. (Immutable PK)
             </label>
-            <input
-              type="text"
-              disabled
-              value={customer.custNo}
-              className="w-full rounded-md border border-[#DDE3DE] bg-[#F5F6F4] px-3 py-2 text-xs font-mono text-[#52615B] cursor-not-allowed"
-            />
-            <p className="text-[10px] text-[#52615B]">
-              Primary key cannot be modified (R-11).
+            <div className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 px-3 py-2 text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+              <Lock className="h-3.5 w-3.5 text-slate-400" />
+              <span>{customer.custNo}</span>
+            </div>
+            <p className="text-[10px] text-slate-400">
+              Primary key cannot be modified to preserve relational integrity.
             </p>
           </div>
 
           {/* Customer Name */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Customer name <span className="text-rose-600">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Customer Name <span className="text-rose-500">*</span>
+              </label>
+              <span className={`text-[10px] font-mono ${custName.length >= 20 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                {custName.length}/20
+              </span>
+            </div>
             <input
               type="text"
               required
-              maxLength={120}
+              maxLength={20}
               value={custName}
               onChange={(e) => setCustName(e.target.value)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
             />
           </div>
 
           {/* Address */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Address <span className="text-rose-600">*</span>
-            </label>
-            <textarea
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Address <span className="text-rose-500">*</span>
+              </label>
+              <span className={`text-[10px] font-mono ${address.length >= 50 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                {address.length}/50
+              </span>
+            </div>
+            <input
+              type="text"
               required
-              rows={2}
-              maxLength={255}
+              maxLength={50}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
             />
           </div>
 
           {/* Payment Terms */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Payment term <span className="text-rose-600">*</span>
+            <label className="block font-semibold text-slate-800 dark:text-slate-200">
+              Payment Terms <span className="text-rose-500">*</span>
             </label>
             <select
               value={payTerms}
               onChange={(e) => setPayTerms(e.target.value as any)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
             >
-              <option value="COD">COD - Cash on Delivery</option>
-              <option value="30D">30D - Net 30 Days</option>
-              <option value="45D">45D - Net 45 Days</option>
+              <option value="30D">Net 30 (30D)</option>
+              <option value="45D">Net 45 (45D)</option>
+              <option value="COD">Cash on Delivery (COD)</option>
             </select>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 border-t border-[#DDE3DE] pt-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-4">
             <Button
               type="button"
               variant="outline"
@@ -192,8 +212,9 @@ export function EditCustomerModal({
               variant="primary"
               size="sm"
               disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isSubmitting ? 'Saving...' : 'Save changes'}
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </form>

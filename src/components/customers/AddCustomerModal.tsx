@@ -9,17 +9,17 @@ import { X, UserPlus, AlertCircle } from 'lucide-react';
 interface AddCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  nextSuggestedCustNo?: number;
+  nextSuggestedCustNo?: string;
 }
 
 export function AddCustomerModal({
   isOpen,
   onClose,
-  nextSuggestedCustNo = 1007,
+  nextSuggestedCustNo = 'C0083',
 }: AddCustomerModalProps) {
   const router = useRouter();
 
-  const [custNo, setCustNo] = useState(String(nextSuggestedCustNo));
+  const [custNo, setCustNo] = useState(nextSuggestedCustNo);
   const [custName, setCustName] = useState('');
   const [address, setAddress] = useState('');
   const [payTerms, setPayTerms] = useState<'COD' | '30D' | '45D'>('30D');
@@ -29,7 +29,7 @@ export function AddCustomerModal({
 
   useEffect(() => {
     if (isOpen) {
-      setCustNo(String(nextSuggestedCustNo));
+      setCustNo(nextSuggestedCustNo);
       setCustName('');
       setAddress('');
       setPayTerms('30D');
@@ -43,26 +43,38 @@ export function AddCustomerModal({
     e.preventDefault();
     setErrorMsg(null);
 
-    const parsedCustNo = parseInt(custNo, 10);
-    if (isNaN(parsedCustNo) || parsedCustNo <= 0) {
-      setErrorMsg('Customer number must be a positive integer.');
+    const cleanCustNo = custNo.trim().toUpperCase();
+    if (!cleanCustNo) {
+      setErrorMsg('Customer number is required.');
+      return;
+    }
+    if (cleanCustNo.length > 5) {
+      setErrorMsg('Customer number cannot exceed 5 characters (Schema limit: VARCHAR(5)).');
       return;
     }
 
     if (!custName.trim()) {
-      setErrorMsg('Customer name is required (R-03).');
+      setErrorMsg('Customer name is required.');
+      return;
+    }
+    if (custName.trim().length > 20) {
+      setErrorMsg('Customer name cannot exceed 20 characters (Schema limit: VARCHAR(20)).');
       return;
     }
 
     if (!address.trim()) {
-      setErrorMsg('Customer address is required (R-03).');
+      setErrorMsg('Customer address is required.');
+      return;
+    }
+    if (address.trim().length > 50) {
+      setErrorMsg('Address cannot exceed 50 characters (Schema limit: VARCHAR(50)).');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const result = await addCustomerAction({
-        custNo: parsedCustNo,
+        custNo: cleanCustNo,
         custName: custName.trim(),
         address: address.trim(),
         payTerms,
@@ -84,31 +96,31 @@ export function AddCustomerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17231F]/50 p-4 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
       <div
-        className="w-full max-w-md rounded-lg border border-[#DDE3DE] bg-white p-6 shadow-xl space-y-5"
+        className="w-full max-w-md rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#DDE3DE] pb-3">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4 text-[#245B48]" />
-            <h3 className="text-lg font-semibold text-[#17231F]">
+            <UserPlus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Add Customer
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-[#52615B] hover:text-[#17231F] p-1 rounded-md hover:bg-[#F0F3F0] transition-colors"
+            className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {errorMsg && (
-          <div className="rounded-md border border-[#FDECEA] bg-[#FDECEA]/60 p-3 text-xs text-[#B42318] flex items-center gap-2">
+          <div className="rounded-md border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -117,77 +129,89 @@ export function AddCustomerModal({
         <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
           {/* Customer Number */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Customer no. <span className="text-rose-600">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Customer No. <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono">Max 5 chars (PK)</span>
+            </div>
             <input
-              type="number"
-              min="1"
-              step="1"
+              type="text"
               required
+              maxLength={5}
               value={custNo}
-              onChange={(e) => setCustNo(e.target.value)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs font-mono text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
-              placeholder="e.g. 1007"
+              onChange={(e) => setCustNo(e.target.value.toUpperCase())}
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-mono uppercase text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              placeholder="e.g. C0083"
             />
-            <p className="text-[10px] text-[#52615B]">
-              Unique primary key (custNo). Entered once, cannot be modified later.
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              Canonical Hope format: C followed by 4 digits (e.g. C0001 to C0082).
             </p>
           </div>
 
           {/* Customer Name */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Customer name <span className="text-rose-600">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Customer Name <span className="text-rose-500">*</span>
+              </label>
+              <span className={`text-[10px] font-mono ${custName.length >= 20 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                {custName.length}/20
+              </span>
+            </div>
             <input
               type="text"
               required
-              maxLength={120}
+              maxLength={20}
               value={custName}
               onChange={(e) => setCustName(e.target.value)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
-              placeholder="e.g. Nexus Tech Hub Cafe"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              placeholder="e.g. Acme Corporation"
             />
           </div>
 
           {/* Address */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Address <span className="text-rose-600">*</span>
-            </label>
-            <textarea
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                Address <span className="text-rose-500">*</span>
+              </label>
+              <span className={`text-[10px] font-mono ${address.length >= 50 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                {address.length}/50
+              </span>
+            </div>
+            <input
+              type="text"
               required
-              rows={2}
-              maxLength={255}
+              maxLength={50}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
-              placeholder="Single-line address including city/state"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              placeholder="e.g. 123 Main St, Metro City"
             />
           </div>
 
           {/* Payment Terms */}
           <div className="space-y-1">
-            <label className="block font-semibold text-[#17231F]">
-              Payment term <span className="text-rose-600">*</span>
+            <label className="block font-semibold text-slate-800 dark:text-slate-200">
+              Payment Terms <span className="text-rose-500">*</span>
             </label>
             <select
               value={payTerms}
               onChange={(e) => setPayTerms(e.target.value as any)}
-              className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
             >
-              <option value="COD">COD - Cash on Delivery</option>
-              <option value="30D">30D - Net 30 Days</option>
-              <option value="45D">45D - Net 45 Days</option>
+              <option value="30D">Net 30 (30D)</option>
+              <option value="45D">Net 45 (45D)</option>
+              <option value="COD">Cash on Delivery (COD)</option>
             </select>
-            <p className="text-[10px] text-[#52615B]">
-              Permitted terms: COD, 30D, 45D (R-04).
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              Enforced by database check constraint: payterm IN (&apos;COD&apos;, &apos;30D&apos;, &apos;45D&apos;).
             </p>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 border-t border-[#DDE3DE] pt-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-4">
             <Button
               type="button"
               variant="outline"
@@ -202,6 +226,7 @@ export function AddCustomerModal({
               variant="primary"
               size="sm"
               disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? 'Saving...' : 'Add Customer'}
             </Button>

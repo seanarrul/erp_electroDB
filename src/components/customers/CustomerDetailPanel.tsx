@@ -270,7 +270,7 @@ export function CustomerDetailPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E9EDEA]">
-                {paymentHistory.map((p) => (
+                {paymentHistory.map((p: any) => (
                   <tr key={p.orNo} className="hover:bg-[#F5F6F4] transition-colors">
                     <td className="py-2.5 px-3 text-[#17231F] whitespace-nowrap">
                       {formatDate(p.payDate)}
