@@ -31,3 +31,33 @@ The SuperAdmin functionality is currently under production and is not yet availa
 During the testing process, several limitations were identified in the authentication and user management sections. These include the absence of dedicated Admin testing credentials, Customer Login functionality, employee login activity monitoring, and the ongoing development of the SuperAdmin feature.
 
 Further testing and verification are recommended once the missing functionalities have been implemented.
+
+WEBSITE SUGGESTION REPORT
+
+Title: Restricted Access to Employee Login History
+
+Module: Authentication and User Management
+
+Category: Feature Suggestion
+
+Priority: Medium
+
+Description:
+
+It is recommended that the Login History interface should only be accessible to Admin and SuperAdmin accounts. This will ensure that employee login records and activity information are restricted to authorized personnel.
+
+The Login History UI should allow authorized administrators to view employee login dates, logout times, last recorded activity, and current session status.
+
+Regular employees and customer accounts should not have access to this interface to maintain the confidentiality and security of employee activity records.
+
+Expected Behavior:
+
+- Admin accounts can access the Login History UI.
+- SuperAdmin accounts can access the Login History UI.
+- Regular employee accounts cannot access the Login History UI.
+- Customer accounts cannot access the Login History UI.
+- Unauthorized users should be prevented from accessing the login history through both the website interface and direct database/API requests.
+
+Recommendation:
+
+Implement role-based access control (RBAC) to ensure that only authorized Admin and SuperAdmin users can view employee login history. 
