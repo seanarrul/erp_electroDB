@@ -1,0 +1,63 @@
+# Website Testing Report By DB Admin – Authentication and User Management
+
+## 1. Admin Registration and Login
+**Status:** For Review
+
+**Description:**
+The Admin login and registration functionality currently does not have a designated Gmail account for testing purposes. Additionally, after completing the registration process, the system automatically redirects the user to the Home Dashboard without an additional verification or confirmation step.
+
+## 2. Customer Login Access
+**Status:** Feature Not Available
+
+**Description:**
+There is currently no separate Customer Login functionality. A dedicated customer account access system is needed, where customers can log in and access only their designated dashboard.
+
+## 3. Employee Login History and Activity Monitoring
+**Status:** Feature Not Available
+
+**Description:**
+The system currently does not have a database or monitoring feature for login history. There is no available record to determine whether an employee is currently active or inactive, nor is there a visible history of employee login activities.
+
+## 4. SuperAdmin Access
+**Status:** Under Production
+
+**Description:**
+The SuperAdmin functionality is currently under production and is not yet available for testing. Further testing will be conducted once the feature has been completed and deployed.
+
+---
+
+## Overall Testing Summary
+
+During the testing process, several limitations were identified in the authentication and user management sections. These include the absence of dedicated Admin testing credentials, Customer Login functionality, employee login activity monitoring, and the ongoing development of the SuperAdmin feature.
+
+Further testing and verification are recommended once the missing functionalities have been implemented.
+
+WEBSITE SUGGESTION REPORT
+
+Title: Restricted Access to Employee Login History
+
+Module: Authentication and User Management
+
+Category: Feature Suggestion
+
+Priority: Medium
+
+Description:
+
+It is recommended that the Login History interface should only be accessible to Admin and SuperAdmin accounts. This will ensure that employee login records and activity information are restricted to authorized personnel.
+
+The Login History UI should allow authorized administrators to view employee login dates, logout times, last recorded activity, and current session status.
+
+Regular employees and customer accounts should not have access to this interface to maintain the confidentiality and security of employee activity records.
+
+Expected Behavior:
+
+- Admin accounts can access the Login History UI.
+- SuperAdmin accounts can access the Login History UI.
+- Regular employee accounts cannot access the Login History UI.
+- Customer accounts cannot access the Login History UI.
+- Unauthorized users should be prevented from accessing the login history through both the website interface and direct database/API requests.
+
+Recommendation:
+
+Implement role-based access control (RBAC) to ensure that only authorized Admin and SuperAdmin users can view employee login history. 

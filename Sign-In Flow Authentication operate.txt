@@ -1,0 +1,7 @@
+Sign-In Flow: Authentication operates smoothly without unhandled errors or login failures.
+
+Missing Non-Employee Registration: The sign-up/registration flow only caters to employee accounts. There is currently no pathway or role selector for non-employee users (e.g., external clients, guest users, or customers).
+
+Missing Password Reset: There is no
+
+Notice: Registration fails during valid submission attempts, even when using the correct email addresses and passwords. (Just an observation on my end it maybe not an major issue)
