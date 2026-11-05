@@ -1,0 +1,50 @@
+WEBSITE FEATURE SUGGESTION REPORT
+
+Title: Supabase AuthDB Integration and Login History Dashboard
+
+Module: Authentication and User Management
+
+Category: Feature Enhancement / Database Integration
+
+Priority: Medium
+
+Description:
+
+an authentication database (authdb) has already been created and configured in Supabase. The proposed improvement is to integrate the existing database with the website and make its recorded authentication information accessible through a dedicated Login History interface.
+
+The website should provide an interactive Login History page that can only be accessed by authenticated Admin and SuperAdmin accounts.
+
+Proposed Features:
+
+1. Login History Interface
+- Display employee login records.
+- Show login dates and timestamps.
+- Display logout dates and timestamps, if available.
+- Show employee account information.
+- Display available session activity information.
+
+2. Role-Based Access
+- Admin accounts can access the Login History page.
+- SuperAdmin accounts can access the Login History page.
+- Regular employee and customer accounts cannot access the interface.
+- Unauthorized access should also be prevented through backend and database security policies.
+
+3. Interactive Dashboard
+- Provide a searchable employee login history.
+- Allow filtering by employee and date.
+- Display the latest login activities.
+- Provide a clear view of available employee session information.
+
+4. Supabase Integration
+- Connect the existing authdb records to the website.
+- Retrieve authentication records from Supabase.
+- Display the retrieved information dynamically in the Login History interface.
+- Ensure that database access follows the appropriate security and authorization policies.
+
+Expected Result:
+
+The website should have a dedicated and functional Login History page where Admin and SuperAdmin users can monitor available employee authentication records without directly accessing the Supabase dashboard.
+
+Recommendation:
+
+Utilize the existing Supabase authdb instead of creating a duplicate database. Coordinate with the development team to identify the existing tables, available authentication records, and the appropriate integration method.
