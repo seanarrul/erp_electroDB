@@ -60,4 +60,4 @@ Expected Behavior:
 
 Recommendation:
 
-Implement role-based access control (RBAC) to ensure that only authorized Admin and SuperAdmin users can view employee login history.
+Implement role-based access control (RBAC) to ensure that only authorized Admin and SuperAdmin users can view employee login history. 
