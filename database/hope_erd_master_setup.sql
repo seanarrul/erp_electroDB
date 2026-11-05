@@ -1,1070 +1,1582 @@
 -- ========================================================================
 -- HOPE Group4: MASTER POSTGRESQL / SUPABASE SETUP SCRIPT
--- Strict 10-Table Schema + Official PartialHOPEDB Coursework Dataset
+-- STRICT RULE: Canonical Jeremias C. Esperanza - NEU CCS Coursework Dataset
+-- Includes:
+--   1. Strict 10-Table Canonical Relational Schema
+--   2. 100% Faithful Coursework Dataset (928 Records)
+--   3. Audit Trail Engine (audit_log table, stamp columns, is_deleted flag)
+--   4. Soft Delete Enforcers & Append-Only History Triggers
+--   5. Active Views (<table>_active) & Legacy Compatibility Views
+--   6. Analytical Views & High-Performance get_home_summary RPC
 -- ========================================================================
 
--- Cleanup
-DROP VIEW IF EXISTS personnel CASCADE;
-DROP VIEW IF EXISTS receiptDetail CASCADE;
-DROP VIEW IF EXISTS priceHist CASCADE;
-DROP VIEW IF EXISTS v_sales_details_priced CASCADE;
-DROP VIEW IF EXISTS v_sales_with_dept CASCADE;
-DROP VIEW IF EXISTS v_sales_summary CASCADE;
-DROP VIEW IF EXISTS v_product_sales_analytics CASCADE;
-DROP VIEW IF EXISTS v_customer_receivables CASCADE;
-DROP VIEW IF EXISTS v_employee_current_status CASCADE;
-DROP VIEW IF EXISTS v_price_history CASCADE;
-DROP VIEW IF EXISTS v_product_overview CASCADE;
-DROP VIEW IF EXISTS v_customer_overview CASCADE;
-DROP VIEW IF EXISTS v_customer_payments CASCADE;
-DROP VIEW IF EXISTS v_sale_lines CASCADE;
+-- Hope, Inc. Database 
+-- Fictitious Company
+-- Conceptualized by JEREMIAS C. ESPERANZA - NEU CCS
+-- Information Management Course
 
-DROP TABLE IF EXISTS PAYMENT CASCADE;
-DROP TABLE IF EXISTS SALESDETAIL CASCADE;
-DROP TABLE IF EXISTS SALES CASCADE;
-DROP TABLE IF EXISTS PRICEHIST CASCADE;
-DROP TABLE IF EXISTS PRODUCT CASCADE;
-DROP TABLE IF EXISTS CUSTOMER CASCADE;
-DROP TABLE IF EXISTS JOBHISTORY CASCADE;
-DROP TABLE IF EXISTS DEPARTMENT CASCADE;
-DROP TABLE IF EXISTS JOB CASCADE;
-DROP TABLE IF EXISTS EMPLOYEE CASCADE;
+DROP TABLE IF EXISTS employee CASCADE;
+DROP TABLE IF EXISTS department CASCADE;
+DROP TABLE IF EXISTS job CASCADE;
+DROP TABLE IF EXISTS jobHistory CASCADE;
+DROP TABLE IF EXISTS customer CASCADE;
+DROP TABLE IF EXISTS sales CASCADE;
+DROP TABLE IF EXISTS salesDetail CASCADE;
+DROP TABLE IF EXISTS product CASCADE;
+DROP TABLE IF EXISTS payment CASCADE;
+DROP TABLE IF EXISTS priceHist CASCADE;
+DROP TABLE IF EXISTS audit_log CASCADE;
 
--- 1. DEPARTMENT
-CREATE TABLE DEPARTMENT (
-    deptCode VARCHAR(10) NOT NULL PRIMARY KEY,
-    deptName VARCHAR(100) NOT NULL UNIQUE
+-- Create customer table 
+CREATE TABLE employee (empno VARCHAR(5) NOT NULL PRIMARY KEY, 
+												lastname VARCHAR(15),  
+												firstname VARCHAR(15), 
+												gender CHAR(1) CONSTRAINT gender_ck CHECK (gender in ('M','F')), 
+												birthdate DATE, 
+												hiredate DATE, 
+												sepDate DATE);
+
+-- Insert employee records
+INSERT INTO employee VALUES('00001','Smith', 'John', 'M','1985-02-20','2010-05-11', NULL);
+INSERT INTO employee VALUES('00003','Smith', 'Jane', 'F','1990-05-16','2010-05-11', NULL);
+INSERT INTO employee VALUES('00005','King', 'Don', 'M','1986-02-14','2010-06-23', NULL);
+INSERT INTO employee VALUES('00007','Jenskin', 'Floyd', 'M','1990-02-20','2010-05-30', NULL);
+INSERT INTO employee VALUES('00009','Cerudo', 'Bambie', 'F','1983-06-23','2010-05-30', NULL);
+INSERT INTO employee VALUES('00011','Davis', 'Tom', 'M','1989-12-16','2010-06-30', NULL);
+INSERT INTO employee VALUES('00013','Morris', 'Olive', 'F','1991-07-21','2010-06-30', NULL);
+INSERT INTO employee VALUES('00015','Zulueta', 'Maggie', 'F','1990-08-03','2010-07-05', '2011-03-30');
+INSERT INTO employee VALUES('00017','Celestino', 'Nelia', 'F','1984-10-24','2010-07-05', NULL);
+INSERT INTO employee VALUES('00019','Esperanza', 'Nehemiah', 'M','1982-02-21','2010-07-05', '2014-04-28');
+INSERT INTO employee VALUES('00021','Manchester', 'Chelie', 'F','1988-12-07','2010-07-05', NULL);
+INSERT INTO employee VALUES('00023','Kline', 'Nicholas', 'M','1992-01-21','2010-07-05', '2010-12-23');
+INSERT INTO employee VALUES('00025','Macapagal', 'Ivy', 'F','1992-04-30','2010-07-05', NULL);
+INSERT INTO employee VALUES('00027','Blanche', 'Ernest', 'M','1986-12-21','2010-07-05', NULL);
+INSERT INTO employee VALUES('00029','Chua', 'Evangeline', 'F','1989-03-10','2010-07-05', NULL);
+INSERT INTO employee VALUES('00031','Lancaster', 'Greta', 'F','1987-08-17','2010-07-05', NULL);
+INSERT INTO employee VALUES('00033','Parks', 'Nigel', 'M','1993-06-23','2010-07-05', NULL);
+INSERT INTO employee VALUES('00035','Carlston', 'Voltaire', 'F','1985-06-12','2010-07-21', NULL);
+INSERT INTO employee VALUES('00037','Silva', 'Yves', 'M','1988-09-21','2010-07-21', NULL);
+INSERT INTO employee VALUES('00039','Geisert', 'William', 'M','1980-03-03','2010-07-21', NULL);
+INSERT INTO employee VALUES('00041','Darwin', 'Helena', 'F','1978-11-08','2010-09-01', NULL);
+INSERT INTO employee VALUES('00043','Love', 'Queen', 'F','1983-11-29','2010-09-01', NULL);
+INSERT INTO employee VALUES('00045','Raven', 'Danny', 'M','1984-02-15','2010-12-03', NULL);
+INSERT INTO employee VALUES('00047','Devito', 'Clint', 'M','1981-06-07','2010-12-03', NULL);
+INSERT INTO employee VALUES('00049','Irving', 'Nancy', 'F','1987-09-19','2010-12-03', NULL);
+INSERT INTO employee VALUES('00051','Baltimore', 'Fergie', 'F','1986-10-10','2011-01-05', NULL);
+INSERT INTO employee VALUES('00053','Jones', 'Veronica', 'F','1983-05-01','2011-01-05', '2011-03-30');
+INSERT INTO employee VALUES('00055','Travis', 'Ursula', 'F','1987-06-07','2011-01-05', NULL);
+INSERT INTO employee VALUES('00057','Orleans', 'Sylvia', 'F','1987-01-28','2011-01-05', NULL);
+INSERT INTO employee VALUES('00059','Sy', 'Alice', 'F','1984-08-13','2011-01-05', '2011-04-20');
+INSERT INTO employee VALUES('00061','De Leon', 'Girlie', 'F','1983-07-27','2011-01-05', NULL);
+INSERT INTO employee VALUES('00063','Grant', 'Albert', 'M','1979-05-05','2011-01-05', NULL);
+
+-- Create DEPARTMENT
+CREATE TABLE department (deptCode VARCHAR(3) NOT NULL,
+												  deptName VARCHAR (20), 
+												  PRIMARY KEY (deptCode)) ;
+
+INSERT INTO department  VALUES  ('ACT', 'Accounting'),
+															  ('BR1', 'Sales Branch 1'),
+															  ('BR2', 'Sales Branch 2'),
+															  ('EXC', 'Executive'),
+															  ('HRD', 'Human Resource'),
+															  ('IT', 'Information Tech'),
+															  ('PAY', 'Payroll'), 
+															  ('WHS', 'Warehouse');
+
+
+-- Create JOB 
+CREATE TABLE job (jobCode VARCHAR(4) NOT NULL PRIMARY KEY, 
+									 jobDesc VARCHAR(20)) ;
+
+-- Insert rows JOB 
+INSERT INTO job VALUES('PRES','President');
+INSERT INTO job VALUES('VP','Vice president');
+INSERT INTO job VALUES('MGR','Manager');
+INSERT INTO job VALUES('SA1','Sales Agent 1');
+INSERT INTO job VALUES('SA2','Sales Agent 2');
+INSERT INTO job VALUES('SPVR','Supervisor');
+INSERT INTO job VALUES('CLK1','Clerk 1');
+INSERT INTO job VALUES('CLK2','Clerk 2');
+INSERT INTO job VALUES('PR1','Programmer 1');
+INSERT INTO job VALUES('PR2','Programmer 2');
+INSERT INTO job VALUES('ANYS','Analyst');
+INSERT INTO job VALUES('ACCT','Accountant');
+INSERT INTO job VALUES('WMAN','Warehouse man');
+INSERT INTO job VALUES('HRS','HR Specialist');
+
+
+-- Create jobHistory
+CREATE TABLE jobHistory (empNo VARCHAR(5) NOT NULL REFERENCES employee,
+												  jobCode VARCHAR(4) NOT NULL REFERENCES job, 
+												  effDate DATE NOT NULL , 
+												  salary DECIMAL(10,2) CONSTRAINT salary_ck 
+												  CHECK (salary >= 0.0), deptCode VARCHAR(4),
+												  PRIMARY KEY (empNo, jobCode,effDate), 
+												  FOREIGN KEY (deptCode) REFERENCES department);
+
+-- Insert rows jobHistory
+INSERT INTO jobHistory VALUES('00001','PR1', '2010-05-11', 48000,'IT');
+INSERT INTO jobHistory VALUES('00001','PR2', '2010-12-01', 50000,'IT');
+INSERT INTO jobHistory VALUES('00003','PR2', '2010-05-11', 50000,'IT');
+INSERT INTO jobHistory VALUES('00003','ANYS', '2010-12-01', 55000,'IT');
+INSERT INTO jobHistory VALUES('00005','SA1', '2010-06-23', 36000,'BR1');
+INSERT INTO jobHistory VALUES('00005','SA2', '2011-01-02', 38000,'BR1');
+INSERT INTO jobHistory VALUES('00007','ANYS', '2010-05-30', 55000,'IT');
+INSERT INTO jobHistory VALUES('00007','MGR', '2011-01-02', 60000,'IT');
+INSERT INTO jobHistory VALUES('00007','VP', '2011-03-31', 80000,'IT');
+INSERT INTO jobHistory VALUES('00009','ACCT', '2010-05-30', 50000,'ACT');
+INSERT INTO jobHistory VALUES('00009','MGR', '2010-12-01', 60000,'ACT');
+INSERT INTO jobHistory VALUES('00011','PRES', '2010-06-30', 100000,'EXC');
+INSERT INTO jobHistory VALUES('00013','MGR', '2010-06-30', 60000,'BR1');
+INSERT INTO jobHistory VALUES('00013','VP', '2011-01-02', 80000,'BR2');
+INSERT INTO jobHistory VALUES('00013','VP', '2011-03-01', 80000,'BR1');
+INSERT INTO jobHistory VALUES('00015','SA1', '2010-07-05', 36000,'BR1');
+INSERT INTO jobHistory VALUES('00017','SA1', '2010-07-05', 36000,'BR1');
+INSERT INTO jobHistory VALUES('00017','SPVR', '2011-01-12', 40000,'BR1');
+INSERT INTO jobHistory VALUES('00019','SA1', '2010-07-05', 36000,'BR1');
+INSERT INTO jobHistory VALUES('00019','SA2', '2011-01-12', 38000,'BR1');
+INSERT INTO jobHistory VALUES('00021','SA1', '2010-07-05', 36000,'BR1');
+INSERT INTO jobHistory VALUES('00021','SA2', '2011-01-12', 38000,'BR1');
+INSERT INTO jobHistory VALUES('00023','MGR', '2010-07-05', 60000,'HRD');
+INSERT INTO jobHistory VALUES('00025','SA1', '2010-07-05', 36000,'BR1');
+INSERT INTO jobHistory VALUES('00027','SA1', '2010-07-05', 36000,'BR1');
+INSERT INTO jobHistory VALUES('00027','SA2', '2011-01-12', 38000,'BR1');
+INSERT INTO jobHistory VALUES('00029','SPVR', '2010-07-05', 40000,'BR1');
+INSERT INTO jobHistory VALUES('00029','MGR', '2011-01-02', 60000,'BR1');
+INSERT INTO jobHistory VALUES('00031','WMAN', '2010-07-05', 35000,'WHS');
+INSERT INTO jobHistory VALUES('00031','WMAN', '2011-12-01', 40000,'WHS');
+INSERT INTO jobHistory VALUES('00033','WMAN', '2010-07-05', 35000,'WHS');
+INSERT INTO jobHistory VALUES('00035','ACCT', '2010-07-21', 50000,'PAY');
+INSERT INTO jobHistory VALUES('00037','CLK1', '2010-07-21', 34000,'PAY');
+INSERT INTO jobHistory VALUES('00039','CLK1', '2010-07-21', 34000,'PAY');
+INSERT INTO jobHistory VALUES('00039','CLK2', '2012-06-30', 35000,'EXC');
+INSERT INTO jobHistory VALUES('00041','SPVR', '2010-09-01', 40000,'WHS');
+INSERT INTO jobHistory VALUES('00041','MGR', '2011-06-01', 60000,'WHS');
+INSERT INTO jobHistory VALUES('00043','CLK2', '2010-09-01', 35000,'EXC');
+INSERT INTO jobHistory VALUES('00043','SPVR', '2011-06-01', 35000,'EXC');
+INSERT INTO jobHistory VALUES('00043','SPVR', '2011-01-12', 35000,'HRD');
+INSERT INTO jobHistory VALUES('00045','SPVR', '2010-12-03', 40000,'ACT');
+INSERT INTO jobHistory VALUES('00047','CLK1', '2010-12-03', 34000,'EXC');
+INSERT INTO jobHistory VALUES('00047','CLK2', '2011-01-12', 35000,'HRD');
+INSERT INTO jobHistory VALUES('00049','MGR', '2010-12-03', 60000,'BR2');
+INSERT INTO jobHistory VALUES('00051','SA1', '2011-01-05', 36000,'BR2');
+INSERT INTO jobHistory VALUES('00053','SA1', '2011-01-05', 36000,'BR2');
+INSERT INTO jobHistory VALUES('00055','SA1', '2011-01-05', 36000,'BR2');
+INSERT INTO jobHistory VALUES('00055','SA2', '2011-03-01', 38000,'BR2');
+INSERT INTO jobHistory VALUES('00057','SA1', '2011-01-05', 36000,'BR2');
+INSERT INTO jobHistory VALUES('00057','PR1', '2011-06-01', 48000,'BR2');
+INSERT INTO jobHistory VALUES('00059','SA1', '2011-01-05', 36000,'BR2');
+INSERT INTO jobHistory VALUES('00061','SA1', '2011-01-05', 36000,'BR2');
+INSERT INTO jobHistory VALUES('00063','SA2', '2011-01-05', 38000,'BR2');
+INSERT INTO jobHistory VALUES('00063','SPVR', '2011-06-01', 40000,'BR2');
+
+select * from jobHistory;
+
+-- Create table Customer
+CREATE TABLE customer (custno VARCHAR(5) NOT NULL PRIMARY KEY, 
+											   custname VARCHAR(20), 
+											   address VARCHAR(50), 
+											   payterm VARCHAR(3) CONSTRAINT pay_ck 
+											   CHECK (payterm IN ('COD', '30D', '45D'))) ;
+
+-- Insert customer records
+INSERT INTO customer VALUES('C0001','Globus Medical, Inc', '2560 Gen Armistead Ave Audubon CA 94031', '30D');
+INSERT INTO customer VALUES('C0002','RF Industries, Inc', '7610 Miramar Rd San Diego, CA 92602', '45D');
+INSERT INTO customer VALUES('C0003','Trisha Macdowell', '7642 Clairemont Mesa Blvd San Diego CA 90321', 'COD');
+INSERT INTO customer VALUES('C0004','HMS Holdings, Inc', '1000 So Fremont Ave, Suite 225 Alhambara CA 91303', '45D');
+INSERT INTO customer VALUES('C0005','Christian Andersen', '1120 Lincoln St Suite 809 Sacramento CA 95815', 'COD');
+INSERT INTO customer VALUES('C0006','Astronics, Inc', '2 Orion Aliso Viejo, CA 92656', '30D');
+INSERT INTO customer VALUES('C0007','Morgan Alegore', '2 Goodyear Irvine, CA 92618', 'COD');
+INSERT INTO customer VALUES('C0008','Abaxis, Inc', '3240 Whipple Rd, Union City, CA 94587', '30D');
+INSERT INTO customer VALUES('C0009','Landec Corp.', '3603 Haven Avenue Menlo Park, CA 94025', '30D');
+INSERT INTO customer VALUES('C0010','SMP Corp.', '3718 Northern Long Island NY 12528', '45D');
+INSERT INTO customer VALUES('C0011','B&G Foods', '4 Gatehall Dr., Ste. 110 Parsippany, NJ 07054', '45D');
+INSERT INTO customer VALUES('C0012','Dexter Santos', '2739 Rebeiro Ave, Santa Clara, CA 95051', 'COD');
+INSERT INTO customer VALUES('C0013','Health Stream', '209 10th Ave, South Suite 450 Nashville Tennessee', '45D');
+INSERT INTO customer VALUES('C0014','InSync Training LLC', 'P.O. Box 3122 Roanoke, VA 24015', '30D');
+INSERT INTO customer VALUES('C0015','Bespoke Education', '8205 Santa Monica Blvd, Suite 365 W HWood CA 90046', '30D');
+INSERT INTO customer VALUES('C0016','Peri Solutions', '2880 Zanker Road San Jose CA 95101', '30D');
+INSERT INTO customer VALUES('C0017','Janet Lim', '800 N. State College Blvd. Fullerton, CA 92831', 'COD');
+INSERT INTO customer VALUES('C0018','Nicole Hutchison', '200 Lincoln Ave, Salinas, CA 93901', 'COD');
+INSERT INTO customer VALUES('C0019','Brandon Drucker', '65 West Alisal St., # 101, Salinas, CA 93901', 'COD');
+INSERT INTO customer VALUES('C0020','Eugene Whitaker', '45 Fremont Street, Suite 2000 San Frans, CA 9410', 'COD');
+INSERT INTO customer VALUES('C0021','Touch Suite', '1081 Holland Dr. Boca Raton, FL 33487', '30D');
+INSERT INTO customer VALUES('C0022','CallFire', '1410 2nd St., Suite 200 Santa Monica, CA 90401', '45D');
+INSERT INTO customer VALUES('C0023','ISBX Corp', '3415 S. Sepulveda Blvd. 1250 Los Angeles, CA 90034', '30D');
+INSERT INTO customer VALUES('C0024','Factual', '1999 Avenue of the Stars Los Angeles, CA 90067 ', '30D');
+INSERT INTO customer VALUES('C0025','Predixion', '31910 Del Obispo San Juan Capistrano, CA 92675', '45D');
+INSERT INTO customer VALUES('C0026','Datapop', '5762 W Jefferson Blvd, Los Angeles, CA 90016', '45D');
+INSERT INTO customer VALUES('C0027','SA Photonics, Inc', '130 Knowles Dr, Los Gatos, CA 95032', '30D');
+INSERT INTO customer VALUES('C0028','Acumen Bldg Entp', '7770 Pardee Lane, Ste. 200 Oakland, CA 94621', '30D');
+INSERT INTO customer VALUES('C0029','IMCorp', '50 Utopia Road Manchester, CT 06042', '30D');
+INSERT INTO customer VALUES('C0030','Brady and Assoc.', '3710 Ruffin Rd, San Diego, CA 90401', '30D');
+INSERT INTO customer VALUES('C0031','Yello Hammer LLC', '111 W 28th St, New York, NY 10001', '30D');
+INSERT INTO customer VALUES('C0032','Conductor', '2 Park Ave, New York, NY 10016', '30D');
+INSERT INTO customer VALUES('C0033','Quantum Networks', '323 West 39th Street 11th Flr NY 10018', '45D');
+INSERT INTO customer VALUES('C0034','Refinery29', '225 Broadway NY 10007', '45D');
+INSERT INTO customer VALUES('C0035','Gravity Media', '104 W 27th St #11d NY 10001', '30D');
+INSERT INTO customer VALUES('C0036','Regal wings', '244 Fifth Avenue, Suite 200 New York, NY 10001', '45D');
+INSERT INTO customer VALUES('C0037','33Across', '229 W 28th St, New York, NY 10001', '45D');
+INSERT INTO customer VALUES('C0038','RCS Capital', '405 Park Avenue New York, NY 1002', '30D');
+INSERT INTO customer VALUES('C0039','OnDeck', '1400 Broadway, 25th Floor, New York, NY 10001', '45D');
+INSERT INTO customer VALUES('C0040','Optimatic Media, Inc', '54 West 40th St., 7th Floor, New York, NY 10018', '30D');
+INSERT INTO customer VALUES('C0041','James Underwood', '450 West 33rd Street New York, NY 10018', 'COD');
+INSERT INTO customer VALUES('C0042','Charles Silverstone', '1335 Ave of the Americas, New York, NY 10019', 'COD');
+INSERT INTO customer VALUES('C0043','Nea Sanchez', '371 7th Ave, New York, NY 10001', 'COD');
+INSERT INTO customer VALUES('C0044','Tracy Lambert', '234 W 42nd St, New York, NY 10036', 'COD');
+INSERT INTO customer VALUES('C0045','Peter Charlestone', '342 W 40th St, New York, NY 10018', 'COD');
+INSERT INTO customer VALUES('C0046','Oxford Academy', '5172 Orange Ave, Cypress, CA 90630', '45D');
+INSERT INTO customer VALUES('C0047','Whitney High Sch', '16800 Shoemaker Ave, Cerritos, CA 90703', '30D');
+INSERT INTO customer VALUES('C0048','Pacfic Collegiate', '255 Swift St, Santa Cruz, CA 95060', '45D');
+INSERT INTO customer VALUES('C0049','KIPP San Jose', '1790 Educational Park Dr, San Jose, CA 95133', '30D');
+INSERT INTO customer VALUES('C0050','The Preuss School', '9500 Gilman Dr Mc 0536, La Jolla, CA 92093', '45D');
+INSERT INTO customer VALUES('C0051','American Indian Sch', '3637 Magee Ave, Oakland, CA 94619', '30D');
+INSERT INTO customer VALUES('C0052','Lowell High School', '1101 Eucalyptus Dr, San Francisco, CA 94132', '45D');
+INSERT INTO customer VALUES('C0053','University HSchool', '2611 East Matoian M/S Uh134, Fresno, CA 93740', '30D');
+INSERT INTO customer VALUES('C0054','Hawthorne Academy', '4467 West Broadway, Hawthorne, CA 90250', '30D');
+INSERT INTO customer VALUES('C0055','Lennox Academy', '11036 Hawthorne Blvd, Lennox, CA 90304', '45D');
+INSERT INTO customer VALUES('C0056','Manhasset School', '200 Memorial Place Manhasset, NY 11030', '45D');
+INSERT INTO customer VALUES('C0057','Pittsford High Sch', '55 Sutherland St Pittsford, NY 14534', '30D');
+INSERT INTO customer VALUES('C0058','Jericho High School', '99 Cedar Swamp Rd, Jericho, NY 11753', '45D');
+INSERT INTO customer VALUES('C0059','Stuyvesant High', '345 Chambers St, New York, NY 10282', '45D');
+INSERT INTO customer VALUES('C0060','Rye High School', 'Parsons St, Rye, NY 10580', '30D');
+INSERT INTO customer VALUES('C0061','Brooklyn High', '29 Ft Greene Place, Brooklyn, NY 11217', '45D');
+INSERT INTO customer VALUES('C0062','Brooklyn Latin Sch', '325 Bushwick Ave, Brooklyn, NY 11206', '30D');
+INSERT INTO customer VALUES('C0063','Bronx Science High', '75 West 205Th St Bronx, NY 10468', '45D');
+INSERT INTO customer VALUES('C0064','Staten Island High', '485 Clawson St, Staten Island, NY 10306', '30D');
+INSERT INTO customer VALUES('C0065','Yonkers Middle High', '150 Rockland Ave, Yonkers, NY 10705', '45D');
+INSERT INTO customer VALUES('C0066','Helen Strong', '800 S Main StTulelake, CA 96134', 'COD');
+INSERT INTO customer VALUES('C0067','Gay Rose Silva', '575 3rd St Napa, CA 94559', 'COD');
+INSERT INTO customer VALUES('C0068','William Pichler', '1121 L St #407 Sacramento, CA 95814', 'COD');
+INSERT INTO customer VALUES('C0069','Terrance Nitz', '23200 Pacific Coast Hwy Malibu, CA 90265', 'COD');
+INSERT INTO customer VALUES('C0070','Errol Atanacio', '300 Capitol Mall #555 Sacramento, CA 95814', 'COD');
+INSERT INTO customer VALUES('C0071','Chuck Jones', '163 W 125th St New York, NY 10027', 'COD');
+INSERT INTO customer VALUES('C0072','Menchu Palmores', '600 College Ave Montour Falls, NY 14865', 'COD');
+INSERT INTO customer VALUES('C0073','Princess Ann White', '109 S Union St #411 Rochester, NY 14607', 'COD');
+INSERT INTO customer VALUES('C0074','Florence Black', '450 S Salina St Syracuse, NY 13202', 'COD');
+INSERT INTO customer VALUES('C0075','Jeremy Irons', '3357 US Highway 9w Highland, NY 12528', 'COD');
+INSERT INTO customer VALUES('C0076','Braddy Banks', '1424 Fulton St Brooklyn, NY 11216', 'COD');
+INSERT INTO customer VALUES('C0077','Office NY Tech Serv', 'State Capitol Empire State Plaza NY 10027', '45D');
+INSERT INTO customer VALUES('C0078','FDA New York', '158-15 Liberty Ave., Jamaica, NY 12528', '45D');
+INSERT INTO customer VALUES('C0079','Social Sec Admn NY', '123 William St, New York, NY 10038', '45D');
+INSERT INTO customer VALUES('C0080','Social Sec Admn CA', '3836 Wilshire Blvd, Los Angeles, CA 90010', '45D');
+INSERT INTO customer VALUES('C0081','Dept Food and Agri', '220 N Street Sacramento, CA 95814', '45D');
+INSERT INTO customer VALUES('C0082','California Dept Tech', '1325 J St Suite 1600 Sacramento CA 95814', '45D');
+
+
+-- Create sales
+CREATE TABLE  sales (transNo VARCHAR(8) NOT NULL PRIMARY KEY, 
+												salesDate DATE, 
+												custNo VARCHAR(5), 
+												empNo VARCHAR(5), 	
+												FOREIGN KEY (custNo) REFERENCES customer, 
+												FOREIGN KEY (empno) REFERENCES employee);
+
+-- Insert rows sales
+INSERT INTO sales VALUES('TR000001','2010-06-27', 'C0001', '00005');
+INSERT INTO sales VALUES('TR000002','2010-07-05', 'C0003', '00005');
+INSERT INTO sales VALUES('TR000003','2010-07-05', 'C0002', '00015');
+INSERT INTO sales VALUES('TR000004','2010-07-07', 'C0004', '00017');
+INSERT INTO sales VALUES('TR000005','2010-07-09', 'C0005', '00019');
+INSERT INTO sales VALUES('TR000006','2010-07-07', 'C0001', '00005');
+INSERT INTO sales VALUES('TR000007','2010-07-07', 'C0002', '00015');
+INSERT INTO sales VALUES('TR000008','2010-07-10', 'C0006', '00021');
+INSERT INTO sales VALUES('TR000009','2010-07-10', 'C0007', '00021');
+INSERT INTO sales VALUES('TR000010','2010-07-10', 'C0008', '00021');
+INSERT INTO sales VALUES('TR000011','2010-07-10', 'C0009', '00005');
+INSERT INTO sales VALUES('TR000012','2010-07-12', 'C0004', '00017');
+INSERT INTO sales VALUES('TR000013','2010-07-12', 'C0010', '00025');
+INSERT INTO sales VALUES('TR000014','2010-07-12', 'C0011', '00021');
+INSERT INTO sales VALUES('TR000015','2010-07-12', 'C0012', '00025');
+INSERT INTO sales VALUES('TR000016','2010-07-12', 'C0013', '00027');
+INSERT INTO sales VALUES('TR000017','2010-07-12', 'C0001', '00005');
+INSERT INTO sales VALUES('TR000018','2010-07-13', 'C0006', '00021');
+INSERT INTO sales VALUES('TR000019','2010-08-01', 'C0014', '00019');
+INSERT INTO sales VALUES('TR000020','2010-08-05', 'C0007', '00021');
+INSERT INTO sales VALUES('TR000021','2010-08-05', 'C0015', '00027');
+INSERT INTO sales VALUES('TR000022','2010-08-10', 'C0016', '00021');
+INSERT INTO sales VALUES('TR000023','2010-08-10', 'C0017', '00027');
+INSERT INTO sales VALUES('TR000024','2010-08-10', 'C0018', '00027');
+INSERT INTO sales VALUES('TR000025','2010-08-10', 'C0019', '00025');
+INSERT INTO sales VALUES('TR000026','2010-08-12', 'C0011', '00021');
+INSERT INTO sales VALUES('TR000027','2010-08-30', 'C0009', '00005');
+INSERT INTO sales VALUES('TR000028','2010-08-30', 'C0008', '00021');
+INSERT INTO sales VALUES('TR000029','2010-09-05', 'C0002', '00015');
+INSERT INTO sales VALUES('TR000030','2010-09-05', 'C0010', '00025');
+INSERT INTO sales VALUES('TR000031','2010-09-05', 'C0005', '00019');
+INSERT INTO sales VALUES('TR000032','2010-09-05', 'C0014', '00019');
+INSERT INTO sales VALUES('TR000033','2010-09-06', 'C0012', '00025');
+INSERT INTO sales VALUES('TR000034','2010-09-06', 'C0018', '00027');
+INSERT INTO sales VALUES('TR000035','2010-09-10', 'C0021', '00027');
+INSERT INTO sales VALUES('TR000036','2010-09-10', 'C0022', '00019');
+INSERT INTO sales VALUES('TR000037','2010-09-23', 'C0023', '00021');
+INSERT INTO sales VALUES('TR000038','2010-09-23', 'C0024', '00005');
+INSERT INTO sales VALUES('TR000039','2010-09-23', 'C0025', '00015');
+INSERT INTO sales VALUES('TR000040','2010-10-05', 'C0021', '00019');
+INSERT INTO sales VALUES('TR000041','2010-10-05', 'C0023', '00025');
+INSERT INTO sales VALUES('TR000042','2020-10-25', 'C0026', '00005');
+INSERT INTO sales VALUES('TR000043','2010-10-27', 'C0027', '00019');
+INSERT INTO sales VALUES('TR000044','2010-11-09', 'C0028', '00027');
+INSERT INTO sales VALUES('TR000045','2010-11-10', 'C0029', '00027');
+INSERT INTO sales VALUES('TR000046','2010-11-20', 'C0030', '00019');
+INSERT INTO sales VALUES('TR000047','2010-11-20', 'C0023', '00025');
+INSERT INTO sales VALUES('TR000048','2010-12-05', 'C0026', '00005');
+INSERT INTO sales VALUES('TR000049','2010-12-10', 'C0007', '00021');
+INSERT INTO sales VALUES('TR000050','2010-12-10', 'C0003', '00005');
+INSERT INTO sales VALUES('TR000051','2010-12-10', 'C0011', '00021');
+INSERT INTO sales VALUES('TR000052','2011-01-10', 'C0031', '00051');
+INSERT INTO sales VALUES('TR000053','2011-01-10', 'C0032', '00051');
+INSERT INTO sales VALUES('TR000054','2011-01-10', 'C0033', '00051');
+INSERT INTO sales VALUES('TR000055','2011-01-10', 'C0034', '00053');
+INSERT INTO sales VALUES('TR000056','2011-01-10', 'C0035', '00055');
+INSERT INTO sales VALUES('TR000057','2011-01-10', 'C0036', '00055');
+INSERT INTO sales VALUES('TR000058','2011-01-10', 'C0029', '00027');
+INSERT INTO sales VALUES('TR000059','2011-01-10', 'C0022', '00019');
+INSERT INTO sales VALUES('TR000060','2011-01-10', 'C0026', '00005');
+INSERT INTO sales VALUES('TR000061','2011-01-10', 'C0027', '00027');
+INSERT INTO sales VALUES('TR000062','2011-01-10', 'C0013', '00027');
+INSERT INTO sales VALUES('TR000063','2011-01-10', 'C0016', '00021');
+INSERT INTO sales VALUES('TR000064','2011-01-17', 'C0037', '00057');
+INSERT INTO sales VALUES('TR000065','2011-01-17', 'C0038', '00059');
+INSERT INTO sales VALUES('TR000066','2011-01-17', 'C0039', '00061');
+INSERT INTO sales VALUES('TR000067','2011-01-17', 'C0040', '00063');
+INSERT INTO sales VALUES('TR000068','2011-01-20', 'C0041', '00059');
+INSERT INTO sales VALUES('TR000069','2011-01-20', 'C0042', '00059');
+INSERT INTO sales VALUES('TR000070','2011-01-25', 'C0043', '00059');
+INSERT INTO sales VALUES('TR000071','2011-01-25', 'C0044', '00059');
+INSERT INTO sales VALUES('TR000072','2011-01-25', 'C0045', '00059');
+INSERT INTO sales VALUES('TR000073','2011-02-01', 'C0046', '00021');
+INSERT INTO sales VALUES('TR000074','2011-02-01', 'C0047', '00005');
+INSERT INTO sales VALUES('TR000075','2011-02-01', 'C0048', '00017');
+INSERT INTO sales VALUES('TR000076','2011-02-02', 'C0045', '00059');
+INSERT INTO sales VALUES('TR000077','2011-02-02', 'C0044', '00059');
+INSERT INTO sales VALUES('TR000078','2011-02-07', 'C0035', '00055');
+INSERT INTO sales VALUES('TR000079','2011-02-07', 'C0036', '00055');
+INSERT INTO sales VALUES('TR000080','2011-02-07', 'C0040', '00063');
+INSERT INTO sales VALUES('TR000081','2011-02-10', 'C0049', '00025');
+INSERT INTO sales VALUES('TR000082','2011-02-10', 'C0050', '00027');
+INSERT INTO sales VALUES('TR000083','2011-02-12', 'C0032', '00051');
+INSERT INTO sales VALUES('TR000084','2011-02-12', 'C0033', '00051');
+INSERT INTO sales VALUES('TR000085','2011-02-15', 'C0051', '00019');
+INSERT INTO sales VALUES('TR000086','2011-02-15', 'C0052', '00019');
+INSERT INTO sales VALUES('TR000087','2011-02-20', 'C0053', '00025');
+INSERT INTO sales VALUES('TR000088','2011-02-20', 'C0054', '00005');
+INSERT INTO sales VALUES('TR000089','2011-02-20', 'C0055', '00021');
+INSERT INTO sales VALUES('TR000090','2011-03-02', 'C0056', '00051');
+INSERT INTO sales VALUES('TR000091','2011-03-02', 'C0057', '00053');
+INSERT INTO sales VALUES('TR000092','2011-03-02', 'C0058', '00053');
+INSERT INTO sales VALUES('TR000093','2011-03-02', 'C0059', '00055');
+INSERT INTO sales VALUES('TR000094','2011-03-02', 'C0060', '00051');
+INSERT INTO sales VALUES('TR000095','2011-03-05', 'C0050', '00027');
+INSERT INTO sales VALUES('TR000096','2011-03-05', 'C0051', '00019');
+INSERT INTO sales VALUES('TR000097','2011-03-05', 'C0052', '00019');
+INSERT INTO sales VALUES('TR000098','2011-03-05', 'C0055', '00021');
+INSERT INTO sales VALUES('TR000099','2011-03-13', 'C0061', '00057');
+INSERT INTO sales VALUES('TR000100','2011-03-13', 'C0062', '00057');
+INSERT INTO sales VALUES('TR000101','2011-03-13', 'C0063', '00059');
+INSERT INTO sales VALUES('TR000102','2011-03-21', 'C0064', '00063');
+INSERT INTO sales VALUES('TR000103','2011-03-21', 'C0065', '00057');
+INSERT INTO sales VALUES('TR000104','2011-03-30', 'C0009', '00005');
+INSERT INTO sales VALUES('TR000105','2011-03-30', 'C0010', '00025');
+INSERT INTO sales VALUES('TR000106','2011-03-30', 'C0022', '00019');
+INSERT INTO sales VALUES('TR000107','2011-03-30', 'C0013', '00027');
+INSERT INTO sales VALUES('TR000108','2011-04-07', 'C0066', '00025');
+INSERT INTO sales VALUES('TR000109','2011-04-07', 'C0067', '00025');
+INSERT INTO sales VALUES('TR000110','2011-04-07', 'C0068', '00025');
+INSERT INTO sales VALUES('TR000111','2011-04-07', 'C0069', '00025');
+INSERT INTO sales VALUES('TR000112','2011-04-07', 'C0070', '00025');
+INSERT INTO sales VALUES('TR000113','2011-04-07', 'C0071', '00059');
+INSERT INTO sales VALUES('TR000114','2011-04-07', 'C0072', '00059');
+INSERT INTO sales VALUES('TR000115','2011-04-07', 'C0073', '00059');
+INSERT INTO sales VALUES('TR000116','2011-04-07', 'C0074', '00059');
+INSERT INTO sales VALUES('TR000117','2011-04-07', 'C0075', '00059');
+INSERT INTO sales VALUES('TR000118','2011-04-07', 'C0076', '00059');
+INSERT INTO sales VALUES('TR000119','2011-04-10', 'C0077', '00063');
+INSERT INTO sales VALUES('TR000120','2011-04-10', 'C0078', '00055');
+INSERT INTO sales VALUES('TR000121','2011-04-12', 'C0079', '00051');
+INSERT INTO sales VALUES('TR000122','2011-04-12', 'C0080', '00025');
+INSERT INTO sales VALUES('TR000123','2011-04-12', 'C0081', '00019');
+INSERT INTO sales VALUES('TR000124','2011-04-15', 'C0082', '00017');
+
+-- Create PRODUCT
+CREATE TABLE product (prodCode VARCHAR(6) NOT NULL PRIMARY KEY, 
+											description VARCHAR(30), 
+											unit VARCHAR(3) CONSTRAINT unit_ck 
+											CHECK (unit IN ('pc','ea','mtr','pkg','ltr')));
+-- Insert rows PRODUCT
+INSERT INTO product VALUES('AD0001','Toshiba Canvio 1 TB', 'ea');
+INSERT INTO product VALUES('AD0002','WD Ultra 1TB ', 'ea');
+INSERT INTO product VALUES('AD0003','Seagate Bracuda 1TB ', 'ea');
+INSERT INTO product VALUES('AD0004','Transcend 1 TB ', 'ea');
+INSERT INTO product VALUES('AK0001','HP Pavilion DV6000', 'pc');
+INSERT INTO product VALUES('AK0002','Micro Innovations Kb', 'pc');
+INSERT INTO product VALUES('AK0003','Steel APEX GAMING KB', 'pc');
+INSERT INTO product VALUES('AM0001','MS Wireless Mouse', 'pc');
+INSERT INTO product VALUES('AM0002','LOGITECH 910-002696', 'pc');
+INSERT INTO product VALUES('AM0003','IMICRO KB-IM8911U', 'pc');
+INSERT INTO product VALUES('AM0004','STEEL Rival Mouse', 'pc');
+INSERT INTO product VALUES('AM0005','Logitech M500 USB', 'pc');
+INSERT INTO product VALUES('AP0001','HDMI Pocket Proj', 'pc');
+INSERT INTO product VALUES('AP0002','InFocus IN112 Proj', 'pc');
+INSERT INTO product VALUES('AP0003','ViewSonic Projector', 'pc');
+INSERT INTO product VALUES('MD0001','ASUS VS228H-P 22-In', 'ea');
+INSERT INTO product VALUES('MD0002','ViewSonic VA2446M', 'ea');
+INSERT INTO product VALUES('MD0003','Dell UltrShrp U2412M', 'ea');
+INSERT INTO product VALUES('MD0004','Acer S231HL BBID 23', 'ea');
+INSERT INTO product VALUES('MD0005','Apple Dsplay MC914', 'ea');
+INSERT INTO product VALUES('MD0006','Asus VE228H 21.5', 'ea');
+INSERT INTO product VALUES('MP0001','Apple iPhone 4 16GB ', 'ea');
+INSERT INTO product VALUES('MP0002','Apple iPhone 3G', 'ea');
+INSERT INTO product VALUES('MP0003','SAMSUNG GALAXY S4 ', 'ea');
+INSERT INTO product VALUES('MP0004','SAMSUNG GALAXY S3', 'ea');
+INSERT INTO product VALUES('NB0001','Dell Inspiron Laptop', 'ea');
+INSERT INTO product VALUES('NB0002','ASUS Tformer Book', 'ea');
+INSERT INTO product VALUES('NB0003','Acer C720 Chrome', 'ea');
+INSERT INTO product VALUES('NB0004','HP Chromebook 11', 'ea');
+INSERT INTO product VALUES('NB0005','Apple Mac Pro Laptop', 'ea');
+INSERT INTO product VALUES('NH0001','NETGEAR ProSAFE 5-Port ', 'pc');
+INSERT INTO product VALUES('NH0002','TP-LINK  1000Mbps', 'pc');
+INSERT INTO product VALUES('NH0003','Cisco 24-P G Switch ', 'pc');
+INSERT INTO product VALUES('NT0001','Apple iPad Retna 16G', 'ea');
+INSERT INTO product VALUES('NT0002','Apple iPad 2 MC769LL', 'ea');
+INSERT INTO product VALUES('NT0003','Apple iPad Mini ', 'ea');
+INSERT INTO product VALUES('NT0004','Samsung Galaxy Tab3 ', 'ea');
+INSERT INTO product VALUES('NT0005','Samsung Glaxy Tab32G', 'ea');
+INSERT INTO product VALUES('NT0006','DrgonTouch 7B 2Core ', 'ea');
+INSERT INTO product VALUES('PA0001','MS Ofc Business 2013', 'ea');
+INSERT INTO product VALUES('PA0002','Office Mac Home 2011', 'ea');
+INSERT INTO product VALUES('PC0001','CyberpowerPC Gamer', 'ea');
+INSERT INTO product VALUES('PC0002','Dell 745 Opti Desk', 'ea');
+INSERT INTO product VALUES('PC0003','Dell Inspiron Desk', 'ea');
+INSERT INTO product VALUES('PC0004','Dell Inspiron 660', 'ea');
+INSERT INTO product VALUES('PF0001','Win7 Pro SP1 64bit ', 'ea');
+INSERT INTO product VALUES('PF0002','Win7 Home Pre SP1 64', 'ea');
+INSERT INTO product VALUES('PF0003','Mac OS X ver 10.6.3', 'ea');
+INSERT INTO product VALUES('PF0004','Windows 8.1 64-Bit ', 'ea');
+INSERT INTO product VALUES('PF0005','Windows 8 Pro ', 'ea');
+INSERT INTO product VALUES('PF0006','RED HAT Prof Edition', 'ea');
+INSERT INTO product VALUES('PR0001','Epson Expression ', 'pc');
+INSERT INTO product VALUES('PR0002','Canon PIXMA MX922 ', 'pc');
+INSERT INTO product VALUES('PR0003','HP Envy 4500 Wireles', 'pc');
+INSERT INTO product VALUES('PS0001','VirServ 12Core 128GB', 'pc');
+INSERT INTO product VALUES('PS0002','Ms WinServer 2012', 'pc');
+INSERT INTO product VALUES('PS0003','Cisco Virt Hardware', 'pc');
+											
+
+-- Create salesDETAIL
+CREATE TABLE salesDetail (transNo VARCHAR(8) NOT NULL REFERENCES sales, 
+													prodCode VARCHAR(6) NOT NULL REFERENCES product, 
+													quantity DECIMAL(10,2) CONSTRAINT quantity_ck 
+													CHECK (quantity >= 0.0), 
+													PRIMARY KEY (transNo, prodCode));
+													
+-- Insert salesDETAIL rows 
+INSERT INTO salesDetail VALUES('TR000001','AK0002', 10);
+INSERT INTO salesDetail VALUES('TR000001','AM0003', 10);
+INSERT INTO salesDetail VALUES('TR000001','MD0001', 10);
+INSERT INTO salesDetail VALUES('TR000001','PC0002', 10);
+INSERT INTO salesDetail VALUES('TR000002','NB0001', 5);
+INSERT INTO salesDetail VALUES('TR000002','PR0001', 1);
+INSERT INTO salesDetail VALUES('TR000003','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000004','AK0003', 6);
+INSERT INTO salesDetail VALUES('TR000004','AM0004', 6);
+INSERT INTO salesDetail VALUES('TR000004','MD0004', 6);
+INSERT INTO salesDetail VALUES('TR000004','NB0002', 4);
+INSERT INTO salesDetail VALUES('TR000004','PC0003', 6);
+INSERT INTO salesDetail VALUES('TR000004','PR0003', 2);
+INSERT INTO salesDetail VALUES('TR000005','AK0003', 1);
+INSERT INTO salesDetail VALUES('TR000005','MD0005', 1);
+INSERT INTO salesDetail VALUES('TR000006','NB0001', 5);
+INSERT INTO salesDetail VALUES('TR000006','PF0005', 5);
+INSERT INTO salesDetail VALUES('TR000007','PF0003', 2);
+INSERT INTO salesDetail VALUES('TR000008','AP0002', 3);
+INSERT INTO salesDetail VALUES('TR000008','MD0002', 2);
+INSERT INTO salesDetail VALUES('TR000008','NB0004', 1);
+INSERT INTO salesDetail VALUES('TR000009','AM0002', 1);
+INSERT INTO salesDetail VALUES('TR000009','MD0003', 1);
+INSERT INTO salesDetail VALUES('TR000010','AP0001', 2);
+INSERT INTO salesDetail VALUES('TR000010','PA0001', 5);
+INSERT INTO salesDetail VALUES('TR000011','AK0003', 3);
+INSERT INTO salesDetail VALUES('TR000011','AM0004', 3);
+INSERT INTO salesDetail VALUES('TR000011','MD0003', 3);
+INSERT INTO salesDetail VALUES('TR000011','PC0004', 3);
+INSERT INTO salesDetail VALUES('TR000011','PR0002', 2);
+INSERT INTO salesDetail VALUES('TR000012','NB0003', 7);
+INSERT INTO salesDetail VALUES('TR000013','AM0005', 2);
+INSERT INTO salesDetail VALUES('TR000013','AP0002', 1);
+INSERT INTO salesDetail VALUES('TR000014','PF0004', 10);
+INSERT INTO salesDetail VALUES('TR000015','AK0003', 1);
+INSERT INTO salesDetail VALUES('TR000015','AM0001', 1);
+INSERT INTO salesDetail VALUES('TR000015','MD0002', 1);
+INSERT INTO salesDetail VALUES('TR000015','PC0001', 1);
+INSERT INTO salesDetail VALUES('TR000016','AP0002', 2);
+INSERT INTO salesDetail VALUES('TR000016','NB0002', 7);
+INSERT INTO salesDetail VALUES('TR000016','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000016','PR0002', 1);
+INSERT INTO salesDetail VALUES('TR000017','PA0001', 3);
+INSERT INTO salesDetail VALUES('TR000017','PA0002', 4);
+INSERT INTO salesDetail VALUES('TR000018','MD0001', 9);
+INSERT INTO salesDetail VALUES('TR000018','PC0004', 9);
+INSERT INTO salesDetail VALUES('TR000019','AP0002', 2);
+INSERT INTO salesDetail VALUES('TR000020','MD0005', 1);
+INSERT INTO salesDetail VALUES('TR000021','AM0002', 3);
+INSERT INTO salesDetail VALUES('TR000021','NB0002', 3);
+INSERT INTO salesDetail VALUES('TR000022','MD0006', 5);
+INSERT INTO salesDetail VALUES('TR000022','PA0002', 1);
+INSERT INTO salesDetail VALUES('TR000022','PC0002', 5);
+INSERT INTO salesDetail VALUES('TR000023','NB0001', 1);
+INSERT INTO salesDetail VALUES('TR000024','PA0002', 1);
+INSERT INTO salesDetail VALUES('TR000025','AP0002', 1);
+INSERT INTO salesDetail VALUES('TR000026','AM0005', 1);
+INSERT INTO salesDetail VALUES('TR000026','MD0003', 1);
+INSERT INTO salesDetail VALUES('TR000026','PC0001', 1);
+INSERT INTO salesDetail VALUES('TR000027','NB0003', 3);
+INSERT INTO salesDetail VALUES('TR000027','PF0003', 1);
+INSERT INTO salesDetail VALUES('TR000028','AM0001', 2);
+INSERT INTO salesDetail VALUES('TR000028','PF0004', 5);
+INSERT INTO salesDetail VALUES('TR000029','PF0001', 3);
+INSERT INTO salesDetail VALUES('TR000030','AM0001', 5);
+INSERT INTO salesDetail VALUES('TR000030','PA0001', 5);
+INSERT INTO salesDetail VALUES('TR000030','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000030','PR0003', 2);
+INSERT INTO salesDetail VALUES('TR000031','AM0003', 20);
+INSERT INTO salesDetail VALUES('TR000032','NB0004', 3);
+INSERT INTO salesDetail VALUES('TR000032','PA0002', 2);
+INSERT INTO salesDetail VALUES('TR000033','NB0001', 3);
+INSERT INTO salesDetail VALUES('TR000034','MD0003', 1);
+INSERT INTO salesDetail VALUES('TR000034','PC0001', 1);
+INSERT INTO salesDetail VALUES('TR000035','NH0003', 3);
+INSERT INTO salesDetail VALUES('TR000035','PC0004', 10);
+INSERT INTO salesDetail VALUES('TR000035','PR0002', 2);
+INSERT INTO salesDetail VALUES('TR000036','MD0005', 5);
+INSERT INTO salesDetail VALUES('TR000037','AM0002', 10);
+INSERT INTO salesDetail VALUES('TR000037','PC0004', 5);
+INSERT INTO salesDetail VALUES('TR000038','AD0003', 1);
+INSERT INTO salesDetail VALUES('TR000038','AK0001', 3);
+INSERT INTO salesDetail VALUES('TR000038','PA0001', 3);
+INSERT INTO salesDetail VALUES('TR000038','PC0003', 3);
+INSERT INTO salesDetail VALUES('TR000039','NB0004', 10);
+INSERT INTO salesDetail VALUES('TR000039','NH0002', 2);
+INSERT INTO salesDetail VALUES('TR000039','PF0001', 1);
+INSERT INTO salesDetail VALUES('TR000039','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000040','NB0002', 15);
+INSERT INTO salesDetail VALUES('TR000041','NB0001', 5);
+INSERT INTO salesDetail VALUES('TR000041','PR0002', 2);
+INSERT INTO salesDetail VALUES('TR000042','AM0005', 3);
+INSERT INTO salesDetail VALUES('TR000042','AP0003', 1);
+INSERT INTO salesDetail VALUES('TR000043','AD0003', 3);
+INSERT INTO salesDetail VALUES('TR000043','NB0004', 5);
+INSERT INTO salesDetail VALUES('TR000043','NH0003', 2);
+INSERT INTO salesDetail VALUES('TR000043','PA0001', 5);
+INSERT INTO salesDetail VALUES('TR000043','PF0001', 2);
+INSERT INTO salesDetail VALUES('TR000044','AD0002', 2);
+INSERT INTO salesDetail VALUES('TR000044','PC0001', 3);
+INSERT INTO salesDetail VALUES('TR000045','AM0004', 5);
+INSERT INTO salesDetail VALUES('TR000045','MD0003', 5);
+INSERT INTO salesDetail VALUES('TR000045','PC0004', 5);
+INSERT INTO salesDetail VALUES('TR000046','AP0001', 1);
+INSERT INTO salesDetail VALUES('TR000046','NB0002', 10);
+INSERT INTO salesDetail VALUES('TR000047','PA0001', 1);
+INSERT INTO salesDetail VALUES('TR000048','AM0005', 3);
+INSERT INTO salesDetail VALUES('TR000048','MD0001', 5);
+INSERT INTO salesDetail VALUES('TR000048','PC0003', 5);
+INSERT INTO salesDetail VALUES('TR000048','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000048','PR0003', 2);
+INSERT INTO salesDetail VALUES('TR000049','MP0001', 10);
+INSERT INTO salesDetail VALUES('TR000049','MP0003', 10);
+INSERT INTO salesDetail VALUES('TR000050','NT0005', 1);
+INSERT INTO salesDetail VALUES('TR000051','MP0001', 15);
+INSERT INTO salesDetail VALUES('TR000051','MP0004', 15);
+INSERT INTO salesDetail VALUES('TR000051','NT0001', 15);
+INSERT INTO salesDetail VALUES('TR000052','MP0001', 10);
+INSERT INTO salesDetail VALUES('TR000052','MP0003', 10);
+INSERT INTO salesDetail VALUES('TR000052','NT0001', 10);
+INSERT INTO salesDetail VALUES('TR000053','AK0002', 20);
+INSERT INTO salesDetail VALUES('TR000053','AM0002', 20);
+INSERT INTO salesDetail VALUES('TR000053','AP0002', 2);
+INSERT INTO salesDetail VALUES('TR000053','MD0001', 20);
+INSERT INTO salesDetail VALUES('TR000053','PC0004', 20);
+INSERT INTO salesDetail VALUES('TR000054','AP0001', 1);
+INSERT INTO salesDetail VALUES('TR000054','NB0001', 10);
+INSERT INTO salesDetail VALUES('TR000055','AD0003', 3);
+INSERT INTO salesDetail VALUES('TR000055','NH0003', 2);
+INSERT INTO salesDetail VALUES('TR000055','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000055','PR0003', 2);
+INSERT INTO salesDetail VALUES('TR000055','PS0001', 1);
+INSERT INTO salesDetail VALUES('TR000056','NB0004', 5);
+INSERT INTO salesDetail VALUES('TR000056','PA0002', 2);
+INSERT INTO salesDetail VALUES('TR000056','PF0005', 1);
+INSERT INTO salesDetail VALUES('TR000057','AD0004', 2);
+INSERT INTO salesDetail VALUES('TR000057','NH0002', 2);
+INSERT INTO salesDetail VALUES('TR000057','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000057','PS0003', 1);
+INSERT INTO salesDetail VALUES('TR000058','MD0005', 2);
+INSERT INTO salesDetail VALUES('TR000058','PS0001', 1);
+INSERT INTO salesDetail VALUES('TR000059','MP0001', 5);
+INSERT INTO salesDetail VALUES('TR000059','NT0002', 5);
+INSERT INTO salesDetail VALUES('TR000060','AD0004', 2);
+INSERT INTO salesDetail VALUES('TR000060','MP0001', 3);
+INSERT INTO salesDetail VALUES('TR000060','PS0002', 1);
+INSERT INTO salesDetail VALUES('TR000060','PS0003', 1);
+INSERT INTO salesDetail VALUES('TR000061','MP0001', 5);
+INSERT INTO salesDetail VALUES('TR000061','MP0003', 5);
+INSERT INTO salesDetail VALUES('TR000062','AD0002', 2);
+INSERT INTO salesDetail VALUES('TR000062','NH0003', 3);
+INSERT INTO salesDetail VALUES('TR000062','NT0006', 2);
+INSERT INTO salesDetail VALUES('TR000062','PS0003', 1);
+INSERT INTO salesDetail VALUES('TR000063','PS0003', 1);
+INSERT INTO salesDetail VALUES('TR000064','MD0002', 2);
+INSERT INTO salesDetail VALUES('TR000064','PC0004', 5);
+INSERT INTO salesDetail VALUES('TR000064','PF0001', 2);
+INSERT INTO salesDetail VALUES('TR000064','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000064','PS0001', 1);
+INSERT INTO salesDetail VALUES('TR000065','NB0004', 5);
+INSERT INTO salesDetail VALUES('TR000065','PA0002', 2);
+INSERT INTO salesDetail VALUES('TR000066','AM0002', 15);
+INSERT INTO salesDetail VALUES('TR000066','MP0003', 15);
+INSERT INTO salesDetail VALUES('TR000066','NB0002', 15);
+INSERT INTO salesDetail VALUES('TR000067','NH0002', 3);
+INSERT INTO salesDetail VALUES('TR000067','PS0003', 3);
+INSERT INTO salesDetail VALUES('TR000068','MP0001', 2);
+INSERT INTO salesDetail VALUES('TR000069','MP0003', 1);
+INSERT INTO salesDetail VALUES('TR000070','NT0001', 3);
+INSERT INTO salesDetail VALUES('TR000071','NT0003', 1);
+INSERT INTO salesDetail VALUES('TR000072','NT0005', 1);
+INSERT INTO salesDetail VALUES('TR000073','AP0002', 5);
+INSERT INTO salesDetail VALUES('TR000073','PC0004', 40);
+INSERT INTO salesDetail VALUES('TR000073','PR0001', 1);
+INSERT INTO salesDetail VALUES('TR000074','AM0002', 2);
+INSERT INTO salesDetail VALUES('TR000074','PC0002', 20);
+INSERT INTO salesDetail VALUES('TR000074','PF0001', 1);
+INSERT INTO salesDetail VALUES('TR000075','AM0001', 10);
+INSERT INTO salesDetail VALUES('TR000075','AP0003', 2);
+INSERT INTO salesDetail VALUES('TR000075','NB0001', 10);
+INSERT INTO salesDetail VALUES('TR000075','NB0005', 5);
+INSERT INTO salesDetail VALUES('TR000076','NB0005', 1);
+INSERT INTO salesDetail VALUES('TR000077','NB0005', 2);
+INSERT INTO salesDetail VALUES('TR000078','NB0005', 10);
+INSERT INTO salesDetail VALUES('TR000079','AD0004', 2);
+INSERT INTO salesDetail VALUES('TR000079','PS0001', 1);
+INSERT INTO salesDetail VALUES('TR000080','NB0005', 3);
+INSERT INTO salesDetail VALUES('TR000081','NB0005', 4);
+INSERT INTO salesDetail VALUES('TR000081','PA0002', 4);
+INSERT INTO salesDetail VALUES('TR000082','PC0002', 20);
+INSERT INTO salesDetail VALUES('TR000082','PF0005', 1);
+INSERT INTO salesDetail VALUES('TR000083','NB0005', 5);
+INSERT INTO salesDetail VALUES('TR000083','PA0002', 5);
+INSERT INTO salesDetail VALUES('TR000084','AM0001', 2);
+INSERT INTO salesDetail VALUES('TR000084','NB0005', 4);
+INSERT INTO salesDetail VALUES('TR000084','NH0003', 5);
+INSERT INTO salesDetail VALUES('TR000084','PS0002', 1);
+INSERT INTO salesDetail VALUES('TR000085','AP0002', 2);
+INSERT INTO salesDetail VALUES('TR000085','PC0002', 10);
+INSERT INTO salesDetail VALUES('TR000085','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000086','AD0003', 3);
+INSERT INTO salesDetail VALUES('TR000086','MD0004', 5);
+INSERT INTO salesDetail VALUES('TR000086','PC0003', 10);
+INSERT INTO salesDetail VALUES('TR000087','AM0001', 10);
+INSERT INTO salesDetail VALUES('TR000087','PC0001', 3);
+INSERT INTO salesDetail VALUES('TR000087','PC0004', 7);
+INSERT INTO salesDetail VALUES('TR000087','PF0004', 2);
+INSERT INTO salesDetail VALUES('TR000088','NH0003', 3);
+INSERT INTO salesDetail VALUES('TR000088','PR0001', 5);
+INSERT INTO salesDetail VALUES('TR000088','PS0001', 5);
+INSERT INTO salesDetail VALUES('TR000089','NB0005', 10);
+INSERT INTO salesDetail VALUES('TR000090','NB0005', 3);
+INSERT INTO salesDetail VALUES('TR000090','NH0001', 1);
+INSERT INTO salesDetail VALUES('TR000090','NH0003', 2);
+INSERT INTO salesDetail VALUES('TR000090','PS0003', 1);
+INSERT INTO salesDetail VALUES('TR000091','AD0003', 2);
+INSERT INTO salesDetail VALUES('TR000091','NT0001', 3);
+INSERT INTO salesDetail VALUES('TR000091','NT0005', 2);
+INSERT INTO salesDetail VALUES('TR000091','PS0002', 1);
+INSERT INTO salesDetail VALUES('TR000092','AD0003', 2);
+INSERT INTO salesDetail VALUES('TR000092','AM0001', 5);
+INSERT INTO salesDetail VALUES('TR000092','NB0004', 2);
+INSERT INTO salesDetail VALUES('TR000092','PC0001', 10);
+INSERT INTO salesDetail VALUES('TR000092','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000093','MD0002', 10);
+INSERT INTO salesDetail VALUES('TR000093','NH0003', 2);
+INSERT INTO salesDetail VALUES('TR000093','PC0002', 20);
+INSERT INTO salesDetail VALUES('TR000094','PC0002', 9);
+INSERT INTO salesDetail VALUES('TR000094','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000095','MD0003', 3);
+INSERT INTO salesDetail VALUES('TR000095','NB0003', 4);
+INSERT INTO salesDetail VALUES('TR000096','AP0002', 2);
+INSERT INTO salesDetail VALUES('TR000096','PA0001', 1);
+INSERT INTO salesDetail VALUES('TR000097','NB0003', 3);
+INSERT INTO salesDetail VALUES('TR000097','PC0004', 5);
+INSERT INTO salesDetail VALUES('TR000098','NB0001', 2);
+INSERT INTO salesDetail VALUES('TR000098','NT0001', 2);
+INSERT INTO salesDetail VALUES('TR000098','PC0002', 10);
+INSERT INTO salesDetail VALUES('TR000098','PF0004', 1);
+INSERT INTO salesDetail VALUES('TR000099','NB0005', 3);
+INSERT INTO salesDetail VALUES('TR000099','PS0002', 1);
+INSERT INTO salesDetail VALUES('TR000099','PS0003', 1);
+INSERT INTO salesDetail VALUES('TR000100','NB0005', 5);
+INSERT INTO salesDetail VALUES('TR000100','NT0002', 3);
+INSERT INTO salesDetail VALUES('TR000100','NT0004', 3);
+INSERT INTO salesDetail VALUES('TR000100','PA0002', 5);
+INSERT INTO salesDetail VALUES('TR000100','PC0002', 10);
+INSERT INTO salesDetail VALUES('TR000101','AD0001', 2);
+INSERT INTO salesDetail VALUES('TR000101','NH0003', 1);
+INSERT INTO salesDetail VALUES('TR000101','PC0001', 10);
+INSERT INTO salesDetail VALUES('TR000101','PF0006', 1);
+INSERT INTO salesDetail VALUES('TR000102','MD0001', 10);
+INSERT INTO salesDetail VALUES('TR000102','NH0002', 1);
+INSERT INTO salesDetail VALUES('TR000102','PC0004', 10);
+INSERT INTO salesDetail VALUES('TR000102','PS0003', 1);
+INSERT INTO salesDetail VALUES('TR000103','AK0001', 15);
+INSERT INTO salesDetail VALUES('TR000103','AM0004', 15);
+INSERT INTO salesDetail VALUES('TR000103','MD0006', 15);
+INSERT INTO salesDetail VALUES('TR000103','PC0004', 15);
+INSERT INTO salesDetail VALUES('TR000104','MP0002', 2);
+INSERT INTO salesDetail VALUES('TR000104','MP0003', 3);
+INSERT INTO salesDetail VALUES('TR000104','NB0005', 2);
+INSERT INTO salesDetail VALUES('TR000105','NB0005', 5);
+INSERT INTO salesDetail VALUES('TR000106','NB0005', 4);
+INSERT INTO salesDetail VALUES('TR000107','NB0005', 5);
+INSERT INTO salesDetail VALUES('TR000108','MP0001', 1);
+INSERT INTO salesDetail VALUES('TR000108','NT0005', 1);
+INSERT INTO salesDetail VALUES('TR000109','NB0005', 1);
+INSERT INTO salesDetail VALUES('TR000110','MP0003', 2);
+INSERT INTO salesDetail VALUES('TR000111','NB0005', 2);
+INSERT INTO salesDetail VALUES('TR000112','NB0001', 2);
+INSERT INTO salesDetail VALUES('TR000113','NB0005', 1);
+INSERT INTO salesDetail VALUES('TR000114','AP0003', 1);
+INSERT INTO salesDetail VALUES('TR000115','NB0005', 1);
+INSERT INTO salesDetail VALUES('TR000115','NT0001', 1);
+INSERT INTO salesDetail VALUES('TR000116','MP0003', 1);
+INSERT INTO salesDetail VALUES('TR000116','NB0005', 1);
+INSERT INTO salesDetail VALUES('TR000117','NT0005', 1);
+INSERT INTO salesDetail VALUES('TR000118','NB0005', 1);
+INSERT INTO salesDetail VALUES('TR000119','NB0005', 20);
+INSERT INTO salesDetail VALUES('TR000119','PC0004', 100);
+INSERT INTO salesDetail VALUES('TR000120','AD0003', 10);
+INSERT INTO salesDetail VALUES('TR000120','NH0003', 20);
+INSERT INTO salesDetail VALUES('TR000120','PC0004', 150);
+INSERT INTO salesDetail VALUES('TR000120','PR0003', 10);
+INSERT INTO salesDetail VALUES('TR000120','PS0001', 5);
+INSERT INTO salesDetail VALUES('TR000120','PS0003', 3);
+INSERT INTO salesDetail VALUES('TR000121','NB0005', 5);
+INSERT INTO salesDetail VALUES('TR000121','NH0003', 5);
+INSERT INTO salesDetail VALUES('TR000121','NT0001', 5);
+INSERT INTO salesDetail VALUES('TR000121','PC0002', 20);
+INSERT INTO salesDetail VALUES('TR000122','AP0002', 1);
+INSERT INTO salesDetail VALUES('TR000122','NB0005', 10);
+INSERT INTO salesDetail VALUES('TR000122','NH0003', 5);
+INSERT INTO salesDetail VALUES('TR000122','PC0003', 30);
+INSERT INTO salesDetail VALUES('TR000122','PF0001', 5);
+INSERT INTO salesDetail VALUES('TR000122','PR0002', 5);
+INSERT INTO salesDetail VALUES('TR000122','PS0003', 3);
+INSERT INTO salesDetail VALUES('TR000123','AD0001', 5);
+INSERT INTO salesDetail VALUES('TR000123','NH0003', 3);
+INSERT INTO salesDetail VALUES('TR000123','NT0001', 3);
+INSERT INTO salesDetail VALUES('TR000123','PC0004', 60);
+INSERT INTO salesDetail VALUES('TR000123','PF0005', 5);
+INSERT INTO salesDetail VALUES('TR000123','PF0006', 3);
+INSERT INTO salesDetail VALUES('TR000123','PR0003', 5);
+INSERT INTO salesDetail VALUES('TR000123','PS0001', 2);
+INSERT INTO salesDetail VALUES('TR000124','AM0002', 10);
+INSERT INTO salesDetail VALUES('TR000124','MD0006', 5);
+INSERT INTO salesDetail VALUES('TR000124','NB0005', 3);
+INSERT INTO salesDetail VALUES('TR000124','PC0002', 15);
+INSERT INTO salesDetail VALUES('TR000124','PF0005', 3);
+INSERT INTO salesDetail VALUES('TR000124','PF0006', 2);
+INSERT INTO salesDetail VALUES('TR000124','PS0001', 3);
+
+
+-- Create table PAYMENT
+CREATE TABLE payment (orNo VARCHAR(8) NOT NULL PRIMARY KEY, 
+											  payDate DATE, 
+											  amount DECIMAL(10,2), 
+											  transno VARCHAR(8) REFERENCES  sales);
+
+-- Insert PAYMENT rows 
+INSERT INTO payment VALUES('OR000001','2010-06-20', '3284.7', 'TR000001');
+INSERT INTO payment VALUES('OR000002','2010-07-05', '1581.72', 'TR000002');
+INSERT INTO payment VALUES('OR000003','2010-07-05', '7.5', 'TR000003');
+INSERT INTO payment VALUES('OR000004','2010-07-07', '57.74', 'TR000007');
+INSERT INTO payment VALUES('OR000005','2010-07-09', '924.99', 'TR000005');
+INSERT INTO payment VALUES('OR000006','2010-07-10', '3000', 'TR000004');
+INSERT INTO payment VALUES('OR000007','2010-07-10', '309.22', 'TR000009');
+INSERT INTO payment VALUES('OR000008','2010-07-12', '1393', 'TR000012');
+INSERT INTO payment VALUES('OR000009','2010-07-12', '740.97', 'TR000015');
+INSERT INTO payment VALUES('OR000010','2010-07-15', '1000', 'TR000006');
+INSERT INTO payment VALUES('OR000011','2010-07-20', '1000', 'TR000010');
+INSERT INTO payment VALUES('OR000012','2010-07-20', '1500', 'TR000011');
+INSERT INTO payment VALUES('OR000013','2010-07-27', '2000', 'TR000016');
+INSERT INTO payment VALUES('OR000014','2010-08-01', '403.02', 'TR000013');
+INSERT INTO payment VALUES('OR000015','2010-08-01', '500', 'TR000014');
+INSERT INTO payment VALUES('OR000016','2010-08-01', '4000', 'TR000018');
+INSERT INTO payment VALUES('OR000017','2010-08-05', '907.5', 'TR000020');
+INSERT INTO payment VALUES('OR000018','2010-08-07', '1095', 'TR000006');
+INSERT INTO payment VALUES('OR000019','2010-08-10', '1000', 'TR000008');
+INSERT INTO payment VALUES('OR000020','2010-08-10', '300', 'TR000023');
+INSERT INTO payment VALUES('OR000021','2010-08-10', '102.99', 'TR000024');
+INSERT INTO payment VALUES('OR000022','2010-08-10', '304.48', 'TR000025');
+INSERT INTO payment VALUES('OR000023','2010-08-12', '1000', 'TR000017');
+INSERT INTO payment VALUES('OR000024','2010-08-15', '1598.25', 'TR000011');
+INSERT INTO payment VALUES('OR000025','2010-08-15', '1919.12', 'TR000018');
+INSERT INTO payment VALUES('OR000026','2010-08-20', '767.77', 'TR000026');
+INSERT INTO payment VALUES('OR000027','2010-08-20', '700.4', 'TR000004');
+INSERT INTO payment VALUES('OR000028','2010-08-23', '608.96', 'TR000019');
+INSERT INTO payment VALUES('OR000029','2010-08-30', '1000', 'TR000022');
+INSERT INTO payment VALUES('OR000030','2010-08-30', '623.25', 'TR000027');
+INSERT INTO payment VALUES('OR000031','2010-09-01', '500', 'TR000021');
+INSERT INTO payment VALUES('OR000032','2010-09-05', '498.59', 'TR000028');
+INSERT INTO payment VALUES('OR000033','2010-09-05', '429', 'TR000031');
+INSERT INTO payment VALUES('OR000034','2010-09-06', '900', 'TR000033');
+INSERT INTO payment VALUES('OR000035','2010-09-06', '718.5', 'TR000034');
+INSERT INTO payment VALUES('OR000036','2010-09-10', '337.5', 'TR000029');
+INSERT INTO payment VALUES('OR000037','2010-09-10', '601.78', 'TR000021');
+INSERT INTO payment VALUES('OR000038','2010-09-10', '776.54', 'TR000022');
+INSERT INTO payment VALUES('OR000039','2010-09-20', '1000', 'TR000032');
+INSERT INTO payment VALUES('OR000040','2010-09-20', '4000', 'TR000035');
+INSERT INTO payment VALUES('OR000041','2010-09-30', '1000', 'TR000030');
+INSERT INTO payment VALUES('OR000042','2010-09-30', '4000', 'TR000036');
+INSERT INTO payment VALUES('OR000043','2010-09-30', '1000', 'TR000038');
+INSERT INTO payment VALUES('OR000044','2010-10-01', '1699.98', 'TR000041');
+INSERT INTO payment VALUES('OR000045','2010-10-10', '539.17', 'TR000030');
+INSERT INTO payment VALUES('OR000046','2010-10-10', '2095.05', 'TR000035');
+INSERT INTO payment VALUES('OR000047','2010-10-10', '3417.2', 'TR000037');
+INSERT INTO payment VALUES('OR000048','2010-10-23', '917.44', 'TR000038');
+INSERT INTO payment VALUES('OR000049','2010-10-23', '2000', 'TR000039');
+INSERT INTO payment VALUES('OR000050','2010-10-25', '3000', 'TR000040');
+INSERT INTO payment VALUES('OR000051','2010-10-30', '522.68', 'TR000042');
+INSERT INTO payment VALUES('OR000052','2010-11-10', '1470', 'TR000040');
+INSERT INTO payment VALUES('OR000053','2010-11-20', '959.3', 'TR000039');
+INSERT INTO payment VALUES('OR000054','2010-11-20', '2000', 'TR000043');
+INSERT INTO payment VALUES('OR000055','2010-11-20', '219', 'TR000047');
+INSERT INTO payment VALUES('OR000056','2010-12-01', '1503.6', 'TR000044');
+INSERT INTO payment VALUES('OR000057','2010-12-05', '3000', 'TR000045');
+INSERT INTO payment VALUES('OR000058','2010-12-10', '3294.99', 'TR000046');
+INSERT INTO payment VALUES('OR000059','2010-12-10', '6249.5', 'TR000049');
+INSERT INTO payment VALUES('OR000060','2010-12-10', '499.99', 'TR000050');
+INSERT INTO payment VALUES('OR000061','2010-12-20', '1472.55', 'TR000045');
+INSERT INTO payment VALUES('OR000062','2011-01-02', '1500', 'TR000048');
+INSERT INTO payment VALUES('OR000063','2011-01-05', '5000', 'TR000051');
+INSERT INTO payment VALUES('OR000064','2011-01-15', '1516.26', 'TR000048');
+INSERT INTO payment VALUES('OR000065','2011-01-15', '5000', 'TR000051');
+INSERT INTO payment VALUES('OR000066','2011-01-15', '599.99', 'TR000063');
+INSERT INTO payment VALUES('OR000067','2011-01-20', '399.9', 'TR000068');
+INSERT INTO payment VALUES('OR000068','2011-01-20', '425', 'TR000069');
+INSERT INTO payment VALUES('OR000069','2011-01-25', '1237.47', 'TR000070');
+INSERT INTO payment VALUES('OR000070','2011-01-25', '287', 'TR000071');
+INSERT INTO payment VALUES('OR000071','2011-01-25', '499.99', 'TR000072');
+INSERT INTO payment VALUES('OR000072','2011-01-30', '10000', 'TR000053');
+INSERT INTO payment VALUES('OR000073','2011-01-30', '1371.02', 'TR000062');
+INSERT INTO payment VALUES('OR000074','2011-01-30', '5000', 'TR000066');
+INSERT INTO payment VALUES('OR000075','2011-02-01', '1000', 'TR000054');
+INSERT INTO payment VALUES('OR000076','2011-02-01', '3000', 'TR000058');
+INSERT INTO payment VALUES('OR000077','2011-02-02', '2369.44', 'TR000077');
+INSERT INTO payment VALUES('OR000078','2011-02-05', '5000', 'TR000052');
+INSERT INTO payment VALUES('OR000079','2011-02-05', '3000', 'TR000055');
+INSERT INTO payment VALUES('OR000080','2011-02-05', '1709.16', 'TR000056');
+INSERT INTO payment VALUES('OR000081','2011-02-05', '800.77', 'TR000057');
+INSERT INTO payment VALUES('OR000082','2011-02-07', '1500', 'TR000080');
+INSERT INTO payment VALUES('OR000083','2011-02-10', '5374.4', 'TR000052');
+INSERT INTO payment VALUES('OR000084','2011-02-10', '5654.2', 'TR000053');
+INSERT INTO payment VALUES('OR000085','2011-02-10', '2314.99', 'TR000054');
+INSERT INTO payment VALUES('OR000086','2011-02-10', '2015', 'TR000058');
+INSERT INTO payment VALUES('OR000087','2011-02-10', '2624.7', 'TR000059');
+INSERT INTO payment VALUES('OR000088','2011-02-10', '2043.81', 'TR000060');
+INSERT INTO payment VALUES('OR000089','2011-02-10', '1500', 'TR000061');
+INSERT INTO payment VALUES('OR000090','2011-02-10', '3343.98', 'TR000079');
+INSERT INTO payment VALUES('OR000091','2011-02-15', '1624.75', 'TR000061');
+INSERT INTO payment VALUES('OR000092','2011-02-15', '6451.8', 'TR000064');
+INSERT INTO payment VALUES('OR000093','2011-02-15', '1600.98', 'TR000065');
+INSERT INTO payment VALUES('OR000094','2011-02-15', '1874.94', 'TR000067');
+INSERT INTO payment VALUES('OR000095','2011-02-15', '4067.98', 'TR000082');
+INSERT INTO payment VALUES('OR000096','2011-02-15', '3000', 'TR000083');
+INSERT INTO payment VALUES('OR000097','2011-02-17', '6935.8', 'TR000066');
+INSERT INTO payment VALUES('OR000098','2011-02-25', '4217.74', 'TR000074');
+INSERT INTO payment VALUES('OR000099','2011-02-25', '10041.28', 'TR000075');
+INSERT INTO payment VALUES('OR000100','2011-02-25', '1184.72', 'TR000076');
+INSERT INTO payment VALUES('OR000101','2011-02-25', '7000', 'TR000078');
+INSERT INTO payment VALUES('OR000102','2011-02-25', '2054.16', 'TR000080');
+INSERT INTO payment VALUES('OR000103','2011-02-25', '7000', 'TR000088');
+INSERT INTO payment VALUES('OR000104','2011-02-25', '5000', 'TR000089');
+INSERT INTO payment VALUES('OR000105','2011-02-26', '3000', 'TR000081');
+INSERT INTO payment VALUES('OR000106','2011-03-01', '10000', 'TR000073');
+INSERT INTO payment VALUES('OR000107','2011-03-01', '4000', 'TR000087');
+INSERT INTO payment VALUES('OR000108','2011-03-02', '3046.32', 'TR000091');
+INSERT INTO payment VALUES('OR000109','2011-03-02', '1788.73', 'TR000094');
+INSERT INTO payment VALUES('OR000110','2011-03-05', '2150.84', 'TR000081');
+INSERT INTO payment VALUES('OR000111','2011-03-05', '3438.55', 'TR000083');
+INSERT INTO payment VALUES('OR000112','2011-03-05', '3000', 'TR000084');
+INSERT INTO payment VALUES('OR000113','2011-03-05', '2626.12', 'TR000085');
+INSERT INTO payment VALUES('OR000114','2011-03-05', '1587.88', 'TR000095');
+INSERT INTO payment VALUES('OR000115','2011-03-05', '858.4', 'TR000096');
+INSERT INTO payment VALUES('OR000116','2011-03-10', '7000', 'TR000088');
+INSERT INTO payment VALUES('OR000117','2011-03-10', '6847.2', 'TR000089');
+INSERT INTO payment VALUES('OR000118','2011-03-11', '13200.22', 'TR000073');
+INSERT INTO payment VALUES('OR000119','2011-03-15', '3000', 'TR000086');
+INSERT INTO payment VALUES('OR000120','2011-03-15', '3489.29', 'TR000098');
+INSERT INTO payment VALUES('OR000121','2011-03-15', '3000', 'TR000100');
+INSERT INTO payment VALUES('OR000122','2011-03-20', '2923.67', 'TR000088');
+INSERT INTO payment VALUES('OR000123','2011-03-20', '2000', 'TR000092');
+INSERT INTO payment VALUES('OR000124','2011-03-20', '4000', 'TR000093');
+INSERT INTO payment VALUES('OR000125','2011-03-20', '1500', 'TR000097');
+INSERT INTO payment VALUES('OR000126','2011-03-20', '4854.14', 'TR000099');
+INSERT INTO payment VALUES('OR000127','2011-03-30', '4519.52', 'TR000090');
+INSERT INTO payment VALUES('OR000128','2011-03-30', '3000', 'TR000100');
+INSERT INTO payment VALUES('OR000129','2011-04-02', '3410.45', 'TR000092');
+INSERT INTO payment VALUES('OR000130','2011-04-02', '2953.08', 'TR000093');
+INSERT INTO payment VALUES('OR000131','2011-04-05', '1787', 'TR000097');
+INSERT INTO payment VALUES('OR000132','2011-04-05', '5000', 'TR000102');
+INSERT INTO payment VALUES('OR000133','2011-04-05', '3000', 'TR000103');
+INSERT INTO payment VALUES('OR000134','2011-04-05', '2000', 'TR000106');
+INSERT INTO payment VALUES('OR000135','2011-04-07', '699.94', 'TR000108');
+INSERT INTO payment VALUES('OR000136','2011-04-07', '1184.72', 'TR000109');
+INSERT INTO payment VALUES('OR000137','2011-04-07', '850', 'TR000110');
+INSERT INTO payment VALUES('OR000138','2011-04-07', '2369.44', 'TR000111');
+INSERT INTO payment VALUES('OR000139','2011-04-07', '600', 'TR000112');
+INSERT INTO payment VALUES('OR000140','2011-04-07', '1184.72', 'TR000113');
+INSERT INTO payment VALUES('OR000141','2011-04-07', '367.49', 'TR000114');
+INSERT INTO payment VALUES('OR000142','2011-04-07', '1597.21', 'TR000115');
+INSERT INTO payment VALUES('OR000143','2011-04-07', '1609.72', 'TR000116');
+INSERT INTO payment VALUES('OR000144','2011-04-07', '499.99', 'TR000117');
+INSERT INTO payment VALUES('OR000145','2011-04-07', '1184.72', 'TR000118');
+INSERT INTO payment VALUES('OR000146','2011-04-10', '3000', 'TR000100');
+INSERT INTO payment VALUES('OR000147','2011-04-10', '4000', 'TR000103');
+INSERT INTO payment VALUES('OR000148','2011-04-13', '4839.91', 'TR000101');
+INSERT INTO payment VALUES('OR000149','2011-04-20', '2321.48', 'TR000102');
+INSERT INTO payment VALUES('OR000150','2011-04-20', '4689.05', 'TR000103');
+INSERT INTO payment VALUES('OR000151','2011-04-20', '5923.6', 'TR000105');
+INSERT INTO payment VALUES('OR000152','2011-04-20', '20000', 'TR000119');
+INSERT INTO payment VALUES('OR000153','2011-04-20', '30000', 'TR000120');
+INSERT INTO payment VALUES('OR000154','2011-04-30', '3000', 'TR000104');
+INSERT INTO payment VALUES('OR000155','2011-04-30', '2738.88', 'TR000106');
+INSERT INTO payment VALUES('OR000156','2011-04-30', '5923.6', 'TR000107');
+INSERT INTO payment VALUES('OR000157','2011-04-30', '20000', 'TR000123');
+INSERT INTO payment VALUES('OR000158','2011-05-01', '20000', 'TR000119');
+INSERT INTO payment VALUES('OR000159','2011-05-05', '30000', 'TR000120');
+INSERT INTO payment VALUES('OR000160','2011-05-10', '37494.4', 'TR000119');
+INSERT INTO payment VALUES('OR000161','2011-05-15', '17872.99', 'TR000124');
+INSERT INTO payment VALUES('OR000162','2011-05-20', '21898.9', 'TR000123');
+INSERT INTO payment VALUES('OR000163','2011-05-30', '43708.17', 'TR000120');
+INSERT INTO payment VALUES('OR000164','2011-05-30', '12804.3', 'TR000121');
+INSERT INTO payment VALUES('OR000165','2011-05-30', '27587.77', 'TR000122');
+
+
+-- Create table PRICEHIST
+CREATE TABLE priceHist (effDate DATE NOT NULL, 
+											   prodCode VARCHAR(6) NOT NULL REFERENCES product, 
+											   unitPrice DECIMAL(10,2) CONSTRAINT unitP_ck 
+											   CHECK (unitPrice > 0),  
+											   PRIMARY KEY (effDate, prodCode));
+
+--  Insert PRICEHIST rows 
+INSERT INTO priceHist VALUES('2010-05-15','AK0001', 12);
+INSERT INTO priceHist VALUES('2010-05-15','AK0002', 8.37);
+INSERT INTO priceHist VALUES('2010-05-15','AK0003', 99.99);
+INSERT INTO priceHist VALUES('2010-05-15','AM0001', 36.45);
+INSERT INTO priceHist VALUES('2010-05-15','AM0002', 69.26);
+INSERT INTO priceHist VALUES('2010-05-15','AM0003', 20.43);
+INSERT INTO priceHist VALUES('2010-05-15','AM0004', 88.14);
+INSERT INTO priceHist VALUES('2010-05-15','AM0005', 49.27);
+INSERT INTO priceHist VALUES('2010-05-15','AP0001', 299.99);
+INSERT INTO priceHist VALUES('2010-05-15','AP0002', 304.48);
+INSERT INTO priceHist VALUES('2010-05-15','AP0003', 349.99);
+INSERT INTO priceHist VALUES('2010-05-15','MD0001', 119.68);
+INSERT INTO priceHist VALUES('2010-05-15','MD0002', 149.99);
+INSERT INTO priceHist VALUES('2010-05-15','MD0003', 239.96);
+INSERT INTO priceHist VALUES('2010-05-15','MD0004', 132.21);
+INSERT INTO priceHist VALUES('2010-05-15','MD0005', 825);
+INSERT INTO priceHist VALUES('2010-05-15','MD0006', 124.29);
+INSERT INTO priceHist VALUES('2010-05-15','NB0001', 300);
+INSERT INTO priceHist VALUES('2010-05-15','NB0002', 298);
+INSERT INTO priceHist VALUES('2010-05-15','NB0003', 199);
+INSERT INTO priceHist VALUES('2010-05-15','NB0004', 279);
+INSERT INTO priceHist VALUES('2010-05-15','PA0001', 219);
+INSERT INTO priceHist VALUES('2010-05-15','PA0002', 102.99);
+INSERT INTO priceHist VALUES('2010-07-12','PC0001', 454.54);
+INSERT INTO priceHist VALUES('2010-05-15','PC0001', 499.99);
+INSERT INTO priceHist VALUES('2010-07-12','PC0002', 197.99);
+INSERT INTO priceHist VALUES('2010-05-15','PC0002', 179.99);
+INSERT INTO priceHist VALUES('2010-05-15','PC0003', 390);
+INSERT INTO priceHist VALUES('2010-05-15','PC0004', 538);
+INSERT INTO priceHist VALUES('2010-05-15','PF0001', 123.75);
+INSERT INTO priceHist VALUES('2010-05-15','PF0002', 64.25);
+INSERT INTO priceHist VALUES('2010-05-15','PF0003', 28.87);
+INSERT INTO priceHist VALUES('2010-05-15','PF0004', 92.85);
+INSERT INTO priceHist VALUES('2010-05-15','PF0005', 119);
+INSERT INTO priceHist VALUES('2010-05-15','PF0006', 7.5);
+INSERT INTO priceHist VALUES('2010-05-15','PR0001', 81.72);
+INSERT INTO priceHist VALUES('2010-05-15','PR0002', 99.99);
+INSERT INTO priceHist VALUES('2010-05-15','PR0003', 123);
+INSERT INTO priceHist VALUES('2010-08-01','MD0001', 131.65);
+INSERT INTO priceHist VALUES('2010-08-01','MD0002', 164.99);
+INSERT INTO priceHist VALUES('2010-08-01','MD0003', 263.96);
+INSERT INTO priceHist VALUES('2010-08-01','MD0004', 145.43);
+INSERT INTO priceHist VALUES('2010-08-01','MD0005', 907.5);
+INSERT INTO priceHist VALUES('2010-08-01','MD0006', 136.72);
+INSERT INTO priceHist VALUES('2010-08-16','PF0001', 112.5);
+INSERT INTO priceHist VALUES('2010-08-16','PF0002', 58.41);
+INSERT INTO priceHist VALUES('2010-08-16','PF0003', 26.25);
+INSERT INTO priceHist VALUES('2010-08-16','PF0004', 84.41);
+INSERT INTO priceHist VALUES('2010-08-16','PF0005', 108.18);
+INSERT INTO priceHist VALUES('2010-08-16','PF0006', 6.82);
+INSERT INTO priceHist VALUES('2010-08-16','AM0001', 38.27);
+INSERT INTO priceHist VALUES('2010-08-16','AM0002', 72.72);
+INSERT INTO priceHist VALUES('2010-08-16','AM0003', 21.45);
+INSERT INTO priceHist VALUES('2010-08-16','AM0004', 92.55);
+INSERT INTO priceHist VALUES('2010-08-16','AM0005', 51.73);
+INSERT INTO priceHist VALUES('2010-08-16','AP0001', 314.99);
+INSERT INTO priceHist VALUES('2010-08-16','AP0002', 319.7);
+INSERT INTO priceHist VALUES('2010-08-16','AP0003', 367.49);
+INSERT INTO priceHist VALUES('2010-08-16','AD0001', 58);
+INSERT INTO priceHist VALUES('2010-08-16','AD0002', 69.99);
+INSERT INTO priceHist VALUES('2010-08-16','AD0003', 54.44);
+INSERT INTO priceHist VALUES('2010-08-16','AD0004', 71.99);
+INSERT INTO priceHist VALUES('2010-08-16','NH0001', 21.99);
+INSERT INTO priceHist VALUES('2010-08-16','NH0002', 24.99);
+INSERT INTO priceHist VALUES('2010-08-16','NH0003', 171.69);
+INSERT INTO priceHist VALUES('2010-12-01','NT0001', 412.49);
+INSERT INTO priceHist VALUES('2010-12-01','NT0002', 324.99);
+INSERT INTO priceHist VALUES('2010-12-01','NT0003', 287);
+INSERT INTO priceHist VALUES('2010-12-01','NT0004', 219.89);
+INSERT INTO priceHist VALUES('2010-12-01','NT0005', 499.99);
+INSERT INTO priceHist VALUES('2010-12-01','NT0006', 57.99);
+INSERT INTO priceHist VALUES('2010-12-01','PS0001', 3200);
+INSERT INTO priceHist VALUES('2010-12-01','PS0002', 699.99);
+INSERT INTO priceHist VALUES('2010-12-01','PS0003', 599.99);
+INSERT INTO priceHist VALUES('2010-12-01','MP0001', 199.95);
+INSERT INTO priceHist VALUES('2010-12-01','MP0002', 126.72);
+INSERT INTO priceHist VALUES('2010-12-01','MP0003', 425);
+INSERT INTO priceHist VALUES('2010-12-01','MP0004', 302);
+INSERT INTO priceHist VALUES('2011-02-01','NB0005', 1184.72);
+
+
+-- =====================================================================
+-- AUDIT TRAIL + SOFT DELETE  (standard PostgreSQL)
+-- Everything below runs AFTER all the data above has been loaded.
+--   * every table gets:  is_deleted (soft delete flag)  and  stamp
+--   * stamp looks like:  EDIT user1 2026-10-12 11:18 AM
+--       (ADD / EDIT / DELETE / RESTORE  +  user  +  date  +  time)
+--   * audit_log keeps the full history (old and new values)
+--   * hard DELETE and TRUNCATE are blocked on every table
+--   * <table>_active views show only rows where is_deleted = false
+-- =====================================================================
+
+-- 1. Central audit table ------------------------------------------------
+CREATE TABLE audit_log (
+    audit_id    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    table_name  VARCHAR(30) NOT NULL,
+    action      VARCHAR(7)  NOT NULL CHECK (action IN ('ADD','EDIT','DELETE','RESTORE')),
+    record_key  VARCHAR(60),             -- primary key value(s), joined with '|'
+    old_values  JSONB,                   -- NULL for ADD
+    new_values  JSONB,
+    action_by   VARCHAR(50) NOT NULL,
+    action_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 2. JOB
-CREATE TABLE JOB (
-    jobCode VARCHAR(10) NOT NULL PRIMARY KEY,
-    jobDesc VARCHAR(100) NOT NULL
-);
+-- 2. Helper functions ---------------------------------------------------
+-- Who is acting? If the application sets  SET app.username = 'user1'
+-- (e.g. because everyone shares one DB login) that name is used; otherwise
+-- the database login name is used.
+CREATE OR REPLACE FUNCTION audit_user() RETURNS TEXT
+LANGUAGE sql STABLE AS $$
+    SELECT COALESCE(NULLIF(current_setting('app.username', true), ''),
+                    session_user::text);
+$$;
 
--- 3. EMPLOYEE
-CREATE TABLE EMPLOYEE (
-    empNo VARCHAR(10) NOT NULL PRIMARY KEY,
-    lastName VARCHAR(50) NOT NULL,
-    firstName VARCHAR(50) NOT NULL,
-    gender CHAR(1) NOT NULL CHECK (gender IN ('M', 'F', 'm', 'f')),
-    birthDate DATE NOT NULL,
-    hireDate DATE NOT NULL,
-    sepDate DATE
-);
+-- Builds the stamp text, e.g.  EDIT user1 2026-10-12 11:18 AM
+-- (time shown in Asia/Manila; change the zone here if needed)
+CREATE OR REPLACE FUNCTION audit_stamp(p_action TEXT) RETURNS TEXT
+LANGUAGE sql STABLE AS $$
+    SELECT p_action || ' ' || audit_user() || ' ' ||
+           to_char(now() AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM');
+$$;
 
--- 4. JOBHISTORY
-CREATE TABLE JOBHISTORY (
-    empNo VARCHAR(10) NOT NULL REFERENCES EMPLOYEE(empNo) ON UPDATE CASCADE ON DELETE RESTRICT,
-    jobCode VARCHAR(10) NOT NULL REFERENCES JOB(jobCode) ON UPDATE CASCADE ON DELETE RESTRICT,
-    effDate DATE NOT NULL,
-    salary NUMERIC(12, 2) NOT NULL CHECK (salary >= 0),
-    deptCode VARCHAR(10) NOT NULL REFERENCES DEPARTMENT(deptCode) ON UPDATE CASCADE ON DELETE RESTRICT,
-    PRIMARY KEY (empNo, jobCode, effDate)
-);
+-- 3. Trigger functions --------------------------------------------------
 
--- 5. CUSTOMER
-CREATE TABLE CUSTOMER (
-    custNo VARCHAR(10) NOT NULL PRIMARY KEY,
-    custName VARCHAR(120) NOT NULL,
-    address VARCHAR(255) NOT NULL,
-    payTerms VARCHAR(50) NOT NULL
-);
+-- 3a. Sets the stamp column on every INSERT / UPDATE
+CREATE OR REPLACE FUNCTION trg_set_stamp() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW.stamp := audit_stamp('ADD');
+    ELSIF (to_jsonb(OLD) - 'stamp') = (to_jsonb(NEW) - 'stamp') THEN
+        NEW.stamp := OLD.stamp;                      -- nothing changed
+    ELSIF NOT OLD.is_deleted AND NEW.is_deleted THEN
+        NEW.stamp := audit_stamp('DELETE');
+    ELSIF OLD.is_deleted AND NOT NEW.is_deleted THEN
+        NEW.stamp := audit_stamp('RESTORE');
+    ELSE
+        NEW.stamp := audit_stamp('EDIT');
+    END IF;
+    RETURN NEW;
+END;
+$$;
 
--- 6. PRODUCT
-CREATE TABLE PRODUCT (
-    prodCode VARCHAR(20) NOT NULL PRIMARY KEY,
-    description VARCHAR(255) NOT NULL,
-    unit VARCHAR(30) NOT NULL
-);
+-- 3b. Writes the history row to audit_log (key columns passed as arguments)
+CREATE OR REPLACE FUNCTION trg_audit_log() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_action TEXT;
+    v_key    TEXT;
+BEGIN
+    SELECT string_agg(to_jsonb(NEW) ->> k, '|' ORDER BY ord)
+      INTO v_key
+      FROM unnest(TG_ARGV) WITH ORDINALITY AS t(k, ord);
 
--- 7. PRICEHIST
-CREATE TABLE PRICEHIST (
-    effDate DATE NOT NULL,
-    prodCode VARCHAR(20) NOT NULL REFERENCES PRODUCT(prodCode) ON UPDATE CASCADE ON DELETE CASCADE,
-    unitPrice NUMERIC(12, 2) NOT NULL CHECK (unitPrice >= 0),
-    PRIMARY KEY (effDate, prodCode)
-);
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO audit_log (table_name, action, record_key, old_values, new_values, action_by)
+        VALUES (TG_TABLE_NAME, 'ADD', v_key, NULL, to_jsonb(NEW), audit_user());
+    ELSE
+        IF (to_jsonb(OLD) - 'stamp') = (to_jsonb(NEW) - 'stamp') THEN
+            RETURN NULL;                             -- nothing changed, no log
+        END IF;
+        v_action := CASE
+                      WHEN NOT OLD.is_deleted AND NEW.is_deleted THEN 'DELETE'
+                      WHEN OLD.is_deleted AND NOT NEW.is_deleted THEN 'RESTORE'
+                      ELSE 'EDIT'
+                    END;
+        INSERT INTO audit_log (table_name, action, record_key, old_values, new_values, action_by)
+        VALUES (TG_TABLE_NAME, v_action, v_key, to_jsonb(OLD), to_jsonb(NEW), audit_user());
+    END IF;
+    RETURN NULL;
+END;
+$$;
 
--- 8. SALES
-CREATE TABLE SALES (
-    transNo VARCHAR(20) NOT NULL PRIMARY KEY,
-    salesDate DATE NOT NULL,
-    custNo VARCHAR(10) NOT NULL REFERENCES CUSTOMER(custNo) ON UPDATE CASCADE ON DELETE RESTRICT,
-    empNo VARCHAR(10) NOT NULL REFERENCES EMPLOYEE(empNo) ON UPDATE CASCADE ON DELETE RESTRICT
-);
+-- 3c. Blocks hard DELETE / TRUNCATE (soft delete only)
+CREATE OR REPLACE FUNCTION trg_block_hard_delete() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'Hard delete/truncate not allowed on %. Use UPDATE ... SET is_deleted = true.', TG_TABLE_NAME;
+END;
+$$;
 
--- 9. SALESDETAIL
-CREATE TABLE SALESDETAIL (
-    transNo VARCHAR(20) NOT NULL REFERENCES SALES(transNo) ON UPDATE CASCADE ON DELETE CASCADE,
-    prodCode VARCHAR(20) NOT NULL REFERENCES PRODUCT(prodCode) ON UPDATE CASCADE ON DELETE RESTRICT,
-    quantity NUMERIC(10, 2) NOT NULL CHECK (quantity >= 0),
-    PRIMARY KEY (transNo, prodCode)
-);
+-- 3d. Blocks any change to audit_log itself (history is append-only)
+CREATE OR REPLACE FUNCTION trg_protect_audit_log() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'audit_log is append-only.';
+END;
+$$;
 
--- 10. PAYMENT
-CREATE TABLE PAYMENT (
-    ORNo VARCHAR(20) NOT NULL PRIMARY KEY,
-    payDate DATE NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
-    transNo VARCHAR(20) NOT NULL REFERENCES SALES(transNo) ON UPDATE CASCADE ON DELETE RESTRICT
-);
+-- 3e. A parent row cannot be soft-deleted while it still has active children
+CREATE OR REPLACE FUNCTION trg_check_children() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_n INT := 0;
+BEGIN
+    IF NOT (NEW.is_deleted AND NOT OLD.is_deleted) THEN
+        RETURN NEW;                                  -- not a soft delete
+    END IF;
 
--- Views for Assignment Compatibility
-CREATE VIEW personnel AS 
-  SELECT empNo AS empno, lastName AS lastname, firstName AS firstname, gender, birthDate AS birthdate, hireDate AS hiredate, sepDate AS sepdate 
-  FROM EMPLOYEE;
+    CASE TG_TABLE_NAME
+        WHEN 'employee' THEN
+            SELECT count(*) INTO v_n FROM (
+                SELECT 1 FROM jobhistory WHERE empno = OLD.empno AND NOT is_deleted
+                UNION ALL
+                SELECT 1 FROM sales      WHERE empno = OLD.empno AND NOT is_deleted) c;
+        WHEN 'department' THEN
+            SELECT count(*) INTO v_n FROM jobhistory
+             WHERE deptcode = OLD.deptcode AND NOT is_deleted;
+        WHEN 'job' THEN
+            SELECT count(*) INTO v_n FROM jobhistory
+             WHERE jobcode = OLD.jobcode AND NOT is_deleted;
+        WHEN 'customer' THEN
+            SELECT count(*) INTO v_n FROM sales
+             WHERE custno = OLD.custno AND NOT is_deleted;
+        WHEN 'sales' THEN
+            SELECT count(*) INTO v_n FROM (
+                SELECT 1 FROM salesdetail WHERE transno = OLD.transno AND NOT is_deleted
+                UNION ALL
+                SELECT 1 FROM payment     WHERE transno = OLD.transno AND NOT is_deleted) c;
+        WHEN 'product' THEN
+            SELECT count(*) INTO v_n FROM (
+                SELECT 1 FROM salesdetail WHERE prodcode = OLD.prodcode AND NOT is_deleted
+                UNION ALL
+                SELECT 1 FROM pricehist   WHERE prodcode = OLD.prodcode AND NOT is_deleted) c;
+        ELSE
+            NULL;                                    -- child tables: nothing to check
+    END CASE;
 
-CREATE VIEW receiptDetail AS 
-  SELECT transNo, prodCode, quantity 
-  FROM SALESDETAIL;
+    IF v_n > 0 THEN
+        RAISE EXCEPTION 'Cannot delete % row: % active related record(s) still exist.', TG_TABLE_NAME, v_n;
+    END IF;
+    RETURN NEW;
+END;
+$$;
 
-CREATE VIEW priceHist AS 
-  SELECT effDate, prodCode, unitPrice 
-  FROM PRICEHIST;
+-- 4. Attach everything to the 10 tables ---------------------------------
+DO $$
+DECLARE
+    r      RECORD;
+    v_args TEXT;
+BEGIN
+    FOR r IN
+        SELECT * FROM (VALUES
+            ('employee',    'empno'),
+            ('department',  'deptcode'),
+            ('job',         'jobcode'),
+            ('jobhistory',  'empno,jobcode,effdate'),
+            ('customer',    'custno'),
+            ('sales',       'transno'),
+            ('salesdetail', 'transno,prodcode'),
+            ('product',     'prodcode'),
+            ('payment',     'orno'),
+            ('pricehist',   'effdate,prodcode')
+        ) AS t(tbl, keycols)
+    LOOP
+        -- new columns
+        EXECUTE format('ALTER TABLE %I ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+                                      ADD COLUMN stamp VARCHAR(60)', r.tbl);
 
--- Data Insert
--- ========================================================================
--- HOPE GROUP4: OFFICIAL COURSE DATASET (from PartialHOPEDB.sql)
--- 100% Faithful to College Information Management Coursework & Assignments
--- Tables: DEPARTMENT, JOB, EMPLOYEE, JOBHISTORY, CUSTOMER, PRODUCT, PRICEHIST, SALES, SALESDETAIL, PAYMENT
--- ========================================================================
+        -- label the rows loaded by this script
+        EXECUTE format('UPDATE %I SET stamp = %L', r.tbl,
+                       'ADD system ' || to_char(now() AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH12:MI AM'));
 
--- Clear existing data in reverse foreign key order
-TRUNCATE TABLE PAYMENT CASCADE;
-TRUNCATE TABLE SALESDETAIL CASCADE;
-TRUNCATE TABLE SALES CASCADE;
-TRUNCATE TABLE PRICEHIST CASCADE;
-TRUNCATE TABLE PRODUCT CASCADE;
-TRUNCATE TABLE CUSTOMER CASCADE;
-TRUNCATE TABLE JOBHISTORY CASCADE;
-TRUNCATE TABLE DEPARTMENT CASCADE;
-TRUNCATE TABLE JOB CASCADE;
-TRUNCATE TABLE EMPLOYEE CASCADE;
+        -- trigger arguments = quoted key column names
+        SELECT string_agg(quote_literal(k), ',') INTO v_args
+          FROM unnest(string_to_array(r.keycols, ',')) AS k;
 
--- 1. DEPARTMENT (5 rows)
-INSERT INTO DEPARTMENT (deptCode, deptName) VALUES
-('DEP-SLS', 'Sales'),
-('DEP-CRP', 'Corporate Accounts'),
-('DEP-LOG', 'Warehouse & Logistics'),
-('DEP-FIN', 'Finance & Billing'),
-('DEP-EXE', 'Executive Management');
+        EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON %I
+                        FOR EACH ROW EXECUTE FUNCTION trg_check_children()',
+                       r.tbl || '_bu_check', r.tbl);
+        EXECUTE format('CREATE TRIGGER %I BEFORE INSERT OR UPDATE ON %I
+                        FOR EACH ROW EXECUTE FUNCTION trg_set_stamp()',
+                       r.tbl || '_biu_stamp', r.tbl);
+        EXECUTE format('CREATE TRIGGER %I BEFORE DELETE ON %I
+                        FOR EACH ROW EXECUTE FUNCTION trg_block_hard_delete()',
+                       r.tbl || '_bd_block', r.tbl);
+        EXECUTE format('CREATE TRIGGER %I BEFORE TRUNCATE ON %I
+                        FOR EACH STATEMENT EXECUTE FUNCTION trg_block_hard_delete()',
+                       r.tbl || '_bt_block', r.tbl);
+        EXECUTE format('CREATE TRIGGER %I AFTER INSERT OR UPDATE ON %I
+                        FOR EACH ROW EXECUTE FUNCTION trg_audit_log(%s)',
+                       r.tbl || '_aiu_audit', r.tbl, v_args);
 
--- 2. JOB (5 rows)
-INSERT INTO JOB (jobCode, jobDesc) VALUES
-('JOB-SREP', 'Field Sales Representative'),
-('JOB-AMGR', 'Senior Account Manager'),
-('JOB-SUPV', 'Regional Sales Supervisor'),
-('JOB-CLRK', 'Credit & Collections Specialist'),
-('JOB-DIR', 'Commercial Operations Director');
+        -- view of active (not deleted) rows
+        EXECUTE format('CREATE VIEW %I AS SELECT * FROM %I WHERE NOT is_deleted',
+                       r.tbl || '_active', r.tbl);
+    END LOOP;
+END;
+$$;
 
--- 3. EMPLOYEE (32 rows from PartialHOPEDB personnel)
-INSERT INTO EMPLOYEE (empNo, lastName, firstName, gender, birthDate, hireDate, sepDate) VALUES
-('00001', 'Smith', 'John', 'M', '1985-02-20', '2010-05-11', NULL),
-('00003', 'Smith', 'Jane', 'F', '1990-05-16', '2010-05-11', NULL),
-('00005', 'King', 'Don', 'M', '1986-02-14', '2010-06-23', NULL),
-('00007', 'Jenskin', 'Floyd', 'M', '1990-02-20', '2010-05-30', NULL),
-('00009', 'Cerudo', 'Bambie', 'F', '1983-06-23', '2010-05-30', NULL),
-('00011', 'Davis', 'Tom', 'M', '1989-12-16', '2010-06-30', NULL),
-('00013', 'Morris', 'Olive', 'F', '1991-07-21', '2010-06-30', NULL),
-('00015', 'Zulueta', 'Maggie', 'F', '1990-08-03', '2010-07-05', '2011-03-30'),
-('00017', 'Celestino', 'Nelia', 'F', '1984-10-24', '2010-07-05', NULL),
-('00019', 'Esperanza', 'Nehemiah', 'M', '1982-02-21', '2010-07-05', '2014-04-28'),
-('00021', 'Manchester', 'Chelie', 'F', '1988-12-07', '2010-07-05', NULL),
-('00023', 'Kline', 'Nicholas', 'M', '1992-01-21', '2010-07-05', '2010-12-23'),
-('00025', 'Macapagal', 'Ivy', 'F', '1992-04-30', '2010-07-05', NULL),
-('00027', 'Blanche', 'Ernest', 'M', '1986-12-21', '2010-07-05', NULL),
-('00029', 'Chua', 'Evangeline', 'F', '1989-03-10', '2010-07-05', NULL),
-('00031', 'Lancaster', 'Greta', 'F', '1987-08-17', '2010-07-05', NULL),
-('00033', 'Parks', 'Nigel', 'M', '1993-06-23', '2010-07-05', NULL),
-('00035', 'Carlston', 'Voltaire', 'F', '1985-06-12', '2010-07-21', NULL),
-('00037', 'Silva', 'Yves', 'M', '1988-09-21', '2010-07-21', NULL),
-('00039', 'Geisert', 'William', 'M', '1980-03-03', '2010-07-21', NULL),
-('00041', 'Darwin', 'Helena', 'F', '1978-11-08', '2010-09-01', NULL),
-('00043', 'Love', 'Queen', 'F', '1983-11-29', '2010-09-01', NULL),
-('00045', 'Raven', 'Danny', 'M', '1984-02-15', '2010-12-03', NULL),
-('00047', 'Devito', 'Clint', 'M', '1981-06-07', '2010-12-03', NULL),
-('00049', 'Irving', 'Nancy', 'F', '1987-09-19', '2010-12-03', NULL),
-('00051', 'Baltimore', 'Fergie', 'F', '1986-10-10', '2011-01-05', NULL),
-('00053', 'Jones', 'Veronica', 'F', '1983-05-01', '2011-01-05', '2011-03-30'),
-('00055', 'Travis', 'Ursula', 'F', '1987-06-07', '2011-01-05', NULL),
-('00057', 'Orleans', 'Sylvia', 'F', '1987-01-28', '2011-01-05', NULL),
-('00059', 'Sy', 'Alice', 'F', '1984-08-13', '2011-01-05', '2011-04-20'),
-('00061', 'De Leon', 'Girlie', 'F', '1983-07-27', '2011-01-05', NULL),
-('00063', 'Grant', 'Albert', 'M', '1979-05-05', '2011-01-05', NULL);
+-- audit_log is append-only
+CREATE TRIGGER audit_log_protect_row
+    BEFORE UPDATE OR DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION trg_protect_audit_log();
+CREATE TRIGGER audit_log_protect_truncate
+    BEFORE TRUNCATE ON audit_log
+    FOR EACH STATEMENT EXECUTE FUNCTION trg_protect_audit_log();
 
--- 4. JOBHISTORY (34 rows)
-INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode) VALUES
-('00001', 'JOB-DIR', '2010-05-11', 75000, 'DEP-EXE'),
-('00003', 'JOB-SUPV', '2010-05-11', 52000, 'DEP-SLS'),
-('00005', 'JOB-SUPV', '2010-06-23', 52000, 'DEP-SLS'),
-('00007', 'JOB-SREP', '2010-05-30', 38500, 'DEP-SLS'),
-('00007', 'JOB-SUPV', '2011-01-15', 48000, 'DEP-SLS'),
-('00009', 'JOB-SREP', '2010-05-30', 42000, 'DEP-SLS'),
-('00009', 'JOB-AMGR', '2011-02-01', 45000, 'DEP-CRP'),
-('00011', 'JOB-AMGR', '2010-06-30', 42000, 'DEP-CRP'),
-('00013', 'JOB-CLRK', '2010-06-30', 32000, 'DEP-FIN'),
-('00015', 'JOB-SREP', '2010-07-05', 35000, 'DEP-SLS'),
-('00017', 'JOB-SREP', '2010-07-05', 38500, 'DEP-SLS'),
-('00019', 'JOB-AMGR', '2010-07-05', 42000, 'DEP-CRP'),
-('00021', 'JOB-CLRK', '2010-07-05', 32000, 'DEP-FIN'),
-('00023', 'JOB-SREP', '2010-07-05', 31500, 'DEP-SLS'),
-('00025', 'JOB-SREP', '2010-07-05', 35000, 'DEP-SLS'),
-('00027', 'JOB-AMGR', '2010-07-05', 42000, 'DEP-CRP'),
-('00029', 'JOB-CLRK', '2010-07-05', 32000, 'DEP-FIN'),
-('00031', 'JOB-SREP', '2010-07-05', 28000, 'DEP-SLS'),
-('00033', 'JOB-SREP', '2010-07-05', 31500, 'DEP-SLS'),
-('00035', 'JOB-AMGR', '2010-07-21', 42000, 'DEP-CRP'),
-('00037', 'JOB-CLRK', '2010-07-21', 32000, 'DEP-FIN'),
-('00039', 'JOB-SREP', '2010-07-21', 42000, 'DEP-SLS'),
-('00041', 'JOB-SREP', '2010-09-01', 28000, 'DEP-SLS'),
-('00043', 'JOB-AMGR', '2010-09-01', 42000, 'DEP-CRP'),
-('00045', 'JOB-CLRK', '2010-12-03', 32000, 'DEP-FIN'),
-('00047', 'JOB-SREP', '2010-12-03', 38500, 'DEP-SLS'),
-('00049', 'JOB-SREP', '2010-12-03', 42000, 'DEP-SLS'),
-('00051', 'JOB-AMGR', '2011-01-05', 42000, 'DEP-CRP'),
-('00053', 'JOB-CLRK', '2011-01-05', 32000, 'DEP-FIN'),
-('00055', 'JOB-SREP', '2011-01-05', 35000, 'DEP-SLS'),
-('00057', 'JOB-SREP', '2011-01-05', 38500, 'DEP-SLS'),
-('00059', 'JOB-AMGR', '2011-01-05', 42000, 'DEP-CRP'),
-('00061', 'JOB-CLRK', '2011-01-05', 32000, 'DEP-FIN'),
-('00063', 'JOB-SREP', '2011-01-05', 31500, 'DEP-SLS');
+-- =====================================================================
+-- Usage examples
+--   Soft delete : UPDATE employee SET is_deleted = true  WHERE empno = '00015';
+--   Restore     : UPDATE employee SET is_deleted = false WHERE empno = '00015';
+--   History     : SELECT * FROM audit_log WHERE table_name = 'employee' ORDER BY audit_id;
+--   Active rows : SELECT * FROM employee_active;
+-- =====================================================================
 
--- 5. CUSTOMER (82 rows from PartialHOPEDB customer)
-INSERT INTO CUSTOMER (custNo, custName, address, payTerms) VALUES
-('C0001', 'Globus Medical, Inc', '2560 Gen Armistead Ave Audubon CA 94031', '30D'),
-('C0002', 'RF Industries, Inc', '7610 Miramar Rd San Diego, CA 92602', '45D'),
-('C0003', 'Trisha Macdowell', '7642 Clairemont Mesa Blvd San Diego CA 90321', 'COD'),
-('C0004', 'HMS Holdings, Inc', '1000 So Fremont Ave, Suite 225 Alhambara CA 91303', '45D'),
-('C0005', 'Christian Andersen', '1120 Lincoln St Suite 809 Sacramento CA 95815', 'COD'),
-('C0006', 'Astronics, Inc', '2 Orion Aliso Viejo, CA 92656', '30D'),
-('C0007', 'Morgan Alegore', '2 Goodyear Irvine, CA 92618', 'COD'),
-('C0008', 'Abaxis, Inc', '3240 Whipple Rd, Union City, CA 94587', '30D'),
-('C0009', 'Landec Corp.', '3603 Haven Avenue Menlo Park, CA 94025', '30D'),
-('C0010', 'SMP Corp.', '3718 Northern Long Island NY 12528', '45D'),
-('C0011', 'B&G Foods', '4 Gatehall Dr., Ste. 110 Parsippany, NJ 07054', '45D'),
-('C0012', 'Dexter Santos', '2739 Rebeiro Ave, Santa Clara, CA 95051', 'COD'),
-('C0013', 'Health Stream', '209 10th Ave, South Suite 450 Nashville Tennessee', '45D'),
-('C0014', 'InSync Training LLC', 'P.O. Box 3122 Roanoke, VA 24015', '30D'),
-('C0015', 'Bespoke Education', '8205 Santa Monica Blvd, Suite 365 W HWood CA 90046', '30D'),
-('C0016', 'Peri Solutions', '2880 Zanker Road San Jose CA 95101', '30D'),
-('C0017', 'Janet Lim', '800 N. State College Blvd. Fullerton, CA 92831', 'COD'),
-('C0018', 'Nicole Hutchison', '200 Lincoln Ave, Salinas, CA 93901', 'COD'),
-('C0019', 'Brandon Drucker', '65 West Alisal St., # 101, Salinas, CA 93901', 'COD'),
-('C0020', 'Eugene Whitaker', '45 Fremont Street, Suite 2000 San Frans, CA 9410', 'COD'),
-('C0021', 'Touch Suite', '1081 Holland Dr. Boca Raton, FL 33487', '30D'),
-('C0022', 'CallFire', '1410 2nd St., Suite 200 Santa Monica, CA 90401', '45D'),
-('C0023', 'ISBX Corp', '3415 S. Sepulveda Blvd. 1250 Los Angeles, CA 90034', '30D'),
-('C0024', 'Factual', '1999 Avenue of the Stars Los Angeles, CA 90067 ', '30D'),
-('C0025', 'Predixion', '31910 Del Obispo San Juan Capistrano, CA 92675', '45D'),
-('C0026', 'Datapop', '5762 W Jefferson Blvd, Los Angeles, CA 90016', '45D'),
-('C0027', 'SA Photonics, Inc', '130 Knowles Dr, Los Gatos, CA 95032', '30D'),
-('C0028', 'Acumen Bldg Entp', '7770 Pardee Lane, Ste. 200 Oakland, CA 94621', '30D'),
-('C0029', 'IMCorp', '50 Utopia Road Manchester, CT 06042', '30D'),
-('C0030', 'Brady and Assoc.', '3710 Ruffin Rd, San Diego, CA 90401', '30D'),
-('C0031', 'Yello Hammer LLC', '111 W 28th St, New York, NY 10001', '30D'),
-('C0032', 'Conductor', '2 Park Ave, New York, NY 10016', '30D'),
-('C0033', 'Quantum Networks', '323 West 39th Street 11th Flr NY 10018', '45D'),
-('C0034', 'Refinery29', '225 Broadway NY 10007', '45D'),
-('C0035', 'Gravity Media', '104 W 27th St #11d NY 10001', '30D'),
-('C0036', 'Regal wings', '244 Fifth Avenue, Suite 200 New York, NY 10001', '45D'),
-('C0037', '33Across', '229 W 28th St, New York, NY 10001', '45D'),
-('C0038', 'RCS Capital', '405 Park Avenue New York, NY 1002', '30D'),
-('C0039', 'OnDeck', '1400 Broadway, 25th Floor, New York, NY 10001', '45D'),
-('C0040', 'Optimatic Media, Inc', '54 West 40th St., 7th Floor, New York, NY 10018', '30D'),
-('C0041', 'James Underwood', '450 West 33rd Street New York, NY 10018', 'COD'),
-('C0042', 'Charles Silverstone', '1335 Ave of the Americas, New York, NY 10019', 'COD'),
-('C0043', 'Nea Sanchez', '371 7th Ave, New York, NY 10001', 'COD'),
-('C0044', 'Tracy Lambert', '234 W 42nd St, New York, NY 10036', 'COD'),
-('C0045', 'Peter Charlestone', '342 W 40th St, New York, NY 10018', 'COD'),
-('C0046', 'Oxford Academy', '5172 Orange Ave, Cypress, CA 90630', '45D'),
-('C0047', 'Whitney High Sch', '16800 Shoemaker Ave, Cerritos, CA 90703', '30D'),
-('C0048', 'Pacfic Collegiate', '255 Swift St, Santa Cruz, CA 95060', '45D'),
-('C0049', 'KIPP San Jose', '1790 Educational Park Dr, San Jose, CA 95133', '30D'),
-('C0050', 'The Preuss School', '9500 Gilman Dr Mc 0536, La Jolla, CA 92093', '45D'),
-('C0051', 'American Indian Sch', '3637 Magee Ave, Oakland, CA 94619', '30D'),
-('C0052', 'Lowell High School', '1101 Eucalyptus Dr, San Francisco, CA 94132', '45D'),
-('C0053', 'University HSchool', '2611 East Matoian M/S Uh134, Fresno, CA 93740', '30D'),
-('C0054', 'Hawthorne Academy', '4467 West Broadway, Hawthorne, CA 90250', '30D'),
-('C0055', 'Lennox Academy', '11036 Hawthorne Blvd, Lennox, CA 90304', '45D'),
-('C0056', 'Manhasset School', '200 Memorial Place Manhasset, NY 11030', '45D'),
-('C0057', 'Pittsford High Sch', '55 Sutherland St Pittsford, NY 14534', '30D'),
-('C0058', 'Jericho High School', '99 Cedar Swamp Rd, Jericho, NY 11753', '45D'),
-('C0059', 'Stuyvesant High', '345 Chambers St, New York, NY 10282', '45D'),
-('C0060', 'Rye High School', 'Parsons St, Rye, NY 10580', '30D'),
-('C0061', 'Brooklyn High', '29 Ft Greene Place, Brooklyn, NY 11217', '45D'),
-('C0062', 'Brooklyn Latin Sch', '325 Bushwick Ave, Brooklyn, NY 11206', '30D'),
-('C0063', 'Bronx Science High', '75 West 205Th St Bronx, NY 10468', '45D'),
-('C0064', 'Staten Island High', '485 Clawson St, Staten Island, NY 10306', '30D'),
-('C0065', 'Yonkers Middle High', '150 Rockland Ave, Yonkers, NY 10705', '45D'),
-('C0066', 'Helen Strong', '800 S Main StTulelake, CA 96134', 'COD'),
-('C0067', 'Gay Rose Silva', '575 3rd St Napa, CA 94559', 'COD'),
-('C0068', 'William Pichler', '1121 L St #407 Sacramento, CA 95814', 'COD'),
-('C0069', 'Terrance Nitz', '23200 Pacific Coast Hwy Malibu, CA 90265', 'COD'),
-('C0070', 'Errol Atanacio', '300 Capitol Mall #555 Sacramento, CA 95814', 'COD'),
-('C0071', 'Chuck Jones', '163 W 125th St New York, NY 10027', 'COD'),
-('C0072', 'Menchu Palmores', '600 College Ave Montour Falls, NY 14865', 'COD'),
-('C0073', 'Princess Ann White', '109 S Union St #411 Rochester, NY 14607', 'COD'),
-('C0074', 'Florence Black', '450 S Salina St Syracuse, NY 13202', 'COD'),
-('C0075', 'Jeremy Irons', '3357 US Highway 9w Highland, NY 12528', 'COD'),
-('C0076', 'Braddy Banks', '1424 Fulton St Brooklyn, NY 11216', 'COD'),
-('C0077', 'Office NY Tech Serv', 'State Capitol Empire State Plaza NY 10027', '45D'),
-('C0078', 'FDA New York', '158-15 Liberty Ave., Jamaica, NY 12528', '45D'),
-('C0079', 'Social Sec Admn NY', '123 William St, New York, NY 10038', '45D'),
-('C0080', 'Social Sec Admn CA', '3836 Wilshire Blvd, Los Angeles, CA 90010', '45D'),
-('C0081', 'Dept Food and Agri', '220 N Street Sacramento, CA 95814', '45D'),
-('C0082', 'California Dept Tech', '1325 J St Suite 1600 Sacramento CA 95814', '45D');
+-- =====================================================================
+-- COMPATIBILITY & ANALYTICAL VIEWS FOR NEXT.JS APPLICATION
+-- =====================================================================
 
--- 6. PRODUCT (57 rows)
-INSERT INTO PRODUCT (prodCode, description, unit) VALUES
-('AD0001', 'DisplayPort to HDMI 4K Gold-Plated Video Adapter', 'pc'),
-('AD0002', 'DVI-D Dual Link to VGA Active Signal Converter', 'pc'),
-('AD0003', 'USB 3.0 Gigabit Ethernet Network Adapter Dongle', 'pc'),
-('AD0004', 'High-Speed USB-C Multiport Hub with HDMI & PD', 'pc'),
-('AK0001', 'Micro Innovations Standard PS/2 Keyboard', 'pc'),
-('AK0002', 'Micro Innovations Multimedia USB Keyboard', 'pc'),
-('AK0003', 'SteelSeries APEX Mechanical Gaming Keyboard', 'pc'),
-('AM0001', 'Microsoft Wireless Optical Mobile Mouse', 'pc'),
-('AM0002', 'Logitech Performance MX Laser Wireless Mouse', 'pc'),
-('AM0003', 'Standard 3-Button USB Optical Scroll Mouse', 'pc'),
-('AM0004', 'Razer DeathAdder Ergonomic Gaming Mouse', 'pc'),
-('AM0005', 'Corsair Harpoon RGB Pro Optical Mouse', 'pc'),
-('AP0001', 'APC Back-UPS 650VA Battery Backup System', 'unit'),
-('AP0002', 'Corsair CX750 750W 80-Plus Bronze Power Supply', 'unit'),
-('AP0003', 'Seasonic Focus GX-850 850W Gold Power Supply', 'unit'),
-('MD0001', 'ASUS VS228H-P 21.5-Inch Full HD LED Monitor', 'unit'),
-('MD0002', 'Acer R240HY 23.8-Inch IPS Widescreen Monitor', 'unit'),
-('MD0003', 'Dell UltraSharp U2415 24-Inch 16:10 Monitor', 'unit'),
-('MD0004', 'Samsung S24D300H 24-Inch LED HDMI Monitor', 'unit'),
-('MD0005', 'LG 34UM68-P 34-Inch UltraWide IPS Gaming Monitor', 'unit'),
-('MD0006', 'ViewSonic VA2246M-LED 22-Inch Widescreen Display', 'unit'),
-('MP0001', 'Sony ICD-PX370 Digital Voice Audio Recorder', 'unit'),
-('MP0002', 'Philips VoiceTracer Professional Memo Recorder', 'unit'),
-('MP0003', 'Blue Yeti Multi-Pattern Professional USB Microphone', 'unit'),
-('MP0004', 'Jabra Speak 510 Wireless Bluetooth Speakerphone', 'unit'),
-('NB0001', 'HP Pavilion DV6000 15.4-Inch Core 2 Duo Laptop', 'unit'),
-('NB0002', 'Lenovo ThinkPad T410 14-Inch Core i5 Notebook', 'unit'),
-('NB0003', 'Dell Inspiron 14 3000 Series Portable Notebook', 'unit'),
-('NB0004', 'Acer Aspire One 11.6-Inch Compact Netbook', 'unit'),
-('NB0005', 'Apple MacBook Pro 13-Inch Unibody Aluminum', 'unit'),
-('NH0001', 'TP-Link TL-SG108 8-Port Gigabit Desktop Switch', 'unit'),
-('NH0002', 'D-Link DGS-1016D 16-Port Gigabit Unmanaged Switch', 'unit'),
-('NH0003', 'Cisco Catalyst 2960 24-Port Fast Ethernet Switch', 'unit'),
-('NT0001', 'Cat6 UTP Solid Bare Copper Patch Cable 100m Roll', 'roll'),
-('NT0002', '10Gtek SFP+ 10Gb Fiber Optical Transceiver Module', 'unit'),
-('NT0003', 'RJ45 Modular Plug Connectors 100-Pack with Boots', 'pack'),
-('NT0004', 'Professional Ratcheting RJ45 Network Crimping Tool', 'unit'),
-('NT0005', 'TRENDnet 24-Port Cat6 Unshielded Patch Panel 1U', 'unit'),
-('NT0006', 'Digital Multi-Function Network Cable Wire Tester', 'unit'),
-('PA0001', 'HP 85A Black LaserJet Original Toner Cartridge', 'cartridge'),
-('PA0002', 'Canon PG-210 Black High-Yield Ink Tank Reservoir', 'cartridge'),
-('PC0001', 'Dell OptiPlex 780 Desktop PC Core 2 Quad 4GB', 'unit'),
-('PC0002', 'HP Slimline S5000 Small Form Factor Desktop', 'unit'),
-('PC0003', 'Lenovo ThinkCentre M90p Business Tower Core i5', 'unit'),
-('PC0004', 'ASUS ProSeries Commercial Workstation Core i7', 'unit'),
-('PF0001', 'Kingston DataTraveler 100 G2 16GB USB Drive', 'pc'),
-('PF0002', 'SanDisk Cruzer Glide 32GB High-Speed Flash Drive', 'pc'),
-('PF0003', 'Transcend JetFlash 8GB USB 2.0 Pen Drive', 'pc'),
-('PF0004', 'Corsair Flash Voyager 64GB Rugged USB 3.0', 'pc'),
-('PF0005', 'Sony MicroVault 32GB Click-Type Flash Drive', 'pc'),
-('PF0006', 'Verbatim PinStripe 4GB Retractable USB Drive', 'pc'),
-('PR0001', 'HP LaserJet Pro P1102w Wireless Monochrome Printer', 'unit'),
-('PR0002', 'Canon PIXMA MP280 All-in-One Inkjet Photo Printer', 'unit'),
-('PR0003', 'Epson WorkForce Pro WF-3620 Color Multifunction', 'unit'),
-('PS0001', 'Dell PowerEdge R710 2U Rack Server Dual Xeon', 'unit'),
-('PS0002', 'APC Smart-UPS RT 3000VA On-Line Power Backup 120V', 'unit'),
-('PS0003', 'CyberPower PR1500LCD 1500VA Sine Wave UPS Tower', 'unit');
+-- Compatibility views
+CREATE OR REPLACE VIEW personnel AS 
+    SELECT empno, lastname, firstname, gender, birthdate, hiredate, sepdate 
+    FROM employee;
 
--- 7. PRICEHIST (79 rows from PartialHOPEDB priceHist)
-INSERT INTO PRICEHIST (effDate, prodCode, unitPrice) VALUES
-('2010-05-15', 'AK0001', 12),
-('2010-05-15', 'AK0002', 8.37),
-('2010-05-15', 'AK0003', 99.99),
-('2010-05-15', 'AM0001', 36.45),
-('2010-05-15', 'AM0002', 69.26),
-('2010-05-15', 'AM0003', 20.43),
-('2010-05-15', 'AM0004', 88.14),
-('2010-05-15', 'AM0005', 49.27),
-('2010-05-15', 'AP0001', 299.99),
-('2010-05-15', 'AP0002', 304.48),
-('2010-05-15', 'AP0003', 349.99),
-('2010-05-15', 'MD0001', 119.68),
-('2010-05-15', 'MD0002', 149.99),
-('2010-05-15', 'MD0003', 239.96),
-('2010-05-15', 'MD0004', 132.21),
-('2010-05-15', 'MD0005', 825),
-('2010-05-15', 'MD0006', 124.29),
-('2010-05-15', 'NB0001', 300),
-('2010-05-15', 'NB0002', 298),
-('2010-05-15', 'NB0003', 199),
-('2010-05-15', 'NB0004', 279),
-('2010-05-15', 'PA0001', 219),
-('2010-05-15', 'PA0002', 102.99),
-('2010-07-12', 'PC0001', 454.54),
-('2010-05-15', 'PC0001', 499.99),
-('2010-07-12', 'PC0002', 197.99),
-('2010-05-15', 'PC0002', 179.99),
-('2010-05-15', 'PC0003', 390),
-('2010-05-15', 'PC0004', 538),
-('2010-05-15', 'PF0001', 123.75),
-('2010-05-15', 'PF0002', 64.25),
-('2010-05-15', 'PF0003', 28.87),
-('2010-05-15', 'PF0004', 92.85),
-('2010-05-15', 'PF0005', 119),
-('2010-05-15', 'PF0006', 7.5),
-('2010-05-15', 'PR0001', 81.72),
-('2010-05-15', 'PR0002', 99.99),
-('2010-05-15', 'PR0003', 123),
-('2010-08-01', 'MD0001', 131.65),
-('2010-08-01', 'MD0002', 164.99),
-('2010-08-01', 'MD0003', 263.96),
-('2010-08-01', 'MD0004', 145.43),
-('2010-08-01', 'MD0005', 907.5),
-('2010-08-01', 'MD0006', 136.72),
-('2010-08-16', 'PF0001', 112.5),
-('2010-08-16', 'PF0002', 58.41),
-('2010-08-16', 'PF0003', 26.25),
-('2010-08-16', 'PF0004', 84.41),
-('2010-08-16', 'PF0005', 108.18),
-('2010-08-16', 'PF0006', 6.82),
-('2010-08-16', 'AM0001', 38.27),
-('2010-08-16', 'AM0002', 72.72),
-('2010-08-16', 'AM0003', 21.45),
-('2010-08-16', 'AM0004', 92.55),
-('2010-08-16', 'AM0005', 51.73),
-('2010-08-16', 'AP0001', 314.99),
-('2010-08-16', 'AP0002', 319.7),
-('2010-08-16', 'AP0003', 367.49),
-('2010-08-16', 'AD0001', 58),
-('2010-08-16', 'AD0002', 69.99),
-('2010-08-16', 'AD0003', 54.44),
-('2010-08-16', 'AD0004', 71.99),
-('2010-08-16', 'NH0001', 21.99),
-('2010-08-16', 'NH0002', 24.99),
-('2010-08-16', 'NH0003', 171.69),
-('2010-12-01', 'NT0001', 412.49),
-('2010-12-01', 'NT0002', 324.99),
-('2010-12-01', 'NT0003', 287),
-('2010-12-01', 'NT0004', 219.89),
-('2010-12-01', 'NT0005', 499.99),
-('2010-12-01', 'NT0006', 57.99),
-('2010-12-01', 'PS0001', 3200),
-('2010-12-01', 'PS0002', 699.99),
-('2010-12-01', 'PS0003', 599.99),
-('2010-12-01', 'MP0001', 199.95),
-('2010-12-01', 'MP0002', 126.72),
-('2010-12-01', 'MP0003', 425),
-('2010-12-01', 'MP0004', 302),
-('2011-02-01', 'NB0005', 1184.72);
+CREATE OR REPLACE VIEW receiptDetail AS 
+    SELECT transno, prodcode, quantity 
+    FROM salesdetail;
 
--- 8. SALES (124 rows)
-INSERT INTO SALES (transNo, salesDate, custNo, empNo) VALUES
-('TR000001', '2010-06-05', 'C0001', '00003'),
-('TR000002', '2010-06-10', 'C0002', '00007'),
-('TR000003', '2010-07-05', 'C0003', '00007'),
-('TR000004', '2010-06-15', 'C0004', '00003'),
-('TR000005', '2010-07-09', 'C0005', '00011'),
-('TR000006', '2010-06-30', 'C0006', '00013'),
-('TR000007', '2010-07-07', 'C0007', '00015'),
-('TR000008', '2010-07-26', 'C0008', '00017'),
-('TR000009', '2010-06-25', 'C0009', '00003'),
-('TR000010', '2010-06-25', 'C0010', '00005'),
-('TR000011', '2010-06-25', 'C0011', '00007'),
-('TR000012', '2010-07-12', 'C0012', '00025'),
-('TR000013', '2010-07-07', 'C0013', '00027'),
-('TR000014', '2010-07-17', 'C0014', '00029'),
-('TR000015', '2010-06-27', 'C0015', '00007'),
-('TR000016', '2010-07-12', 'C0016', '00033'),
-('TR000017', '2010-08-12', 'C0017', '00035'),
-('TR000018', '2010-08-01', 'C0018', '00037'),
-('TR000019', '2010-08-23', 'C0019', '00039'),
-('TR000020', '2010-08-05', 'C0020', '00003'),
-('TR000021', '2010-08-17', 'C0021', '00005'),
-('TR000022', '2010-08-05', 'C0022', '00007'),
-('TR000023', '2010-07-26', 'C0023', '00009'),
-('TR000024', '2010-07-26', 'C0024', '00011'),
-('TR000025', '2010-07-16', 'C0025', '00019'),
-('TR000026', '2010-08-01', 'C0026', '00015'),
-('TR000027', '2010-08-15', 'C0027', '00017'),
-('TR000028', '2010-08-21', 'C0028', '00019'),
-('TR000029', '2010-08-26', 'C0029', '00021'),
-('TR000030', '2010-09-15', 'C0030', '00019'),
-('TR000031', '2010-08-21', 'C0031', '00025'),
-('TR000032', '2010-09-05', 'C0032', '00023'),
-('TR000033', '2010-08-12', 'C0033', '00029'),
-('TR000034', '2010-08-12', 'C0034', '00031'),
-('TR000035', '2010-09-05', 'C0035', '00029'),
-('TR000036', '2010-09-05', 'C0036', '00031'),
-('TR000037', '2010-09-15', 'C0037', '00033'),
-('TR000038', '2010-09-15', 'C0038', '00035'),
-('TR000039', '2010-09-28', 'C0039', '00037'),
-('TR000040', '2010-10-10', 'C0040', '00039'),
-('TR000041', '2010-10-01', 'C0041', '00041'),
-('TR000042', '2010-10-30', 'C0042', '00043'),
-('TR000043', '2010-11-20', 'C0043', '00003'),
-('TR000044', '2010-12-01', 'C0044', '00005'),
-('TR000045', '2010-12-05', 'C0045', '00043'),
-('TR000046', '2010-11-15', 'C0046', '00009'),
-('TR000047', '2010-11-05', 'C0047', '00011'),
-('TR000048', '2010-12-08', 'C0048', '00049'),
-('TR000049', '2010-12-01', 'C0049', '00015'),
-('TR000050', '2010-12-01', 'C0050', '00017'),
-('TR000051', '2010-12-21', 'C0051', '00007'),
-('TR000052', '2011-01-11', 'C0052', '00047'),
-('TR000053', '2011-01-15', 'C0053', '00049'),
-('TR000054', '2011-01-17', 'C0054', '00051'),
-('TR000055', '2011-01-11', 'C0055', '00053'),
-('TR000056', '2011-01-11', 'C0056', '00055'),
-('TR000057', '2011-01-21', 'C0057', '00057'),
-('TR000058', '2011-01-07', 'C0058', '00059'),
-('TR000059', '2011-01-16', 'C0059', '00061'),
-('TR000060', '2011-01-26', 'C0060', '00063'),
-('TR000061', '2011-01-16', 'C0061', '00003'),
-('TR000062', '2011-01-15', 'C0062', '00005'),
-('TR000063', '2010-12-21', 'C0063', '00031'),
-('TR000064', '2011-01-31', 'C0064', '00009'),
-('TR000065', '2011-01-21', 'C0065', '00011'),
-('TR000066', '2011-01-30', 'C0066', '00013'),
-('TR000067', '2011-02-15', 'C0067', '00015'),
-('TR000068', '2011-01-20', 'C0068', '00017'),
-('TR000069', '2011-01-20', 'C0069', '00019'),
-('TR000070', '2011-01-25', 'C0070', '00021'),
-('TR000071', '2011-01-25', 'C0071', '00025'),
-('TR000072', '2011-01-25', 'C0072', '00027'),
-('TR000073', '2011-03-01', 'C0073', '00029'),
-('TR000074', '2011-02-25', 'C0074', '00031'),
-('TR000075', '2011-02-25', 'C0075', '00033'),
-('TR000076', '2011-02-25', 'C0076', '00035'),
-('TR000077', '2011-02-01', 'C0077', '00037'),
-('TR000078', '2011-02-01', 'C0078', '00039'),
-('TR000079', '2011-01-16', 'C0079', '00041'),
-('TR000080', '2011-02-01', 'C0080', '00043'),
-('TR000081', '2011-02-01', 'C0081', '00045'),
-('TR000082', '2011-01-21', 'C0082', '00047'),
-('TR000083', '2011-02-01', 'C0001', '00049'),
-('TR000084', '2011-02-08', 'C0002', '00051'),
-('TR000085', '2011-03-05', 'C0003', '00053'),
-('TR000086', '2011-02-18', 'C0004', '00055'),
-('TR000087', '2011-03-01', 'C0005', '00057'),
-('TR000088', '2011-02-10', 'C0006', '00059'),
-('TR000089', '2011-02-25', 'C0007', '00061'),
-('TR000090', '2011-03-15', 'C0008', '00063'),
-('TR000091', '2011-02-15', 'C0009', '00003'),
-('TR000092', '2011-02-23', 'C0010', '00005'),
-('TR000093', '2011-02-23', 'C0011', '00007'),
-('TR000094', '2011-03-02', 'C0012', '00009'),
-('TR000095', '2011-02-08', 'C0013', '00011'),
-('TR000096', '2011-02-18', 'C0014', '00013'),
-('TR000097', '2011-03-05', 'C0015', '00015'),
-('TR000098', '2011-02-28', 'C0016', '00017'),
-('TR000099', '2011-03-20', 'C0017', '00019'),
-('TR000100', '2011-03-15', 'C0018', '00021'),
-('TR000101', '2011-04-13', 'C0019', '00039'),
-('TR000102', '2011-04-05', 'C0020', '00041'),
-('TR000103', '2011-03-21', 'C0021', '00029'),
-('TR000104', '2011-04-05', 'C0022', '00045'),
-('TR000105', '2011-04-05', 'C0023', '00047'),
-('TR000106', '2011-03-21', 'C0024', '00035'),
-('TR000107', '2011-04-05', 'C0025', '00051'),
-('TR000108', '2011-03-13', 'C0026', '00039'),
-('TR000109', '2011-03-23', 'C0027', '00041'),
-('TR000110', '2011-03-23', 'C0028', '00043'),
-('TR000111', '2011-03-23', 'C0029', '00045'),
-('TR000112', '2011-03-23', 'C0030', '00047'),
-('TR000113', '2011-03-23', 'C0031', '00049'),
-('TR000114', '2011-03-23', 'C0032', '00051'),
-('TR000115', '2011-03-13', 'C0033', '00053'),
-('TR000116', '2011-03-13', 'C0034', '00055'),
-('TR000117', '2011-03-23', 'C0035', '00057'),
-('TR000118', '2011-03-13', 'C0036', '00059'),
-('TR000119', '2011-03-26', 'C0037', '00061'),
-('TR000120', '2011-04-05', 'C0038', '00019'),
-('TR000121', '2011-05-05', 'C0039', '00031'),
-('TR000122', '2011-05-15', 'C0040', '00033'),
-('TR000123', '2011-04-30', 'C0041', '00035'),
-('TR000124', '2011-05-15', 'C0042', '00037');
+CREATE OR REPLACE VIEW customer_legacy AS 
+    SELECT custno, custname, address, payterm 
+    FROM customer;
 
--- 9. SALESDETAIL (313 rows from PartialHOPEDB receiptDetail)
-INSERT INTO SALESDETAIL (transNo, prodCode, quantity) VALUES
-('TR000001', 'AK0002', 10),
-('TR000001', 'AM0003', 10),
-('TR000001', 'MD0001', 10),
-('TR000001', 'PC0002', 10),
-('TR000002', 'NB0001', 5),
-('TR000002', 'PR0001', 1),
-('TR000003', 'PF0006', 1),
-('TR000004', 'AK0003', 6),
-('TR000004', 'AM0004', 6),
-('TR000004', 'MD0004', 6),
-('TR000004', 'NB0002', 4),
-('TR000004', 'PC0003', 6),
-('TR000004', 'PR0003', 2),
-('TR000005', 'AK0003', 1),
-('TR000005', 'MD0005', 1),
-('TR000006', 'NB0001', 5),
-('TR000006', 'PF0005', 5),
-('TR000007', 'PF0003', 2),
-('TR000008', 'AP0002', 3),
-('TR000008', 'MD0002', 2),
-('TR000008', 'NB0004', 1),
-('TR000009', 'AM0002', 1),
-('TR000009', 'MD0003', 1),
-('TR000010', 'AP0001', 2),
-('TR000010', 'PA0001', 5),
-('TR000011', 'AK0003', 3),
-('TR000011', 'AM0004', 3),
-('TR000011', 'MD0003', 3),
-('TR000011', 'PC0004', 3),
-('TR000011', 'PR0002', 2),
-('TR000012', 'NB0003', 7),
-('TR000013', 'AM0005', 2),
-('TR000013', 'AP0002', 1),
-('TR000014', 'PF0004', 10),
-('TR000015', 'AK0003', 1),
-('TR000015', 'AM0001', 1),
-('TR000015', 'MD0002', 1),
-('TR000015', 'PC0001', 1),
-('TR000016', 'AP0002', 2),
-('TR000016', 'NB0002', 7),
-('TR000016', 'PF0006', 1),
-('TR000016', 'PR0002', 1),
-('TR000017', 'PA0001', 3),
-('TR000017', 'PA0002', 4),
-('TR000018', 'MD0001', 9),
-('TR000018', 'PC0004', 9),
-('TR000019', 'AP0002', 2),
-('TR000020', 'MD0005', 1),
-('TR000021', 'AM0002', 3),
-('TR000021', 'NB0002', 3),
-('TR000022', 'MD0006', 5),
-('TR000022', 'PA0002', 1),
-('TR000022', 'PC0002', 5),
-('TR000023', 'NB0001', 1),
-('TR000024', 'PA0002', 1),
-('TR000025', 'AP0002', 1),
-('TR000026', 'AM0005', 1),
-('TR000026', 'MD0003', 1),
-('TR000026', 'PC0001', 1),
-('TR000027', 'NB0003', 3),
-('TR000027', 'PF0003', 1),
-('TR000028', 'AM0001', 2),
-('TR000028', 'PF0004', 5),
-('TR000029', 'PF0001', 3),
-('TR000030', 'AM0001', 5),
-('TR000030', 'PA0001', 5),
-('TR000030', 'PF0006', 1),
-('TR000030', 'PR0003', 2),
-('TR000031', 'AM0003', 20),
-('TR000032', 'NB0004', 3),
-('TR000032', 'PA0002', 2),
-('TR000033', 'NB0001', 3),
-('TR000034', 'MD0003', 1),
-('TR000034', 'PC0001', 1),
-('TR000035', 'NH0003', 3),
-('TR000035', 'PC0004', 10),
-('TR000035', 'PR0002', 2),
-('TR000036', 'MD0005', 5),
-('TR000037', 'AM0002', 10),
-('TR000037', 'PC0004', 5),
-('TR000038', 'AD0003', 1),
-('TR000038', 'AK0001', 3),
-('TR000038', 'PA0001', 3),
-('TR000038', 'PC0003', 3),
-('TR000039', 'NB0004', 10),
-('TR000039', 'NH0002', 2),
-('TR000039', 'PF0001', 1),
-('TR000039', 'PF0006', 1),
-('TR000040', 'NB0002', 15),
-('TR000041', 'NB0001', 5),
-('TR000041', 'PR0002', 2),
-('TR000042', 'AM0005', 3),
-('TR000042', 'AP0003', 1),
-('TR000043', 'AD0003', 3),
-('TR000043', 'NB0004', 5),
-('TR000043', 'NH0003', 2),
-('TR000043', 'PA0001', 5),
-('TR000043', 'PF0001', 2),
-('TR000044', 'AD0002', 2),
-('TR000044', 'PC0001', 3),
-('TR000045', 'AM0004', 5),
-('TR000045', 'MD0003', 5),
-('TR000045', 'PC0004', 5),
-('TR000046', 'AP0001', 1),
-('TR000046', 'NB0002', 10),
-('TR000047', 'PA0001', 1),
-('TR000048', 'AM0005', 3),
-('TR000048', 'MD0001', 5),
-('TR000048', 'PC0003', 5),
-('TR000048', 'PF0006', 1),
-('TR000048', 'PR0003', 2),
-('TR000049', 'MP0001', 10),
-('TR000049', 'MP0003', 10),
-('TR000050', 'NT0005', 1),
-('TR000051', 'MP0001', 15),
-('TR000051', 'MP0004', 15),
-('TR000051', 'NT0001', 15),
-('TR000052', 'MP0001', 10),
-('TR000052', 'MP0003', 10),
-('TR000052', 'NT0001', 10),
-('TR000053', 'AK0002', 20),
-('TR000053', 'AM0002', 20),
-('TR000053', 'AP0002', 2),
-('TR000053', 'MD0001', 20),
-('TR000053', 'PC0004', 20),
-('TR000054', 'AP0001', 1),
-('TR000054', 'NB0001', 10),
-('TR000055', 'AD0003', 3),
-('TR000055', 'NH0003', 2),
-('TR000055', 'PF0006', 1),
-('TR000055', 'PR0003', 2),
-('TR000055', 'PS0001', 1),
-('TR000056', 'NB0004', 5),
-('TR000056', 'PA0002', 2),
-('TR000056', 'PF0005', 1),
-('TR000057', 'AD0004', 2),
-('TR000057', 'NH0002', 2),
-('TR000057', 'PF0006', 1),
-('TR000057', 'PS0003', 1),
-('TR000058', 'MD0005', 2),
-('TR000058', 'PS0001', 1),
-('TR000059', 'MP0001', 5),
-('TR000059', 'NT0002', 5),
-('TR000060', 'AD0004', 2),
-('TR000060', 'MP0001', 3),
-('TR000060', 'PS0002', 1),
-('TR000060', 'PS0003', 1),
-('TR000061', 'MP0001', 5),
-('TR000061', 'MP0003', 5),
-('TR000062', 'AD0002', 2),
-('TR000062', 'NH0003', 3),
-('TR000062', 'NT0006', 2),
-('TR000062', 'PS0003', 1),
-('TR000063', 'PS0003', 1),
-('TR000064', 'MD0002', 2),
-('TR000064', 'PC0004', 5),
-('TR000064', 'PF0001', 2),
-('TR000064', 'PF0006', 1),
-('TR000064', 'PS0001', 1),
-('TR000065', 'NB0004', 5),
-('TR000065', 'PA0002', 2),
-('TR000066', 'AM0002', 15),
-('TR000066', 'MP0003', 15),
-('TR000066', 'NB0002', 15),
-('TR000067', 'NH0002', 3),
-('TR000067', 'PS0003', 3),
-('TR000068', 'MP0001', 2),
-('TR000069', 'MP0003', 1),
-('TR000070', 'NT0001', 3),
-('TR000071', 'NT0003', 1),
-('TR000072', 'NT0005', 1),
-('TR000073', 'AP0002', 5),
-('TR000073', 'PC0004', 40),
-('TR000073', 'PR0001', 1),
-('TR000074', 'AM0002', 2),
-('TR000074', 'PC0002', 20),
-('TR000074', 'PF0001', 1),
-('TR000075', 'AM0001', 10),
-('TR000075', 'AP0003', 2),
-('TR000075', 'NB0001', 10),
-('TR000075', 'NB0005', 5),
-('TR000076', 'NB0005', 1),
-('TR000077', 'NB0005', 2),
-('TR000078', 'NB0005', 10),
-('TR000079', 'AD0004', 2),
-('TR000079', 'PS0001', 1),
-('TR000080', 'NB0005', 3),
-('TR000081', 'NB0005', 4),
-('TR000081', 'PA0002', 4),
-('TR000082', 'PC0002', 20),
-('TR000082', 'PF0005', 1),
-('TR000083', 'NB0005', 5),
-('TR000083', 'PA0002', 5),
-('TR000084', 'AM0001', 2),
-('TR000084', 'NB0005', 4),
-('TR000084', 'NH0003', 5),
-('TR000084', 'PS0002', 1),
-('TR000085', 'AP0002', 2),
-('TR000085', 'PC0002', 10),
-('TR000085', 'PF0006', 1),
-('TR000086', 'AD0003', 3),
-('TR000086', 'MD0004', 5),
-('TR000086', 'PC0003', 10),
-('TR000087', 'AM0001', 10),
-('TR000087', 'PC0001', 3),
-('TR000087', 'PC0004', 7),
-('TR000087', 'PF0004', 2),
-('TR000088', 'NH0003', 3),
-('TR000088', 'PR0001', 5),
-('TR000088', 'PS0001', 5),
-('TR000089', 'NB0005', 10),
-('TR000090', 'NB0005', 3),
-('TR000090', 'NH0001', 1),
-('TR000090', 'NH0003', 2),
-('TR000090', 'PS0003', 1),
-('TR000091', 'AD0003', 2),
-('TR000091', 'NT0001', 3),
-('TR000091', 'NT0005', 2),
-('TR000091', 'PS0002', 1),
-('TR000092', 'AD0003', 2),
-('TR000092', 'AM0001', 5),
-('TR000092', 'NB0004', 2),
-('TR000092', 'PC0001', 10),
-('TR000092', 'PF0006', 1),
-('TR000093', 'MD0002', 10),
-('TR000093', 'NH0003', 2),
-('TR000093', 'PC0002', 20),
-('TR000094', 'PC0002', 9),
-('TR000094', 'PF0006', 1),
-('TR000095', 'MD0003', 3),
-('TR000095', 'NB0003', 4),
-('TR000096', 'AP0002', 2),
-('TR000096', 'PA0001', 1),
-('TR000097', 'NB0003', 3),
-('TR000097', 'PC0004', 5),
-('TR000098', 'NB0001', 2),
-('TR000098', 'NT0001', 2),
-('TR000098', 'PC0002', 10),
-('TR000098', 'PF0004', 1),
-('TR000099', 'NB0005', 3),
-('TR000099', 'PS0002', 1),
-('TR000099', 'PS0003', 1),
-('TR000100', 'NB0005', 5),
-('TR000100', 'NT0002', 3),
-('TR000100', 'NT0004', 3),
-('TR000100', 'PA0002', 5),
-('TR000100', 'PC0002', 10),
-('TR000101', 'AD0001', 2),
-('TR000101', 'NH0003', 1),
-('TR000101', 'PC0001', 10),
-('TR000101', 'PF0006', 1),
-('TR000102', 'MD0001', 10),
-('TR000102', 'NH0002', 1),
-('TR000102', 'PC0004', 10),
-('TR000102', 'PS0003', 1),
-('TR000103', 'AK0001', 15),
-('TR000103', 'AM0004', 15),
-('TR000103', 'MD0006', 15),
-('TR000103', 'PC0004', 15),
-('TR000104', 'MP0002', 2),
-('TR000104', 'MP0003', 3),
-('TR000104', 'NB0005', 2),
-('TR000105', 'NB0005', 5),
-('TR000106', 'NB0005', 4),
-('TR000107', 'NB0005', 5),
-('TR000108', 'MP0001', 1),
-('TR000108', 'NT0005', 1),
-('TR000109', 'NB0005', 1),
-('TR000110', 'MP0003', 2),
-('TR000111', 'NB0005', 2),
-('TR000112', 'NB0001', 2),
-('TR000113', 'NB0005', 1),
-('TR000114', 'AP0003', 1),
-('TR000115', 'NB0005', 1),
-('TR000115', 'NT0001', 1),
-('TR000116', 'MP0003', 1),
-('TR000116', 'NB0005', 1),
-('TR000117', 'NT0005', 1),
-('TR000118', 'NB0005', 1),
-('TR000119', 'NB0005', 20),
-('TR000119', 'PC0004', 100),
-('TR000120', 'AD0003', 10),
-('TR000120', 'NH0003', 20),
-('TR000120', 'PC0004', 150),
-('TR000120', 'PR0003', 10),
-('TR000120', 'PS0001', 5),
-('TR000120', 'PS0003', 3),
-('TR000121', 'NB0005', 5),
-('TR000121', 'NH0003', 5),
-('TR000121', 'NT0001', 5),
-('TR000121', 'PC0002', 20),
-('TR000122', 'AP0002', 1),
-('TR000122', 'NB0005', 10),
-('TR000122', 'NH0003', 5),
-('TR000122', 'PC0003', 30),
-('TR000122', 'PF0001', 5),
-('TR000122', 'PR0002', 5),
-('TR000122', 'PS0003', 3),
-('TR000123', 'AD0001', 5),
-('TR000123', 'NH0003', 3),
-('TR000123', 'NT0001', 3),
-('TR000123', 'PC0004', 60),
-('TR000123', 'PF0005', 5),
-('TR000123', 'PF0006', 3),
-('TR000123', 'PR0003', 5),
-('TR000123', 'PS0001', 2),
-('TR000124', 'AM0002', 10),
-('TR000124', 'MD0006', 5),
-('TR000124', 'NB0005', 3),
-('TR000124', 'PC0002', 15),
-('TR000124', 'PF0005', 3),
-('TR000124', 'PF0006', 2),
-('TR000124', 'PS0001', 3);
+-- 1. v_sale_lines: Itemized priced lines with effective unit price
+CREATE OR REPLACE VIEW v_sale_lines AS
+SELECT 
+    sd.transno AS "transNo",
+    s.salesdate AS "salesDate",
+    sd.prodcode AS "prodCode",
+    p.description,
+    p.unit,
+    sd.quantity,
+    COALESCE(ph.unitprice, 0.0) AS "unitPrice",
+    ph.effdate AS "priceEffDate",
+    (sd.quantity * COALESCE(ph.unitprice, 0.0))::NUMERIC(14,2) AS "lineAmount"
+FROM salesdetail sd
+JOIN sales s ON s.transno = sd.transno
+JOIN product p ON p.prodcode = sd.prodcode
+LEFT JOIN LATERAL (
+    SELECT ph1.unitprice, ph1.effdate
+    FROM pricehist ph1
+    WHERE ph1.prodcode = sd.prodcode AND ph1.effdate <= s.salesdate
+    ORDER BY ph1.effdate DESC
+    LIMIT 1
+) ph ON true;
 
--- 10. PAYMENT (165 rows from PartialHOPEDB payment)
-INSERT INTO PAYMENT (ORNo, payDate, amount, transNo) VALUES
-('OR000001', '2010-06-20', 3284.7, 'TR000001'),
-('OR000002', '2010-07-05', 1581.72, 'TR000002'),
-('OR000003', '2010-07-05', 7.5, 'TR000003'),
-('OR000004', '2010-07-07', 57.74, 'TR000007'),
-('OR000005', '2010-07-09', 924.99, 'TR000005'),
-('OR000006', '2010-07-10', 3000, 'TR000004'),
-('OR000007', '2010-07-10', 309.22, 'TR000009'),
-('OR000008', '2010-07-12', 1393, 'TR000012'),
-('OR000009', '2010-07-12', 740.97, 'TR000015'),
-('OR000010', '2010-07-15', 1000, 'TR000006'),
-('OR000011', '2010-07-20', 1000, 'TR000010'),
-('OR000012', '2010-07-20', 1500, 'TR000011'),
-('OR000013', '2010-07-27', 2000, 'TR000016'),
-('OR000014', '2010-08-01', 403.02, 'TR000013'),
-('OR000015', '2010-08-01', 500, 'TR000014'),
-('OR000016', '2010-08-01', 4000, 'TR000018'),
-('OR000017', '2010-08-05', 907.5, 'TR000020'),
-('OR000018', '2010-08-07', 1095, 'TR000006'),
-('OR000019', '2010-08-10', 1000, 'TR000008'),
-('OR000020', '2010-08-10', 300, 'TR000023'),
-('OR000021', '2010-08-10', 102.99, 'TR000024'),
-('OR000022', '2010-08-10', 304.48, 'TR000025'),
-('OR000023', '2010-08-12', 1000, 'TR000017'),
-('OR000024', '2010-08-15', 1598.25, 'TR000011'),
-('OR000025', '2010-08-15', 1919.12, 'TR000018'),
-('OR000026', '2010-08-20', 767.77, 'TR000026'),
-('OR000027', '2010-08-20', 700.4, 'TR000004'),
-('OR000028', '2010-08-23', 608.96, 'TR000019'),
-('OR000029', '2010-08-30', 1000, 'TR000022'),
-('OR000030', '2010-08-30', 623.25, 'TR000027'),
-('OR000031', '2010-09-01', 500, 'TR000021'),
-('OR000032', '2010-09-05', 498.59, 'TR000028'),
-('OR000033', '2010-09-05', 429, 'TR000031'),
-('OR000034', '2010-09-06', 900, 'TR000033'),
-('OR000035', '2010-09-06', 718.5, 'TR000034'),
-('OR000036', '2010-09-10', 337.5, 'TR000029'),
-('OR000037', '2010-09-10', 601.78, 'TR000021'),
-('OR000038', '2010-09-10', 776.54, 'TR000022'),
-('OR000039', '2010-09-20', 1000, 'TR000032'),
-('OR000040', '2010-09-20', 4000, 'TR000035'),
-('OR000041', '2010-09-30', 1000, 'TR000030'),
-('OR000042', '2010-09-30', 4000, 'TR000036'),
-('OR000043', '2010-09-30', 1000, 'TR000038'),
-('OR000044', '2010-10-01', 1699.98, 'TR000041'),
-('OR000045', '2010-10-10', 539.17, 'TR000030'),
-('OR000046', '2010-10-10', 2095.05, 'TR000035'),
-('OR000047', '2010-10-10', 3417.2, 'TR000037'),
-('OR000048', '2010-10-23', 917.44, 'TR000038'),
-('OR000049', '2010-10-23', 2000, 'TR000039'),
-('OR000050', '2010-10-25', 3000, 'TR000040'),
-('OR000051', '2010-10-30', 522.68, 'TR000042'),
-('OR000052', '2010-11-10', 1470, 'TR000040'),
-('OR000053', '2010-11-20', 959.3, 'TR000039'),
-('OR000054', '2010-11-20', 2000, 'TR000043'),
-('OR000055', '2010-11-20', 219, 'TR000047'),
-('OR000056', '2010-12-01', 1503.6, 'TR000044'),
-('OR000057', '2010-12-05', 3000, 'TR000045'),
-('OR000058', '2010-12-10', 3294.99, 'TR000046'),
-('OR000059', '2010-12-10', 6249.5, 'TR000049'),
-('OR000060', '2010-12-10', 499.99, 'TR000050'),
-('OR000061', '2010-12-20', 1472.55, 'TR000045'),
-('OR000062', '2011-01-02', 1500, 'TR000048'),
-('OR000063', '2011-01-05', 5000, 'TR000051'),
-('OR000064', '2011-01-15', 1516.26, 'TR000048'),
-('OR000065', '2011-01-15', 5000, 'TR000051'),
-('OR000066', '2011-01-15', 599.99, 'TR000063'),
-('OR000067', '2011-01-20', 399.9, 'TR000068'),
-('OR000068', '2011-01-20', 425, 'TR000069'),
-('OR000069', '2011-01-25', 1237.47, 'TR000070'),
-('OR000070', '2011-01-25', 287, 'TR000071'),
-('OR000071', '2011-01-25', 499.99, 'TR000072'),
-('OR000072', '2011-01-30', 10000, 'TR000053'),
-('OR000073', '2011-01-30', 1371.02, 'TR000062'),
-('OR000074', '2011-01-30', 5000, 'TR000066'),
-('OR000075', '2011-02-01', 1000, 'TR000054'),
-('OR000076', '2011-02-01', 3000, 'TR000058'),
-('OR000077', '2011-02-02', 2369.44, 'TR000077'),
-('OR000078', '2011-02-05', 5000, 'TR000052'),
-('OR000079', '2011-02-05', 3000, 'TR000055'),
-('OR000080', '2011-02-05', 1709.16, 'TR000056'),
-('OR000081', '2011-02-05', 800.77, 'TR000057'),
-('OR000082', '2011-02-07', 1500, 'TR000080'),
-('OR000083', '2011-02-10', 5374.4, 'TR000052'),
-('OR000084', '2011-02-10', 5654.2, 'TR000053'),
-('OR000085', '2011-02-10', 2314.99, 'TR000054'),
-('OR000086', '2011-02-10', 2015, 'TR000058'),
-('OR000087', '2011-02-10', 2624.7, 'TR000059'),
-('OR000088', '2011-02-10', 2043.81, 'TR000060'),
-('OR000089', '2011-02-10', 1500, 'TR000061'),
-('OR000090', '2011-02-10', 3343.98, 'TR000079'),
-('OR000091', '2011-02-15', 1624.75, 'TR000061'),
-('OR000092', '2011-02-15', 6451.8, 'TR000064'),
-('OR000093', '2011-02-15', 1600.98, 'TR000065'),
-('OR000094', '2011-02-15', 1874.94, 'TR000067'),
-('OR000095', '2011-02-15', 4067.98, 'TR000082'),
-('OR000096', '2011-02-15', 3000, 'TR000083'),
-('OR000097', '2011-02-17', 6935.8, 'TR000066'),
-('OR000098', '2011-02-25', 4217.74, 'TR000074'),
-('OR000099', '2011-02-25', 10041.28, 'TR000075'),
-('OR000100', '2011-02-25', 1184.72, 'TR000076'),
-('OR000101', '2011-02-25', 7000, 'TR000078'),
-('OR000102', '2011-02-25', 2054.16, 'TR000080'),
-('OR000103', '2011-02-25', 7000, 'TR000088'),
-('OR000104', '2011-02-25', 5000, 'TR000089'),
-('OR000105', '2011-02-26', 3000, 'TR000081'),
-('OR000106', '2011-03-01', 10000, 'TR000073'),
-('OR000107', '2011-03-01', 4000, 'TR000087'),
-('OR000108', '2011-03-02', 3046.32, 'TR000091'),
-('OR000109', '2011-03-02', 1788.73, 'TR000094'),
-('OR000110', '2011-03-05', 2150.84, 'TR000081'),
-('OR000111', '2011-03-05', 3438.55, 'TR000083'),
-('OR000112', '2011-03-05', 3000, 'TR000084'),
-('OR000113', '2011-03-05', 2626.12, 'TR000085'),
-('OR000114', '2011-03-05', 1587.88, 'TR000095'),
-('OR000115', '2011-03-05', 858.4, 'TR000096'),
-('OR000116', '2011-03-10', 7000, 'TR000088'),
-('OR000117', '2011-03-10', 6847.2, 'TR000089'),
-('OR000118', '2011-03-11', 13200.22, 'TR000073'),
-('OR000119', '2011-03-15', 3000, 'TR000086'),
-('OR000120', '2011-03-15', 3489.29, 'TR000098'),
-('OR000121', '2011-03-15', 3000, 'TR000100'),
-('OR000122', '2011-03-20', 2923.67, 'TR000088'),
-('OR000123', '2011-03-20', 2000, 'TR000092'),
-('OR000124', '2011-03-20', 4000, 'TR000093'),
-('OR000125', '2011-03-20', 1500, 'TR000097'),
-('OR000126', '2011-03-20', 4854.14, 'TR000099'),
-('OR000127', '2011-03-30', 4519.52, 'TR000090'),
-('OR000128', '2011-03-30', 3000, 'TR000100'),
-('OR000129', '2011-04-02', 3410.45, 'TR000092'),
-('OR000130', '2011-04-02', 2953.08, 'TR000093'),
-('OR000131', '2011-04-05', 1787, 'TR000097'),
-('OR000132', '2011-04-05', 5000, 'TR000102'),
-('OR000133', '2011-04-05', 3000, 'TR000103'),
-('OR000134', '2011-04-05', 2000, 'TR000106'),
-('OR000135', '2011-04-07', 699.94, 'TR000108'),
-('OR000136', '2011-04-07', 1184.72, 'TR000109'),
-('OR000137', '2011-04-07', 850, 'TR000110'),
-('OR000138', '2011-04-07', 2369.44, 'TR000111'),
-('OR000139', '2011-04-07', 600, 'TR000112'),
-('OR000140', '2011-04-07', 1184.72, 'TR000113'),
-('OR000141', '2011-04-07', 367.49, 'TR000114'),
-('OR000142', '2011-04-07', 1597.21, 'TR000115'),
-('OR000143', '2011-04-07', 1609.72, 'TR000116'),
-('OR000144', '2011-04-07', 499.99, 'TR000117'),
-('OR000145', '2011-04-07', 1184.72, 'TR000118'),
-('OR000146', '2011-04-10', 3000, 'TR000100'),
-('OR000147', '2011-04-10', 4000, 'TR000103'),
-('OR000148', '2011-04-13', 4839.91, 'TR000101'),
-('OR000149', '2011-04-20', 2321.48, 'TR000102'),
-('OR000150', '2011-04-20', 4689.05, 'TR000103'),
-('OR000151', '2011-04-20', 5923.6, 'TR000105'),
-('OR000152', '2011-04-20', 20000, 'TR000119'),
-('OR000153', '2011-04-20', 30000, 'TR000120'),
-('OR000154', '2011-04-30', 3000, 'TR000104'),
-('OR000155', '2011-04-30', 2738.88, 'TR000106'),
-('OR000156', '2011-04-30', 5923.6, 'TR000107'),
-('OR000157', '2011-04-30', 20000, 'TR000123'),
-('OR000158', '2011-05-01', 20000, 'TR000119'),
-('OR000159', '2011-05-05', 30000, 'TR000120'),
-('OR000160', '2011-05-10', 37494.4, 'TR000119'),
-('OR000161', '2011-05-15', 17872.99, 'TR000124'),
-('OR000162', '2011-05-20', 21898.9, 'TR000123'),
-('OR000163', '2011-05-30', 43708.17, 'TR000120'),
-('OR000164', '2011-05-30', 12804.3, 'TR000121'),
-('OR000165', '2011-05-30', 27587.77, 'TR000122');
+-- 2. v_sales_details_priced
+CREATE OR REPLACE VIEW v_sales_details_priced AS
+SELECT 
+    sd.transno AS "transNo",
+    s.salesdate AS "salesDate",
+    sd.prodcode AS "prodCode",
+    p.description AS "productDescription",
+    p.unit,
+    sd.quantity,
+    COALESCE(ph.unitprice, 0.0) AS "unitPrice",
+    (sd.quantity * COALESCE(ph.unitprice, 0.0))::NUMERIC(14,2) AS "lineTotal"
+FROM salesdetail sd
+JOIN sales s ON s.transno = sd.transno
+JOIN product p ON p.prodcode = sd.prodcode
+LEFT JOIN LATERAL (
+    SELECT ph1.unitprice, ph1.effdate
+    FROM pricehist ph1
+    WHERE ph1.prodcode = sd.prodcode AND ph1.effdate <= s.salesdate
+    ORDER BY ph1.effdate DESC
+    LIMIT 1
+) ph ON true;
 
+-- 3. v_sales_summary
+CREATE OR REPLACE VIEW v_sales_summary AS
+SELECT 
+    s.transno AS "transNo",
+    s.salesdate AS "salesDate",
+    c.custno AS "custNo",
+    c.custname AS "custName",
+    c.address AS "custAddress",
+    c.payterm AS "payTerms",
+    e.empno AS "empNo",
+    (e.firstname || ' ' || e.lastname) AS "repName",
+    jh.deptcode AS "deptCode",
+    d.deptname AS "deptName",
+    COALESCE(COUNT(sd.prodcode), 0)::INT AS "itemCount",
+    COALESCE(SUM(l."lineAmount"), 0.0)::NUMERIC(14,2) AS "totalAmount"
+FROM sales s
+JOIN customer c ON c.custno = s.custno
+JOIN employee e ON e.empno = s.empno
+LEFT JOIN LATERAL (
+    SELECT jh1.deptcode
+    FROM jobhistory jh1
+    WHERE jh1.empno = s.empno AND jh1.effdate <= s.salesdate
+    ORDER BY jh1.effdate DESC
+    LIMIT 1
+) jh ON true
+LEFT JOIN department d ON d.deptcode = jh.deptcode
+LEFT JOIN salesdetail sd ON sd.transno = s.transno
+LEFT JOIN v_sale_lines l ON l."transNo" = sd.transno AND l."prodCode" = sd.prodcode
+GROUP BY s.transno, s.salesdate, c.custno, c.custname, c.address, c.payterm, e.empno, e.firstname, e.lastname, jh.deptcode, d.deptname;
+
+-- 4. v_customer_overview
+CREATE OR REPLACE VIEW v_customer_overview AS
+SELECT 
+    c.custno AS "custNo",
+    c.custname AS "custName",
+    c.address,
+    c.payterm AS "payTerms",
+    COUNT(DISTINCT s.transno)::INT AS "ordersPlaced",
+    COUNT(p.orno)::INT AS "paymentCount",
+    COALESCE(SUM(p.amount), 0.0)::NUMERIC(14,2) AS "totalPaid",
+    (COUNT(DISTINCT s.transno) - COUNT(DISTINCT p.transno))::INT AS "unpaidOrders",
+    MAX(p.paydate) AS "lastPaymentDate",
+    (
+        SELECT p_sub.orno 
+        FROM payment p_sub 
+        JOIN sales s_sub ON s_sub.transno = p_sub.transno 
+        WHERE s_sub.custno = c.custno 
+        ORDER BY p_sub.paydate DESC, p_sub.orno DESC 
+        LIMIT 1
+    ) AS "lastPaymentOrNo",
+    MIN(s.salesdate) AS "customerSince"
+FROM customer c
+LEFT JOIN sales s ON s.custno = c.custno
+LEFT JOIN payment p ON p.transno = s.transno
+GROUP BY c.custno, c.custname, c.address, c.payterm;
+
+-- 5. v_customer_payments
+CREATE OR REPLACE VIEW v_customer_payments AS
+SELECT 
+    p.orno AS "ORNo",
+    p.orno AS "orNo",
+    p.paydate AS "payDate",
+    p.amount,
+    p.transno AS "transNo",
+    s.custno AS "custNo",
+    c.custname AS "custName",
+    s.salesdate AS "salesDate",
+    CASE WHEN s.transno IS NULL THEN 1 ELSE 0 END AS "isUnlinked"
+FROM payment p
+LEFT JOIN sales s ON s.transno = p.transno
+LEFT JOIN customer c ON c.custno = s.custno
+ORDER BY p.paydate DESC, p.orno DESC;
+
+-- 6. v_employee_current_status
+CREATE OR REPLACE VIEW v_employee_current_status AS
+SELECT 
+    e.empno AS "empNo",
+    e.lastname AS "lastName",
+    e.firstname AS "firstName",
+    (e.firstname || ' ' || e.lastname) AS "fullName",
+    e.gender,
+    e.birthdate AS "birthDate",
+    e.hiredate AS "hireDate",
+    e.sepdate AS "sepDate",
+    CASE WHEN e.sepdate IS NULL THEN 'Active' ELSE 'Separated' END AS status,
+    CASE WHEN e.sepdate IS NULL THEN 'Active' ELSE 'Separated' END AS "employmentStatus",
+    jh.deptcode AS "deptCode",
+    d.deptname AS "deptName",
+    jh.jobcode AS "jobCode",
+    j.jobdesc AS "jobDesc",
+    jh.salary,
+    jh.salary AS "currentSalary",
+    jh.effdate AS "currentJobEffDate",
+    (DATE_PART('year', now()) - DATE_PART('year', e.hiredate))::INT AS "yearsOfService"
+FROM employee e
+LEFT JOIN LATERAL (
+    SELECT jh1.deptcode, jh1.jobcode, jh1.salary
+    FROM jobhistory jh1
+    WHERE jh1.empno = e.empno
+    ORDER BY jh1.effdate DESC
+    LIMIT 1
+) jh ON true
+LEFT JOIN department d ON d.deptcode = jh.deptcode
+LEFT JOIN job j ON j.jobcode = jh.jobcode;
+
+-- 7. v_price_history
+CREATE OR REPLACE VIEW v_price_history AS
+SELECT 
+    ph.effdate AS "effDate",
+    ph.prodcode AS "prodCode",
+    p.description,
+    p.unit,
+    ph.unitprice AS "unitPrice"
+FROM pricehist ph
+JOIN product p ON p.prodcode = ph.prodcode;
+
+-- 8. v_product_overview
+CREATE OR REPLACE VIEW v_product_overview AS
+SELECT 
+    p.prodcode AS "prodCode",
+    p.description,
+    p.unit,
+    cur.unitprice AS "currentPrice",
+    COALESCE(cnt.priceRecordCount, 0)::INT AS "priceRecordCount",
+    COALESCE(s_agg.unitsSold, 0)::INT AS "unitsSold",
+    COALESCE(s_agg.salesRevenue, 0.0)::NUMERIC(14,2) AS "salesRevenue",
+    s_agg.lastSold AS "lastSold"
+FROM product p
+LEFT JOIN LATERAL (
+    SELECT ph1.unitprice
+    FROM pricehist ph1
+    WHERE ph1.prodcode = p.prodcode
+    ORDER BY ph1.effdate DESC
+    LIMIT 1
+) cur ON true
+LEFT JOIN LATERAL (
+    SELECT COUNT(*) AS priceRecordCount
+    FROM pricehist
+    WHERE prodcode = p.prodcode
+) cnt ON true
+LEFT JOIN LATERAL (
+    SELECT 
+        SUM(sd.quantity) AS unitsSold,
+        SUM(sd.quantity * COALESCE(ph.unitprice, 0.0)) AS salesRevenue,
+        MAX(s.salesdate) AS lastSold
+    FROM salesdetail sd
+    JOIN sales s ON s.transno = sd.transno
+    LEFT JOIN LATERAL (
+        SELECT ph1.unitprice
+        FROM pricehist ph1
+        WHERE ph1.prodcode = sd.prodcode AND ph1.effdate <= s.salesdate
+        ORDER BY ph1.effdate DESC
+        LIMIT 1
+    ) ph ON true
+    WHERE sd.prodcode = p.prodcode
+) s_agg ON true;
+
+-- 9. v_product_sales_analytics
+CREATE OR REPLACE VIEW v_product_sales_analytics AS
+SELECT 
+    p.prodcode AS "prodCode",
+    p.description,
+    p.unit,
+    cur.unitprice AS "currentPrice",
+    COALESCE(s_agg.unitsSold, 0)::INT AS "totalUnitsSold",
+    COALESCE(s_agg.salesRevenue, 0.0)::NUMERIC(14,2) AS "totalRevenue"
+FROM product p
+LEFT JOIN LATERAL (
+    SELECT ph1.unitprice
+    FROM pricehist ph1
+    WHERE ph1.prodcode = p.prodcode
+    ORDER BY ph1.effdate DESC
+    LIMIT 1
+) cur ON true
+LEFT JOIN LATERAL (
+    SELECT 
+        SUM(sd.quantity) AS unitsSold,
+        SUM(sd.quantity * COALESCE(ph.unitprice, 0.0)) AS salesRevenue
+    FROM salesdetail sd
+    JOIN sales s ON s.transno = sd.transno
+    LEFT JOIN LATERAL (
+        SELECT ph1.unitprice
+        FROM pricehist ph1
+        WHERE ph1.prodcode = sd.prodcode AND ph1.effdate <= s.salesdate
+        ORDER BY ph1.effdate DESC
+        LIMIT 1
+    ) ph ON true
+    WHERE sd.prodcode = p.prodcode
+) s_agg ON true;
+
+-- 10. v_sales_with_dept
+CREATE OR REPLACE VIEW v_sales_with_dept AS
+SELECT 
+    s.transno AS "transNo",
+    s.salesdate AS "salesDate",
+    s.custno AS "custNo",
+    s.empno AS "empNo",
+    (e.firstname || ' ' || e.lastname) AS "empName",
+    jh.deptcode AS "deptCode",
+    d.deptname AS "deptName",
+    jh.jobcode AS "jobCode",
+    j.jobdesc AS "jobDesc"
+FROM sales s
+JOIN employee e ON e.empno = s.empno
+LEFT JOIN LATERAL (
+    SELECT jh1.deptcode, jh1.jobcode
+    FROM jobhistory jh1
+    WHERE jh1.empno = s.empno AND jh1.effdate <= s.salesdate
+    ORDER BY jh1.effdate DESC
+    LIMIT 1
+) jh ON true
+LEFT JOIN department d ON d.deptcode = jh.deptcode
+LEFT JOIN job j ON j.jobcode = jh.jobcode;
+
+-- 11. RPC function: get_home_summary
+CREATE OR REPLACE FUNCTION get_home_summary()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY INVOKER
+AS $$
+DECLARE
+    result JSONB;
+BEGIN
+    SELECT jsonb_build_object(
+        'checkedAt', to_char(now() AT TIME ZONE 'Asia/Manila', 'Mon DD, YYYY, HH12:MI AM'),
+        'totalTables', 10,
+        'totalRelationships', 9,
+        'counts', jsonb_build_object(
+            'DEPARTMENT', (SELECT count(*) FROM department),
+            'JOB', (SELECT count(*) FROM job),
+            'EMPLOYEE', (SELECT count(*) FROM employee),
+            'JOBHISTORY', (SELECT count(*) FROM jobhistory),
+            'CUSTOMER', (SELECT count(*) FROM customer),
+            'PRODUCT', (SELECT count(*) FROM product),
+            'PRICEHIST', (SELECT count(*) FROM pricehist),
+            'SALES', (SELECT count(*) FROM sales),
+            'SALESDETAIL', (SELECT count(*) FROM salesdetail),
+            'PAYMENT', (SELECT count(*) FROM payment)
+        )
+    ) INTO result;
+    RETURN result;
+END;
+$$;

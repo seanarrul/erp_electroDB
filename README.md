@@ -1,8 +1,9 @@
 # HOPE Group4 Sales and Payments Monitoring System
 
 > **Subject:** Information Management (2nd Year Computer Science Capstone)  
-> **Corporate Branding:** HOPE Group4 — PC Hardware & Enterprise Solutions  
-> **Schema Rule:** Strictly 10 Tables (Hope ERD Faithful • Zero Extra Tables • Zero Extra Columns)  
+> **Corporate Branding:** HOPE Group4 — Enterprise Database & Information Management  
+> **Schema Rule:** Strictly 10 Tables (Hope ERD Faithful • Zero Extra Tables • Standard Audit Trail)  
+> **Canonical Dataset Rule:** 100% Faithful to Jeremias C. Esperanza (NEU CCS) `HopeDB_audit.sql.txt` (928 canonical records: 32 Employees, 8 Departments, 14 Jobs, 54 JobHistories, 82 Customers, 57 Products, 79 PriceHistories, 124 Sales, 313 SalesDetails, 165 Payments). This is THE ONLY authoritative data used by the system (all legacy/alternative datasets removed).  
 > **Full-Stack Architecture:** Next.js 15 (App Router, Server Actions, TypeScript), Tailwind CSS  
 > **Production Target:** Vercel
 

@@ -23,8 +23,8 @@ function getManilaToday(): string {
 
 const addCustomerSchema = z.object({
   custNo: z.union([
+    z.string().min(1, 'Customer number is required.'),
     z.number().int().positive('Customer number must be a positive integer.'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
   custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(120),
   address: z.string().trim().min(1, 'Customer address is required (R-03).').max(255),
@@ -35,8 +35,8 @@ const addCustomerSchema = z.object({
 
 const updateCustomerSchema = z.object({
   custNo: z.union([
+    z.string().min(1, 'Customer number is required.'),
     z.number().int().positive('Customer number must be a positive integer.'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
   custName: z.string().trim().min(1, 'Customer name is required (R-03).').max(120),
   address: z.string().trim().min(1, 'Customer address is required (R-03).').max(255),
@@ -134,19 +134,22 @@ export async function addCustomerAction(input: AddCustomerInput) {
     // SQLite implementation
     const db = getSqliteDb();
 
+    const rawCust = String(validated.custNo).trim();
+    const custNo = rawCust.startsWith('C') ? rawCust : (/^\d+$/.test(rawCust) ? `C${rawCust.padStart(4, '0')}` : rawCust);
+
     // R-02: Check unique custNo
-    const existing = db.prepare('SELECT 1 FROM CUSTOMER WHERE custNo = ?').get(validated.custNo);
+    const existing = db.prepare('SELECT 1 FROM CUSTOMER WHERE custNo = ? OR custNo = ?').get(custNo, rawCust);
     if (existing) {
-      return { error: `Customer number ${validated.custNo} is already in use (R-02).` };
+      return { error: `Customer number ${custNo} is already in use (R-02).` };
     }
 
     db.prepare(`
-      INSERT INTO CUSTOMER (custNo, custName, address, payTerms)
-      VALUES (?, ?, ?, ?)
-    `).run(validated.custNo, validated.custName, validated.address, validated.payTerms);
+      INSERT INTO CUSTOMER (custNo, custName, address, payterm, stamp)
+      VALUES (?, ?, ?, ?, 'ADD sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
+    `).run(custNo, validated.custName, validated.address, validated.payTerms);
 
     revalidatePath('/customers');
-    return { success: true, custNo: validated.custNo };
+    return { success: true, custNo };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return { error: err.errors[0]?.message || 'Invalid customer input' };
@@ -198,16 +201,19 @@ export async function updateCustomerAction(input: UpdateCustomerInput) {
     // SQLite implementation
     const db = getSqliteDb();
 
-    const existing = db.prepare('SELECT 1 FROM CUSTOMER WHERE custNo = ?').get(validated.custNo);
+    const rawCust = String(validated.custNo).trim();
+    const custNo = rawCust.startsWith('C') ? rawCust : (/^\d+$/.test(rawCust) ? `C${rawCust.padStart(4, '0')}` : rawCust);
+
+    const existing = db.prepare('SELECT 1 FROM CUSTOMER WHERE custNo = ? OR custNo = ?').get(custNo, rawCust);
     if (!existing) {
-      return { error: `Customer #${validated.custNo} was not found.` };
+      return { error: `Customer #${custNo} was not found.` };
     }
 
     db.prepare(`
       UPDATE CUSTOMER 
-      SET custName = ?, address = ?, payTerms = ?
-      WHERE custNo = ?
-    `).run(validated.custName, validated.address, validated.payTerms, validated.custNo);
+      SET custName = ?, address = ?, payterm = ?, stamp = 'EDIT sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours')
+      WHERE custNo = ? OR custNo = ?
+    `).run(validated.custName, validated.address, validated.payTerms, custNo, rawCust);
 
     revalidatePath('/customers');
     return { success: true };

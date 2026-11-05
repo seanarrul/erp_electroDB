@@ -18,12 +18,12 @@ const saleItemSchema = z.object({
 
 const createSaleSchema = z.object({
   custNo: z.union([
+    z.string().min(1, 'Customer is required (R-01)'),
     z.number().int().positive('Customer is required (R-01)'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
   empNo: z.union([
+    z.string().min(1, 'Sales Representative is required (R-01)'),
     z.number().int().positive('Sales Representative is required (R-01)'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
   salesDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid date (YYYY-MM-DD) is required'),
   items: z
@@ -109,14 +109,21 @@ export async function createSaleAction(input: CreateSaleInput) {
       };
     }
 
+    // Normalize customer and employee numbers
+    const rawCust = String(validated.custNo).trim();
+    const custNo = rawCust.startsWith('C') ? rawCust : (/^\d+$/.test(rawCust) ? `C${rawCust.padStart(4, '0')}` : rawCust);
+
+    const rawEmp = String(validated.empNo).trim();
+    const empNo = /^\d+$/.test(rawEmp) ? rawEmp.padStart(5, '0') : rawEmp;
+
     // Validate Customer exists (R-01)
-    const custExists = db.prepare('SELECT custNo FROM CUSTOMER WHERE custNo = ?').get(validated.custNo);
+    const custExists = db.prepare('SELECT custNo FROM CUSTOMER WHERE custNo = ? OR custNo = ?').get(custNo, rawCust);
     if (!custExists) {
       return { error: `Rule R-01 violation: Customer ${validated.custNo} does not exist.` };
     }
 
     // Validate Sales Rep (R-06)
-    const emp = db.prepare('SELECT hireDate, sepDate FROM EMPLOYEE WHERE empNo = ?').get(validated.empNo) as any;
+    const emp = db.prepare('SELECT hireDate, sepDate FROM EMPLOYEE WHERE empNo = ? OR empNo = ?').get(empNo, rawEmp) as any;
     if (!emp) {
       return { error: `Rule R-01 violation: Employee ${validated.empNo} not found.` };
     }
@@ -129,8 +136,8 @@ export async function createSaleAction(input: CreateSaleInput) {
 
     // Validate Rep has JOBHISTORY on or before sale date (R-06)
     const hasJob = db
-      .prepare('SELECT 1 FROM JOBHISTORY WHERE empNo = ? AND effDate <= ? LIMIT 1')
-      .get(validated.empNo, validated.salesDate);
+      .prepare('SELECT 1 FROM JOBHISTORY WHERE (empNo = ? OR empNo = ?) AND effDate <= ? LIMIT 1')
+      .get(empNo, rawEmp, validated.salesDate);
     if (!hasJob) {
       return { error: `Rule R-06 violation: Sales rep has no assigned department on ${validated.salesDate}.` };
     }
@@ -151,8 +158,15 @@ export async function createSaleAction(input: CreateSaleInput) {
     }
 
     // Compute next transNo (R-08)
-    const nextRow = db.prepare('SELECT COALESCE(MAX(transNo), 5000) + 1 AS nextTransNo FROM SALES').get() as any;
-    const transNo = Number(nextRow.nextTransNo);
+    const nextRow = db.prepare(`
+      SELECT COALESCE(
+        MAX(CAST(SUBSTR(transNo, 3) AS INTEGER)),
+        MAX(CAST(transNo AS INTEGER)),
+        0
+      ) + 1 AS nextNum FROM SALES
+    `).get() as any;
+    const nextNum = Number(nextRow?.nextNum || 125);
+    const transNo = `TR${String(nextNum).padStart(6, '0')}`;
 
     // Atomic transaction (R-09)
     db.exec('BEGIN IMMEDIATE');
@@ -160,14 +174,14 @@ export async function createSaleAction(input: CreateSaleInput) {
     try {
       // 1. Insert master sale record
       db.prepare(`
-        INSERT INTO SALES (transNo, salesDate, custNo, empNo)
-        VALUES (?, ?, ?, ?)
-      `).run(transNo, validated.salesDate, validated.custNo, validated.empNo);
+        INSERT INTO SALES (transNo, salesDate, custNo, empNo, stamp)
+        VALUES (?, ?, ?, ?, 'ADD sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
+      `).run(transNo, validated.salesDate, custNo, empNo);
 
       // 2. Insert line items
       const insertDetail = db.prepare(`
-        INSERT INTO SALESDETAIL (transNo, prodCode, quantity)
-        VALUES (?, ?, ?)
+        INSERT INTO SALESDETAIL (transNo, prodCode, quantity, stamp)
+        VALUES (?, ?, ?, 'ADD sales ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
       `);
 
       for (const item of validated.items) {

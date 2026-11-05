@@ -127,7 +127,7 @@ export async function getEmployeesDirectory(
       birthDate: String(r.birthDate || ''),
       hireDate,
       sepDate,
-      employmentStatus: r.employmentStatus as 'Active' | 'Separated',
+      employmentStatus: (r.employmentStatus || r.status || (sepDate ? 'Separated' : 'Active')) as 'Active' | 'Separated',
       tenureDays: Number(r.tenureDays || 0),
       tenureText: calculateTenureText(hireDate, sepDate),
       jobCode: String(r.jobCode || 'N/A'),

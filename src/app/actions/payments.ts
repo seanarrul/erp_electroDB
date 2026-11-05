@@ -10,8 +10,8 @@ import { getSalesForPayment, getNextORNumberPreview } from '@/lib/data/payments'
 
 const recordPaymentSchema = z.object({
   transNo: z.union([
+    z.string().min(1, 'Transaction number is required'),
     z.number().int().positive('Transaction number is required'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
   amount: z.number().positive('Payment amount must be greater than zero'),
   payDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid payment date (YYYY-MM-DD) is required'),
@@ -88,15 +88,18 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
     db.exec('BEGIN IMMEDIATE');
 
     try {
-      // 1. Fetch sale
-      const sale = db.prepare('SELECT transNo, salesDate FROM SALES WHERE transNo = ?').get(validated.transNo) as any;
+      // 1. Fetch sale (supports TR000001 or numeric ID)
+      const rawTrans = String(validated.transNo).trim();
+      const transNo = rawTrans.startsWith('TR') ? rawTrans : (/^\d+$/.test(rawTrans) ? `TR${rawTrans.padStart(6, '0')}` : rawTrans);
+
+      const sale = db.prepare('SELECT transNo, salesDate FROM SALES WHERE transNo = ? OR transNo = ?').get(transNo, rawTrans) as any;
       if (!sale) {
         db.exec('ROLLBACK');
         return { error: `Transaction #${validated.transNo} does not exist.` };
       }
 
       // 2. Date checks
-      const todayStr = '2026-10-28'; // Asia/Manila current date
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
       if (validated.payDate < sale.salesDate) {
         db.exec('ROLLBACK');
         return { error: `Payment date cannot be before the sale date (${sale.salesDate}).` };
@@ -106,7 +109,7 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
         return { error: 'Payment date cannot be in the future.' };
       }
 
-      const latestPay = db.prepare('SELECT MAX(payDate) AS maxDate FROM PAYMENT WHERE transNo = ?').get(validated.transNo) as any;
+      const latestPay = db.prepare('SELECT MAX(payDate) AS maxDate FROM PAYMENT WHERE transNo = ?').get(sale.transNo) as any;
       if (latestPay?.maxDate && validated.payDate < latestPay.maxDate) {
         db.exec('ROLLBACK');
         return { error: `Payment date cannot be before the latest receipt date (${latestPay.maxDate}).` };
@@ -124,12 +127,12 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
           WHERE ph2.prodCode = sd.prodCode AND ph2.effDate <= ?
         )
         WHERE sd.transNo = ?
-      `).all(sale.salesDate, validated.transNo) as any[];
+      `).all(sale.salesDate, sale.transNo) as any[];
 
       const saleTotal = details.reduce((sum, d) => sum + (Number(d.quantity) * Number(d.unitPrice)), 0);
 
       // 4. Compute existing payments on this sale
-      const paySumRow = db.prepare('SELECT COALESCE(SUM(amount), 0) AS totalPaid FROM PAYMENT WHERE transNo = ?').get(validated.transNo) as any;
+      const paySumRow = db.prepare('SELECT COALESCE(SUM(amount), 0) AS totalPaid FROM PAYMENT WHERE transNo = ?').get(sale.transNo) as any;
       const existingPayments = Number(paySumRow.totalPaid);
 
       // 5. Check if total payments would exceed sale total
@@ -140,14 +143,21 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
       }
 
       // 6. Assign next OR number in sequence
-      const maxOrRow = db.prepare('SELECT COALESCE(MAX(ORNo), 9000) + 1 AS nextORNo FROM PAYMENT').get() as any;
-      const orNo = Number(maxOrRow.nextORNo);
+      const maxOrRow = db.prepare(`
+        SELECT COALESCE(
+          MAX(CAST(SUBSTR(ORNo, 3) AS INTEGER)),
+          MAX(CAST(ORNo AS INTEGER)),
+          0
+        ) + 1 AS nextNum FROM PAYMENT
+      `).get() as any;
+      const nextNum = Number(maxOrRow?.nextNum || 166);
+      const orNo = `OR${String(nextNum).padStart(6, '0')}`;
 
       // 7. Insert payment
       db.prepare(`
-        INSERT INTO PAYMENT (ORNo, payDate, amount, transNo)
-        VALUES (?, ?, ?, ?)
-      `).run(orNo, validated.payDate, validated.amount, validated.transNo);
+        INSERT INTO PAYMENT (ORNo, payDate, amount, transNo, stamp)
+        VALUES (?, ?, ?, ?, 'ADD cashier ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
+      `).run(orNo, validated.payDate, validated.amount, sale.transNo);
 
       db.exec('COMMIT');
 

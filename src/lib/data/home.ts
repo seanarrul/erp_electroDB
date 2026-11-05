@@ -98,18 +98,18 @@ export interface HomeSummaryResult {
   durationMs: number;
 }
 
-// Fallback seed counts for local environment
+// Fallback seed counts for local environment (Canonical HopeDB_audit dataset)
 const FALLBACK_COUNTS: Record<string, number> = {
-  DEPARTMENT: 4,
-  JOB: 6,
-  EMPLOYEE: 10,
-  JOBHISTORY: 15,
-  CUSTOMER: 8,
-  PRODUCT: 15,
-  PRICEHIST: 24,
-  SALES: 142,
-  SALESDETAIL: 350,
-  PAYMENT: 126,
+  DEPARTMENT: 8,
+  JOB: 14,
+  EMPLOYEE: 32,
+  JOBHISTORY: 54,
+  CUSTOMER: 82,
+  PRODUCT: 57,
+  PRICEHIST: 79,
+  SALES: 124,
+  SALESDETAIL: 313,
+  PAYMENT: 165,
 };
 
 function getPhtFormattedTime(): string {
@@ -136,18 +136,18 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
     };
   }
 
-  // Pre-configured rich dashboard metrics matching the executive enterprise design
+  // Pre-configured rich dashboard metrics matching the canonical HopeDB_audit dataset
   const kpis: HomeKPIData = {
-    totalSales: 2385670.0,
-    totalSalesFormatted: '₱2,385,670.00',
-    salesGrowth: '+18%',
+    totalSales: 688935.47,
+    totalSalesFormatted: '₱688,935.47',
+    salesGrowth: 'Sum of 124 transactions • Click to audit',
     totalTransactions: 124,
-    transactionsGrowth: '+12%',
-    totalPayments: 2215340.0,
-    totalPaymentsFormatted: '₱2,215,340.00',
-    paymentsGrowth: '+16%',
-    activeEmployees: 8,
-    employeesGrowth: '+0%',
+    transactionsGrowth: '82 customers • Jun 2010 – Apr 2011',
+    totalPayments: 665326.58,
+    totalPaymentsFormatted: '₱665,326.58',
+    paymentsGrowth: '165 receipts • ₱23,608.89 open balance',
+    activeEmployees: 27,
+    employeesGrowth: '27 active of 32 staff (5 separated)',
   };
 
   const salesOverview: SalesMonthlyOverview[] = [
@@ -257,29 +257,40 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
   ];
 
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc('get_home_summary');
+    if (
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-project') &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('your-anon')
+    ) {
+      try {
+        const supabase = await createClient();
+        const { data, error } = await supabase.rpc('get_home_summary');
 
-    if (!error && data && typeof data === 'object') {
-      const durationMs = Math.round(performance.now() - startTime);
-      const counts = (data.counts || {}) as Record<string, number>;
-      const totalRows = Object.values(counts).reduce((acc, c) => acc + (Number(c) || 0), 0);
+        if (!error && data && typeof data === 'object') {
+          const durationMs = Math.round(performance.now() - startTime);
+          const counts = (data.counts || {}) as Record<string, number>;
+          const totalRows = Object.values(counts).reduce((acc, c) => acc + (Number(c) || 0), 0);
 
-      return {
-        success: true,
-        durationMs,
-        data: {
-          checkedAt: data.checkedAt || getPhtFormattedTime(),
-          totalTables: data.totalTables || 10,
-          totalRelationships: data.totalRelationships || 9,
-          totalRows: totalRows || 690,
-          counts,
-          kpis,
-          salesOverview,
-          recentTransactions,
-          topProducts,
-        },
-      };
+          return {
+            success: true,
+            durationMs,
+            data: {
+              checkedAt: data.checkedAt || getPhtFormattedTime(),
+              totalTables: data.totalTables || 10,
+              totalRelationships: data.totalRelationships || 9,
+              totalRows: totalRows || 928,
+              counts,
+              kpis,
+              salesOverview,
+              recentTransactions,
+              topProducts,
+            },
+          };
+        }
+      } catch {
+        // Fall back to SQLite local database
+      }
     }
 
     // Query local database if available
@@ -311,14 +322,16 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
 
         kpis.totalSales = totalSales;
         kpis.totalSalesFormatted = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(totalSales);
-        kpis.salesGrowth = 'Sum of 15 transactions • Click to audit';
+        kpis.salesGrowth = `Sum of ${totalTransactions} transactions • Click to audit`;
         kpis.totalTransactions = totalTransactions;
-        kpis.transactionsGrowth = '5 customers • Nov 2025 – Oct 2026';
+        kpis.transactionsGrowth = '82 customers • Jun 2010 – Apr 2011';
         kpis.totalPayments = totalPayments;
         kpis.totalPaymentsFormatted = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(totalPayments);
-        kpis.paymentsGrowth = '14 receipts • ₱480k open balance';
+        const openBalance = Math.max(0, totalSales - totalPayments);
+        const openBalStr = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(openBalance);
+        kpis.paymentsGrowth = `165 receipts • ${openBalStr} open balance`;
         kpis.activeEmployees = activeEmployees;
-        kpis.employeesGrowth = '8 active of 10 staff (2 separated)';
+        kpis.employeesGrowth = `${activeEmployees} active of 32 staff (5 separated)`;
 
         // Detailed Audit Calculations
         try {

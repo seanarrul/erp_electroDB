@@ -132,13 +132,19 @@ export async function addEmployeeAction(input: AddEmployeeInput) {
     db.exec('BEGIN IMMEDIATE');
     try {
       // R-02: Next empNo sequence
-      const maxRow = db.prepare('SELECT COALESCE(MAX(empNo), 100) + 1 AS nextEmpNo FROM EMPLOYEE').get() as any;
-      const nextEmpNo = Number(maxRow.nextEmpNo);
+      const maxRow = db.prepare(`
+        SELECT COALESCE(
+          MAX(CAST(empNo AS INTEGER)),
+          0
+        ) + 2 AS nextNum FROM EMPLOYEE
+      `).get() as any;
+      const nextNum = Number(maxRow?.nextNum || 65);
+      const nextEmpNo = String(nextNum).padStart(5, '0');
 
       // Insert EMPLOYEE
       db.prepare(`
-        INSERT INTO EMPLOYEE (empNo, lastName, firstName, gender, birthDate, hireDate, sepDate)
-        VALUES (?, ?, ?, ?, ?, ?, NULL)
+        INSERT INTO EMPLOYEE (empNo, lastName, firstName, gender, birthDate, hireDate, sepDate, stamp)
+        VALUES (?, ?, ?, ?, ?, ?, NULL, 'ADD admin ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
       `).run(
         nextEmpNo,
         validated.lastName,
@@ -150,8 +156,8 @@ export async function addEmployeeAction(input: AddEmployeeInput) {
 
       // Insert first JOBHISTORY
       db.prepare(`
-        INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO JOBHISTORY (empNo, jobCode, effDate, salary, deptCode, stamp)
+        VALUES (?, ?, ?, ?, ?, 'ADD admin ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
       `).run(
         nextEmpNo,
         validated.jobCode,
