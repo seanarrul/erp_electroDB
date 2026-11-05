@@ -47,8 +47,8 @@ const updateCustomerSchema = z.object({
 
 const recordPaymentSchema = z.object({
   orNo: z.union([
+    z.string().min(1, 'OR number is required (R-08).'),
     z.number().int().positive('OR number must be a positive integer (R-08).'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
   payDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid payment date in YYYY-MM-DD format is required.'),
   amount: z
@@ -58,12 +58,12 @@ const recordPaymentSchema = z.object({
       message: 'Payment amount cannot have more than 2 decimal places (R-07).',
     }),
   transNo: z.union([
+    z.string().min(1, 'Sales transaction number is required (R-05).'),
     z.number().int().positive('Sales transaction number is required (R-05).'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
   custNo: z.union([
+    z.string().min(1, 'Customer number is required.'),
     z.number().int().positive('Customer number is required.'),
-    z.string().transform((val) => parseInt(val.replace(/\D/g, ''), 10)),
   ]),
 });
 
@@ -270,19 +270,28 @@ export async function recordCustomerPaymentAction(input: RecordPaymentInput) {
     const db = getSqliteDb();
     const todayManila = getManilaToday();
 
+    const rawOr = String(validated.orNo).trim();
+    const formattedOrNo = rawOr.startsWith('OR') ? rawOr : `OR${rawOr.padStart(6, '0')}`;
+
+    const rawTrans = String(validated.transNo).trim();
+    const formattedTransNo = rawTrans.startsWith('TR') ? rawTrans : `TR${rawTrans.padStart(6, '0')}`;
+
+    const rawCust = String(validated.custNo).trim();
+    const formattedCustNo = rawCust.startsWith('C') ? rawCust : `C${rawCust.padStart(4, '0')}`;
+
     // R-08: Check ORNo uniqueness
-    const existingOr = db.prepare('SELECT 1 FROM PAYMENT WHERE ORNo = ?').get(validated.orNo);
+    const existingOr = db.prepare('SELECT 1 FROM PAYMENT WHERE ORNo = ? OR ORNo = ?').get(formattedOrNo, rawOr);
     if (existingOr) {
-      return { error: `That OR number (${validated.orNo}) is already recorded (R-08).` };
+      return { error: `That OR number (${formattedOrNo}) is already recorded (R-08).` };
     }
 
     // R-05: Check transNo exists in SALES and belongs to custNo
-    const sale = db.prepare('SELECT salesDate, custNo FROM SALES WHERE transNo = ?').get(validated.transNo) as any;
+    const sale = db.prepare('SELECT salesDate, custNo FROM SALES WHERE transNo = ? OR transNo = ?').get(formattedTransNo, rawTrans) as any;
     if (!sale) {
-      return { error: `Transaction #${validated.transNo} does not exist in Sales records (R-05).` };
+      return { error: `Transaction #${formattedTransNo} does not exist in Sales records (R-05).` };
     }
-    if (Number(sale.custNo) !== validated.custNo) {
-      return { error: `That transaction (#${validated.transNo}) does not belong to this customer (#${validated.custNo}) (R-05).` };
+    if (String(sale.custNo) !== formattedCustNo && String(sale.custNo) !== rawCust) {
+      return { error: `That transaction (#${formattedTransNo}) does not belong to this customer (#${formattedCustNo}) (R-05).` };
     }
 
     // R-06: payDate >= salesDate and <= today
@@ -294,12 +303,12 @@ export async function recordCustomerPaymentAction(input: RecordPaymentInput) {
     }
 
     db.prepare(`
-      INSERT INTO PAYMENT (ORNo, payDate, amount, transNo)
-      VALUES (?, ?, ?, ?)
-    `).run(validated.orNo, validated.payDate, validated.amount, validated.transNo);
+      INSERT INTO PAYMENT (ORNo, payDate, amount, transNo, stamp)
+      VALUES (?, ?, ?, ?, 'ADD cashier ' || strftime('%Y-%m-%d %H:%M', 'now', '+8 hours'))
+    `).run(formattedOrNo, validated.payDate, validated.amount, sale.transNo || formattedTransNo);
 
     revalidatePath('/customers');
-    return { success: true, orNo: validated.orNo };
+    return { success: true, orNo: formattedOrNo };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return { error: err.errors[0]?.message || 'Invalid payment input' };

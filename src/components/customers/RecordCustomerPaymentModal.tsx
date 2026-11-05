@@ -63,9 +63,9 @@ export function RecordCustomerPaymentModal({
     e.preventDefault();
     setErrorMsg(null);
 
-    const parsedOrNo = parseInt(orNo, 10);
-    if (isNaN(parsedOrNo) || parsedOrNo <= 0) {
-      setErrorMsg('OR number must be a positive integer (R-08).');
+    const cleanOr = orNo.trim().toUpperCase();
+    if (!cleanOr) {
+      setErrorMsg('OR number is required (R-08).');
       return;
     }
 
@@ -98,10 +98,10 @@ export function RecordCustomerPaymentModal({
     setIsSubmitting(true);
     try {
       const result = await recordCustomerPaymentAction({
-        orNo: parsedOrNo,
+        orNo: cleanOr,
         payDate,
         amount: parsedAmount,
-        transNo: Number(selectedTransNo),
+        transNo: selectedTransNo,
         custNo,
       });
 
@@ -195,14 +195,12 @@ export function RecordCustomerPaymentModal({
               OR No. <span className="text-rose-600">*</span>
             </label>
             <input
-              type="number"
-              min="1"
-              step="1"
+              type="text"
               required
               value={orNo}
               onChange={(e) => setOrNo(e.target.value)}
               className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-2 text-xs font-mono text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
-              placeholder="e.g. 9127"
+              placeholder="e.g. OR000166 or 166"
             />
             <p className="text-[10px] text-[#52615B]">
               Official Receipt number (PAYMENT.ORNo). Unique, immutable once saved (R-08).

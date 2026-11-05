@@ -54,16 +54,20 @@ import {
 
 const CANONICAL_FAMILY_PREFIXES = [
   'ALL',
-  'CPU',
-  'GPU',
-  'MB',
-  'RAM',
-  'SSD',
-  'PSU',
-  'CASE',
-  'MON',
-  'KB',
-  'MS',
+  'AD',
+  'AK',
+  'AM',
+  'AP',
+  'MD',
+  'MP',
+  'NB',
+  'NH',
+  'NT',
+  'PA',
+  'PC',
+  'PF',
+  'PR',
+  'PS',
 ];
 
 interface ProductsMainViewProps {
@@ -181,11 +185,10 @@ export function ProductsMainView({
 
   // Distinct families in catalog
   const catalogFamilies = useMemo(() => {
-    const list = [...CANONICAL_FAMILY_PREFIXES];
-    Object.keys(metrics.familyCounts).forEach((f) => {
-      if (!list.includes(f)) list.push(f);
-    });
-    return list;
+    const present = Object.keys(metrics.familyCounts || {})
+      .filter((f) => f !== 'ALL' && (metrics.familyCounts[f] || 0) > 0)
+      .sort();
+    return ['ALL', ...present];
   }, [metrics.familyCounts]);
 
   // 1. Filtered Products View list (uses deferredSearch for non-blocking rendering)
@@ -215,8 +218,8 @@ export function ProductsMainView({
   const filteredPriceHistory = useMemo(() => {
     return initialPriceHistory.filter((h) => {
       // Family filter
-      const pFamily = h.prodCode.split('-')[0]?.toUpperCase();
-      if (selectedFamily !== 'ALL' && pFamily !== selectedFamily.toUpperCase()) {
+      const pFamily = getProductFamily(h.prodCode);
+      if (selectedFamily !== 'ALL' && pFamily.toUpperCase() !== selectedFamily.toUpperCase()) {
         return false;
       }
 
@@ -497,6 +500,23 @@ export function ProductsMainView({
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
+          </div>
+
+          {/* Category / Family Select */}
+          <div className="flex items-center gap-1.5 font-mono text-xs">
+            <span className="text-[#41555f] dark:text-slate-300 whitespace-nowrap">Category:</span>
+            <select
+              value={selectedFamily}
+              onChange={(e) => updateUrl({ family: e.target.value === 'ALL' ? null : e.target.value, page: '1' })}
+              className="rounded-[2px] border border-black/15 dark:border-white/20 bg-white dark:bg-surface-1 px-2 py-1.5 text-xs text-[#041a24] dark:text-white focus:border-[#041a24] dark:focus:border-white focus:outline-none cursor-pointer max-w-[170px] truncate"
+            >
+              <option value="ALL">All ({initialProducts.length})</option>
+              {catalogFamilies.filter((f) => f !== 'ALL').map((f) => (
+                <option key={f} value={f}>
+                  {f} - {getFamilyLabel(f)} ({metrics.familyCounts[f] || 0})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Sales Activity Select */}

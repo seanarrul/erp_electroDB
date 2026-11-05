@@ -48,7 +48,7 @@ export function RecordPaymentDialog({
 
   // Form states
   const [selectedTransNo, setSelectedTransNo] = useState<string | number>(fixedTransNo || 0);
-  const [payDate, setPayDate] = useState<string>('2026-10-28');
+  const [payDate, setPayDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState<string>('');
   const [searchSaleQuery, setSearchSaleQuery] = useState<string>('');
 
@@ -300,7 +300,7 @@ export function RecordPaymentDialog({
                   required
                   value={payDate}
                   onChange={(e) => setPayDate(e.target.value)}
-                  max="2026-10-28"
+                  max={new Date().toISOString().slice(0, 10)}
                   className="w-full rounded-md border border-[#CCD5CD] bg-white px-3 py-1.5 text-xs text-[#17231F] focus:border-[#245B48] focus:ring-1 focus:ring-[#245B48]/30 focus:outline-none transition-all"
                 />
               </div>

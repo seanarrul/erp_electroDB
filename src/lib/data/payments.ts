@@ -87,16 +87,17 @@ export async function getPaymentsLedger(filter?: {
 
   // Period filtering matching Sales page
   if (filter?.period && filter.period !== 'ALL') {
-    const todayStr = '2026-10-27';
-    if (filter.period === 'TODAY') {
-      items = items.filter((i) => i.payDate === todayStr);
-    } else if (filter.period === 'THIS_WEEK') {
-      const minDate = '2026-10-20';
-      items = items.filter((i) => i.payDate >= minDate && i.payDate <= todayStr);
-    } else if (filter.period === 'THIS_MONTH') {
-      items = items.filter((i) => i.payDate.startsWith('2026-10'));
-    } else if (filter.period === 'THIS_YEAR') {
-      items = items.filter((i) => i.payDate.startsWith('2026'));
+    if (/^\d{4}$/.test(filter.period)) {
+      items = items.filter((i) => i.payDate.startsWith(filter.period!));
+    } else {
+      const latestPayDate = items[0]?.payDate || new Date().toISOString().slice(0, 10);
+      if (filter.period === 'TODAY') {
+        items = items.filter((i) => i.payDate === latestPayDate);
+      } else if (filter.period === 'THIS_MONTH') {
+        items = items.filter((i) => i.payDate.slice(0, 7) === latestPayDate.slice(0, 7));
+      } else if (filter.period === 'THIS_YEAR') {
+        items = items.filter((i) => i.payDate.slice(0, 4) === latestPayDate.slice(0, 4));
+      }
     }
   }
 

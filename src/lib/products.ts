@@ -5,6 +5,22 @@
 // ========================================================================
 
 export const FAMILY_LABELS: Record<string, string> = {
+  // Canonical Coursework Product Families (HopeDB_audit.sql)
+  AD: 'External Storage',
+  AK: 'Keyboards & Devices',
+  AM: 'Mice & Input',
+  AP: 'Projectors & Displays',
+  MD: 'Media & Flash Drives',
+  MP: 'Multifunction Printers',
+  NB: 'Notebooks & Laptops',
+  NH: 'Network Hubs & Routers',
+  NT: 'Network Equipment',
+  PA: 'Power Adapters & Surge',
+  PC: 'Power Components',
+  PF: 'Cooling Fans',
+  PR: 'Printers & Scanners',
+  PS: 'Audio & Speakers',
+  // Legacy / PC Component fallbacks
   CPU: 'Processors',
   GPU: 'Graphics cards',
   MB: 'Motherboards',
@@ -18,11 +34,21 @@ export const FAMILY_LABELS: Record<string, string> = {
 };
 
 /**
- * Extracts family prefix from a product code (e.g., 'CPU-R5-5600' -> 'CPU').
+ * Extracts family prefix from a product code:
+ * - Coursework canonical: 'AD0001' -> 'AD'
+ * - Hyphenated fallback: 'CPU-R5-5600' -> 'CPU'
  */
 export function getProductFamily(prodCode: string): string {
-  const parts = prodCode.split('-');
-  return parts[0]?.toUpperCase() || 'OTHER';
+  if (!prodCode) return 'OTHER';
+  const clean = prodCode.trim().toUpperCase();
+  if (clean.includes('-')) {
+    return clean.split('-')[0] || 'OTHER';
+  }
+  const match = clean.match(/^([A-Z]{2,4})/);
+  if (match) {
+    return match[1];
+  }
+  return 'OTHER';
 }
 
 /**

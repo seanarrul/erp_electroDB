@@ -205,15 +205,28 @@ export function SalesMainView({
     updateUrl({ q: null, period: null, dept: null, rep: null, page: '1' });
   };
 
+  // Available transaction years in dataset
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    initialSales.forEach((s) => {
+      if (s.salesDate && s.salesDate.length >= 4) {
+        years.add(s.salesDate.slice(0, 4));
+      }
+    });
+    return Array.from(years).sort().reverse();
+  }, [initialSales]);
+
   // 1. Filtered Sales (uses deferredSearch for non-blocking rendering)
   const filteredSales = useMemo(() => {
     const matchesPeriod = (dateStr: string) => {
-      if (periodFilter === 'all') return true;
-      const todayStr = '2026-10-28';
-      if (periodFilter === 'today') return dateStr === todayStr;
-      if (periodFilter === 'week') return dateStr >= '2026-10-22' && dateStr <= todayStr;
-      if (periodFilter === 'month') return dateStr.startsWith('2026-10');
-      if (periodFilter === 'year') return dateStr.startsWith('2026');
+      if (!periodFilter || periodFilter === 'all') return true;
+      if (/^\d{4}$/.test(periodFilter)) {
+        return dateStr.startsWith(periodFilter);
+      }
+      const latestDateStr = initialSales[0]?.salesDate || new Date().toISOString().slice(0, 10);
+      if (periodFilter === 'today') return dateStr === latestDateStr;
+      if (periodFilter === 'month') return dateStr.slice(0, 7) === latestDateStr.slice(0, 7);
+      if (periodFilter === 'year') return dateStr.slice(0, 4) === latestDateStr.slice(0, 4);
       return true;
     };
 
@@ -563,11 +576,12 @@ export function SalesMainView({
             onChange={(e) => updateUrl({ period: e.target.value === 'all' ? null : e.target.value, page: '1' })}
             className="rounded-[2px] border border-black/15 bg-white px-2 py-1.5 text-xs text-[#041a24] focus:border-[#041a24] focus:outline-none cursor-pointer"
           >
-            <option value="all">All time</option>
-            <option value="today">Today</option>
-            <option value="week">This week</option>
-            <option value="month">This month</option>
-            <option value="year">This year</option>
+            <option value="all">All time ({initialSales.length})</option>
+            {availableYears.map((yr) => (
+              <option key={yr} value={yr}>
+                Year {yr}
+              </option>
+            ))}
           </select>
 
           {/* Department Filter */}
