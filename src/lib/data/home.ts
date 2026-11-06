@@ -54,31 +54,6 @@ export interface HomeKPIData {
   customerDistribution?: TransactionByCustomerItem[];
 }
 
-export interface SalesMonthlyOverview {
-  month: string;
-  sales: number;
-  label: string;
-}
-
-export interface RecentTransactionItem {
-  transNo: string;
-  date: string;
-  customer: string;
-  employee: string;
-  amount: number;
-  amountFormatted: string;
-  status: 'Completed' | 'Pending';
-}
-
-export interface TopProductItem {
-  prodCode: string;
-  name: string;
-  soldCount: number;
-  revenue: number;
-  revenueFormatted: string;
-  category: 'cpu' | 'gpu' | 'psu' | 'monitor' | 'keyboard' | 'other';
-}
-
 export interface HomeSummaryData {
   checkedAt: string;
   totalTables: number;
@@ -86,9 +61,6 @@ export interface HomeSummaryData {
   totalRows: number;
   counts: Record<string, number>;
   kpis: HomeKPIData;
-  salesOverview: SalesMonthlyOverview[];
-  recentTransactions: RecentTransactionItem[];
-  topProducts: TopProductItem[];
 }
 
 export interface HomeSummaryResult {
@@ -151,112 +123,6 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
     employeesGrowth: '27 active of 32 staff (5 separated)',
   };
 
-  const salesOverview: SalesMonthlyOverview[] = [
-    { month: 'Nov', sales: 70000, label: '₱70k' },
-    { month: 'Dec', sales: 130000, label: '₱130k' },
-    { month: 'Jan', sales: 90000, label: '₱90k' },
-    { month: 'Feb', sales: 145000, label: '₱145k' },
-    { month: 'Mar', sales: 120000, label: '₱120k' },
-    { month: 'Apr', sales: 170000, label: '₱170k' },
-    { month: 'May', sales: 155000, label: '₱155k' },
-    { month: 'Jun', sales: 240000, label: '₱240k' },
-    { month: 'Jul', sales: 205000, label: '₱205k' },
-    { month: 'Aug', sales: 250000, label: '₱250k' },
-    { month: 'Sep', sales: 245000, label: '₱245k' },
-    { month: 'Oct', sales: 340000, label: '₱340k' },
-  ];
-
-  const recentTransactions: RecentTransactionItem[] = [
-    {
-      transNo: 'T000124',
-      date: 'Oct 28, 2026 10:45 AM',
-      customer: 'Juan Dela Cruz',
-      employee: 'Maria Santos',
-      amount: 8495.0,
-      amountFormatted: '₱8,495.00',
-      status: 'Completed',
-    },
-    {
-      transNo: 'T000123',
-      date: 'Oct 28, 2026 09:32 AM',
-      customer: 'Ana Reyes',
-      employee: 'Carlos Lopez',
-      amount: 16995.0,
-      amountFormatted: '₱16,995.00',
-      status: 'Completed',
-    },
-    {
-      transNo: 'T000122',
-      date: 'Oct 27, 2026 04:17 PM',
-      customer: 'Ramon Santos',
-      employee: 'Maria Santos',
-      amount: 4850.0,
-      amountFormatted: '₱4,850.00',
-      status: 'Completed',
-    },
-    {
-      transNo: 'T000121',
-      date: 'Oct 27, 2026 11:03 AM',
-      customer: 'Liza Cruz',
-      employee: 'Juan Reyes',
-      amount: 12700.0,
-      amountFormatted: '₱12,700.00',
-      status: 'Pending',
-    },
-    {
-      transNo: 'T000120',
-      date: 'Oct 26, 2026 03:25 PM',
-      customer: 'Mark Villanueva',
-      employee: 'Carlos Lopez',
-      amount: 7350.0,
-      amountFormatted: '₱7,350.00',
-      status: 'Completed',
-    },
-  ];
-
-  const topProducts: TopProductItem[] = [
-    {
-      prodCode: 'CPU-AMD-5600',
-      name: 'AMD Ryzen 5 5600',
-      soldCount: 45,
-      revenue: 382275.0,
-      revenueFormatted: '₱382,275.00',
-      category: 'cpu',
-    },
-    {
-      prodCode: 'GPU-NV-4060',
-      name: 'NVIDIA GeForce RTX 4060',
-      soldCount: 38,
-      revenue: 797610.0,
-      revenueFormatted: '₱797,610.00',
-      category: 'gpu',
-    },
-    {
-      prodCode: 'PSU-COR-650',
-      name: 'Corsair CV650',
-      soldCount: 32,
-      revenue: 358400.0,
-      revenueFormatted: '₱358,400.00',
-      category: 'psu',
-    },
-    {
-      prodCode: 'MON-VS-2428',
-      name: 'ViewSonic VX2428',
-      soldCount: 28,
-      revenue: 229660.0,
-      revenueFormatted: '₱229,660.00',
-      category: 'monitor',
-    },
-    {
-      prodCode: 'ACC-LOG-K120',
-      name: 'Logitech Keyboard K120',
-      soldCount: 24,
-      revenue: 95760.0,
-      revenueFormatted: '₱95,760.00',
-      category: 'keyboard',
-    },
-  ];
-
   try {
     if (
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -297,9 +163,6 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
               totalRows: totalRows || 928,
               counts,
               kpis,
-              salesOverview,
-              recentTransactions,
-              topProducts,
             },
           };
         }
@@ -335,9 +198,6 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
               totalRows: totalRows || 928,
               counts,
               kpis,
-              salesOverview,
-              recentTransactions,
-              topProducts,
             },
           };
         }
@@ -362,7 +222,7 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
         }
       }
 
-      // 1. Dynamic KPIs directly from canonical tables & views
+      // Dynamic KPIs directly from canonical tables & views
       try {
         const revRow = db.prepare('SELECT SUM(totalAmount) as totalRev, count(*) as totalTrans FROM v_sales_summary').get() as any;
         const payRow = db.prepare('SELECT SUM(amount) as totalPaid FROM PAYMENT').get() as any;
@@ -386,7 +246,7 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
         kpis.activeEmployees = activeEmployees;
         kpis.employeesGrowth = `${activeEmployees} active of 32 staff (5 separated)`;
 
-        // Detailed Audit Calculations
+        // Detailed Audit Calculations for interactive modals
         try {
           const allSalesRows = db.prepare(`
             SELECT 
@@ -483,117 +343,6 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
       } catch {
         // preserve fallback
       }
-
-      // 2. Dynamic Recent Transactions
-      try {
-        const recentRows = db.prepare(`
-          SELECT 
-            s.transNo,
-            s.salesDate,
-            c.custName,
-            e.firstName || ' ' || e.lastName AS repName,
-            v.totalAmount,
-            COALESCE((SELECT SUM(p.amount) FROM PAYMENT p WHERE p.transNo = s.transNo), 0.0) AS paidAmount
-          FROM SALES s
-          JOIN CUSTOMER c ON c.custNo = s.custNo
-          JOIN EMPLOYEE e ON e.empNo = s.empNo
-          JOIN v_sales_summary v ON v.transNo = s.transNo
-          ORDER BY s.salesDate DESC, s.transNo DESC
-          LIMIT 5
-        `).all() as any[];
-
-        if (recentRows.length > 0) {
-          recentTransactions.length = 0;
-          for (const r of recentRows) {
-            const amount = Number(r.totalAmount || 0);
-            const paid = Number(r.paidAmount || 0);
-            recentTransactions.push({
-              transNo: String(r.transNo),
-              date: String(r.salesDate),
-              customer: String(r.custName),
-              employee: String(r.repName),
-              amount,
-              amountFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount),
-              status: paid >= amount ? 'Completed' : 'Pending',
-            });
-          }
-        }
-      } catch {
-        // preserve fallback
-      }
-
-      // 3. Dynamic Top Products
-      try {
-        const topRows = db.prepare(`
-          SELECT 
-            p.prodCode,
-            p.description as name,
-            SUM(sd.quantity) as soldCount,
-            SUM(l.lineAmount) as revenue,
-            LOWER(SUBSTR(p.prodCode, 1, 2)) as prefix
-          FROM SALESDETAIL sd
-          JOIN PRODUCT p ON p.prodCode = sd.prodCode
-          JOIN v_sale_lines l ON l.transNo = sd.transNo AND l.prodCode = sd.prodCode
-          GROUP BY p.prodCode, p.description
-          ORDER BY soldCount DESC
-          LIMIT 5
-        `).all() as any[];
-
-        if (topRows.length > 0) {
-          topProducts.length = 0;
-          for (const r of topRows) {
-            const revenue = Number(r.revenue || 0);
-            let category: TopProductItem['category'] = 'other';
-            if (r.prefix === 'pc') category = 'cpu';
-            else if (r.prefix === 'nb') category = 'gpu';
-            else if (r.prefix === 'md') category = 'monitor';
-            else if (r.prefix === 'ak') category = 'keyboard';
-            else if (r.prefix === 'ap') category = 'psu';
-
-            topProducts.push({
-              prodCode: String(r.prodCode),
-              name: String(r.name),
-              soldCount: Number(r.soldCount || 0),
-              revenue,
-              revenueFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(revenue),
-              category,
-            });
-          }
-        }
-      } catch {
-        // preserve fallback
-      }
-
-      // 4. Dynamic Monthly Sales Overview
-      try {
-        const monthlyRows = db.prepare(`
-          SELECT 
-            SUBSTR(s.salesDate, 1, 7) as ym,
-            SUM(v.totalAmount) as sales
-          FROM SALES s
-          JOIN v_sales_summary v ON v.transNo = s.transNo
-          GROUP BY ym
-          ORDER BY ym ASC
-        `).all() as any[];
-
-        if (monthlyRows.length > 0) {
-          salesOverview.length = 0;
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          for (const r of monthlyRows) {
-            const parts = String(r.ym).split('-');
-            const monthIdx = parseInt(parts[1], 10) - 1;
-            const mName = monthNames[monthIdx] || r.ym;
-            const sales = Number(r.sales || 0);
-            salesOverview.push({
-              month: mName,
-              sales,
-              label: `₱${Math.round(sales / 1000)}k`,
-            });
-          }
-        }
-      } catch {
-        // preserve fallback
-      }
     } catch {
       // Use fallback seed counts
     }
@@ -612,9 +361,6 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
         totalRows,
         counts,
         kpis,
-        salesOverview,
-        recentTransactions,
-        topProducts,
       },
     };
   } catch {

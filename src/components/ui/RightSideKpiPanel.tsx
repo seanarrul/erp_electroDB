@@ -19,6 +19,7 @@ export interface RightSideKpiPanelProps {
   subtitle?: string;
   cards: KpiCardItem[];
   className?: string;
+  layout?: 'vertical' | 'grid';
 }
 
 export function RightSideKpiPanel({
@@ -26,10 +27,13 @@ export function RightSideKpiPanel({
   subtitle,
   cards,
   className = '',
+  layout = 'vertical',
 }: RightSideKpiPanelProps) {
+  const isGrid = layout === 'grid';
+
   return (
     <div
-      className={`w-full xl:w-[248px] shrink-0 font-sans ${className}`}
+      className={`${isGrid ? 'w-full font-sans' : 'w-full xl:w-[248px] shrink-0 font-sans'} ${className}`}
       aria-label={title}
     >
       {/* Slim Header */}
@@ -53,8 +57,8 @@ export function RightSideKpiPanel({
         </div>
       )}
 
-      {/* Slimmer Portrait KPI Cards Stack */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-col gap-2.5">
+      {/* KPI Cards Container */}
+      <div className={isGrid ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-col gap-2.5'}>
         {cards.map((card) => {
           const Icon = card.icon;
           const isClickable = Boolean(card.onClick || card.clickable);

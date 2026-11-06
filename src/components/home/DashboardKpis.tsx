@@ -16,11 +16,12 @@ import {
 
 interface DashboardKpisProps {
   kpis: HomeKPIData;
+  layout?: 'vertical' | 'grid';
 }
 
 type AuditCardType = 'sales' | 'transactions' | 'payments' | 'employees' | null;
 
-export function DashboardKpis({ kpis }: DashboardKpisProps) {
+export function DashboardKpis({ kpis, layout = 'grid' }: DashboardKpisProps) {
   const [activeAudit, setActiveAudit] = useState<AuditCardType>(null);
 
   const cards: KpiCardItem[] = [
@@ -65,8 +66,9 @@ export function DashboardKpis({ kpis }: DashboardKpisProps) {
   return (
     <>
       <RightSideKpiPanel
-        title="Database Stats Bar"
+        title="Live Monitoring Statistics"
         cards={cards}
+        layout={layout}
       />
 
       {/* 1. TOTAL SALES AUDIT MODAL */}
