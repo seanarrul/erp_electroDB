@@ -27,9 +27,9 @@ export default async function HomePage({ searchParams }: PageProps) {
   const data = summary.data;
 
   return (
-    <div className="flex flex-col min-[1100px]:flex-row items-start gap-4 sm:gap-5 max-w-[1440px] mx-auto pb-10 font-sans">
+    <div className="flex flex-col min-[1200px]:grid min-[1200px]:grid-cols-[minmax(0,1fr)_288px] min-[1200px]:gap-x-10 gap-y-8 max-w-[1440px] mx-auto pb-10 font-sans items-start">
       {/* ── Main Content Column (Title, Database Status, Live Monitoring Stats) ── */}
-      <div className="flex-1 min-w-0 w-full space-y-4 sm:space-y-5">
+      <div className="min-w-0 w-full space-y-4 sm:space-y-5">
         {/* 1. Dashboard Header (Title & Database Connected status card) */}
         <DashboardHeader
           fullName={user.fullName || 'Admin'}
@@ -38,7 +38,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           isConnected={summary.success}
         />
 
-        {/* 2. Key Performance Indicators Monitoring Grid (Moves up into freed space) */}
+        {/* 2. Key Performance Indicators Monitoring Grid */}
         {data?.kpis && (
           <section aria-label="Key Performance Indicators" className="w-full">
             <DashboardKpis kpis={data.kpis} layout="grid" />
@@ -46,10 +46,10 @@ export default async function HomePage({ searchParams }: PageProps) {
         )}
       </div>
 
-      {/* ── Right Rail: Slim, Sticky Team Credits Panel ── */}
+      {/* ── Right Rail: Floating, Formal Vertical Team Panel ── */}
       <aside
         aria-label="Team Credits"
-        className="w-full min-[1100px]:w-[250px] shrink-0 min-[1100px]:sticky min-[1100px]:top-4"
+        className="w-full max-w-[480px] min-[1200px]:max-w-[288px] min-[1200px]:w-[288px] shrink-0 min-[1200px]:sticky min-[1200px]:top-24 min-[1200px]:mr-6 self-start"
       >
         <ProjectTeamCard />
       </aside>

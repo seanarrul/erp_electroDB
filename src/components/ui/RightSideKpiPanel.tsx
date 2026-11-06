@@ -58,7 +58,7 @@ export function RightSideKpiPanel({
       )}
 
       {/* KPI Cards Container */}
-      <div className={isGrid ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-col gap-2.5'}>
+      <div className={isGrid ? 'grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3' : 'grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-col gap-2.5'}>
         {cards.map((card) => {
           const Icon = card.icon;
           const isClickable = Boolean(card.onClick || card.clickable);
