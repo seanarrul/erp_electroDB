@@ -41,7 +41,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   const counts = data?.counts || {};
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-[1440px] mx-auto pb-12 font-sans">
+    <div className="space-y-4 sm:space-y-5 max-w-[1440px] mx-auto pb-10 font-sans">
       {/* 1. Dashboard Header */}
       <DashboardHeader
         fullName={user.fullName || 'Admin'}
