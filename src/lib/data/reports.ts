@@ -1,12 +1,46 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
+
+function getHopeDbPath(): string {
+  if (process.env.VERCEL) {
+    const tmpPath = path.join('/tmp', 'hope.db');
+    if (!fs.existsSync(tmpPath)) {
+      const srcPath = path.join(process.cwd(), 'hope.db');
+      if (fs.existsSync(srcPath)) {
+        try {
+          fs.copyFileSync(srcPath, tmpPath);
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return tmpPath;
+  }
+  return path.join(process.cwd(), 'hope.db');
+}
 
 function getDb(): DatabaseSync {
-  const dbPath = path.join(process.cwd(), 'hope.db');
+  const dbPath = getHopeDbPath();
   return new DatabaseSync(dbPath);
 }
 
-// 1. Top Customers by Sales
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const salaryFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+
+// ========================================================================
+// 1. TOP CUSTOMERS BY SALES (Figure 28)
+// ========================================================================
 export interface TopCustomerRow {
   rank: number;
   custNo: string;
@@ -15,18 +49,31 @@ export interface TopCustomerRow {
   totalSalesFormatted: string;
 }
 
-export function getTopCustomers(fromDate = '2000-01-01', toDate = '2099-12-31', topN = 10): TopCustomerRow[] {
+export function getTopCustomers(fromDate = '2010-01-01', toDate = '2026-12-31', topN = 10): TopCustomerRow[] {
   const db = getDb();
-  // Using v_sales_details_priced
+  const effectiveFrom = fromDate || '2000-01-01';
+  const effectiveTo = toDate || '2099-12-31';
+  const effectiveTopN = Math.max(1, Number(topN) || 10);
+
   const query = `
     SELECT 
       c.custNo,
       c.custName,
-      COALESCE(SUM(vsd.lineTotal), 0.0) as totalSales
+      SUM(sd.quantity * (
+        SELECT ph.unitPrice 
+        FROM PRICEHIST ph 
+        WHERE ph.prodCode = sd.prodCode 
+          AND ph.effDate <= s.salesDate 
+          AND ph.is_deleted = 0
+        ORDER BY ph.effDate DESC 
+        LIMIT 1
+      )) AS totalSales
     FROM SALES s
     JOIN CUSTOMER c ON c.custNo = s.custNo
-    JOIN v_sales_details_priced vsd ON vsd.transNo = s.transNo
-    WHERE s.salesDate BETWEEN ? AND ?
+    JOIN SALESDETAIL sd ON sd.transNo = s.transNo
+    WHERE s.is_deleted = 0 
+      AND sd.is_deleted = 0
+      AND s.salesDate BETWEEN ? AND ?
     GROUP BY c.custNo, c.custName
     HAVING totalSales > 0
     ORDER BY totalSales DESC
@@ -34,20 +81,23 @@ export function getTopCustomers(fromDate = '2000-01-01', toDate = '2099-12-31', 
   `;
 
   try {
-    const rows = db.prepare(query).all(fromDate, toDate, topN) as any[];
+    const rows = db.prepare(query).all(effectiveFrom, effectiveTo, effectiveTopN) as any[];
     return rows.map((r, idx) => ({
       rank: idx + 1,
       custNo: String(r.custNo),
-      custName: r.custName,
-      totalSales: Number(r.totalSales),
-      totalSalesFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(r.totalSales),
+      custName: String(r.custName || ''),
+      totalSales: Number(r.totalSales || 0),
+      totalSalesFormatted: currencyFormatter.format(Number(r.totalSales || 0)),
     }));
   } catch {
     return [];
   }
 }
 
-// 2. Product Master List (Current Price)
+// ========================================================================
+// 2. PRODUCT MASTER LIST (CURRENT PRICE) (Figure 29)
+// "Only active products appear."
+// ========================================================================
 export interface ProductMasterRow {
   prodCode: string;
   description: string;
@@ -66,31 +116,37 @@ export function getProductMasterList(): ProductMasterRow[] {
       (
         SELECT ph.unitPrice 
         FROM PRICEHIST ph 
-        WHERE ph.prodCode = p.prodCode AND ph.effDate <= date('now')
+        WHERE ph.prodCode = p.prodCode 
+          AND ph.effDate <= date('now')
+          AND ph.is_deleted = 0
         ORDER BY ph.effDate DESC 
         LIMIT 1
       ) as currentPrice
     FROM PRODUCT p
+    WHERE p.is_deleted = 0
     ORDER BY p.prodCode ASC
   `;
 
   try {
     const rows = db.prepare(query).all() as any[];
-    return rows.map((r) => ({
-      prodCode: r.prodCode,
-      description: r.description,
-      unit: r.unit,
-      currentPrice: r.currentPrice !== null ? Number(r.currentPrice) : null,
-      currentPriceFormatted: r.currentPrice !== null 
-        ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(r.currentPrice)
-        : '—',
-    }));
+    return rows.map((r) => {
+      const price = r.currentPrice !== null && r.currentPrice !== undefined ? Number(r.currentPrice) : null;
+      return {
+        prodCode: String(r.prodCode),
+        description: String(r.description || ''),
+        unit: String(r.unit || 'pcs'),
+        currentPrice: price,
+        currentPriceFormatted: price !== null ? currencyFormatter.format(price) : '—',
+      };
+    });
   } catch {
     return [];
   }
 }
 
-// 3. Top Products by Sales Amount
+// ========================================================================
+// 3. TOP PRODUCTS BY SALES AMOUNT (Figure 30)
+// ========================================================================
 export interface TopProductRow {
   rank: number;
   prodCode: string;
@@ -100,38 +156,57 @@ export interface TopProductRow {
   salesAmountFormatted: string;
 }
 
-export function getTopProducts(fromDate = '2000-01-01', toDate = '2099-12-31', topN = 10): TopProductRow[] {
+export function getTopProducts(fromDate = '2010-01-01', toDate = '2026-12-31', topN = 10): TopProductRow[] {
   const db = getDb();
+  const effectiveFrom = fromDate || '2000-01-01';
+  const effectiveTo = toDate || '2099-12-31';
+  const effectiveTopN = Math.max(1, Number(topN) || 10);
+
   const query = `
     SELECT 
-      vsd.prodCode,
+      sd.prodCode,
       p.description,
-      SUM(vsd.quantity) as qtySold,
-      SUM(vsd.lineTotal) as salesAmount
-    FROM v_sales_details_priced vsd
-    JOIN PRODUCT p ON p.prodCode = vsd.prodCode
-    WHERE vsd.salesDate BETWEEN ? AND ?
-    GROUP BY vsd.prodCode, p.description
+      SUM(sd.quantity) as qtySold,
+      SUM(sd.quantity * (
+        SELECT ph.unitPrice 
+        FROM PRICEHIST ph 
+        WHERE ph.prodCode = sd.prodCode 
+          AND ph.effDate <= s.salesDate 
+          AND ph.is_deleted = 0
+        ORDER BY ph.effDate DESC 
+        LIMIT 1
+      )) as salesAmount
+    FROM SALESDETAIL sd
+    JOIN SALES s ON s.transNo = sd.transNo
+    JOIN PRODUCT p ON p.prodCode = sd.prodCode
+    WHERE s.is_deleted = 0 
+      AND sd.is_deleted = 0
+      AND s.salesDate BETWEEN ? AND ?
+    GROUP BY sd.prodCode, p.description
+    HAVING salesAmount > 0
     ORDER BY salesAmount DESC
     LIMIT ?
   `;
 
   try {
-    const rows = db.prepare(query).all(fromDate, toDate, topN) as any[];
+    const rows = db.prepare(query).all(effectiveFrom, effectiveTo, effectiveTopN) as any[];
     return rows.map((r, idx) => ({
       rank: idx + 1,
-      prodCode: r.prodCode,
-      description: r.description,
-      qtySold: Number(r.qtySold),
-      salesAmount: Number(r.salesAmount),
-      salesAmountFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(r.salesAmount),
+      prodCode: String(r.prodCode),
+      description: String(r.description || ''),
+      qtySold: Number(r.qtySold || 0),
+      salesAmount: Number(r.salesAmount || 0),
+      salesAmountFormatted: currencyFormatter.format(Number(r.salesAmount || 0)),
     }));
   } catch {
     return [];
   }
 }
 
-// 4. Active Employees (Not Separated)
+// ========================================================================
+// 4. ACTIVE EMPLOYEES (NOT SEPARATED) (Figure 31)
+// "Employees with no separation date."
+// ========================================================================
 export interface ActiveEmployeeRow {
   empNo: string;
   lastName: string;
@@ -146,7 +221,8 @@ export function getActiveEmployees(): ActiveEmployeeRow[] {
   const query = `
     SELECT empNo, lastName, firstName, gender, birthDate, hireDate
     FROM EMPLOYEE
-    WHERE sepDate IS NULL
+    WHERE (sepDate IS NULL OR sepDate = '' OR trim(sepDate) = '')
+      AND is_deleted = 0
     ORDER BY empNo ASC
   `;
 
@@ -154,18 +230,20 @@ export function getActiveEmployees(): ActiveEmployeeRow[] {
     const rows = db.prepare(query).all() as any[];
     return rows.map((r) => ({
       empNo: String(r.empNo),
-      lastName: r.lastName,
-      firstName: r.firstName,
-      gender: r.gender,
-      birthDate: r.birthDate,
-      hireDate: r.hireDate,
+      lastName: String(r.lastName || ''),
+      firstName: String(r.firstName || ''),
+      gender: String(r.gender || '—'),
+      birthDate: String(r.birthDate || '—'),
+      hireDate: String(r.hireDate || '—'),
     }));
   } catch {
     return [];
   }
 }
 
-// 5. All Employees (Including Separated)
+// ========================================================================
+// 5. ALL EMPLOYEES (INCLUDING SEPARATED) (Figure 32)
+// ========================================================================
 export interface AllEmployeeRow {
   empNo: string;
   lastName: string;
@@ -174,35 +252,41 @@ export interface AllEmployeeRow {
   birthDate: string;
   hireDate: string;
   sepDate: string | null;
-  status: 'Active' | 'Separated';
+  status: 'Active' | 'Inactive';
 }
 
 export function getAllEmployeesReport(): AllEmployeeRow[] {
   const db = getDb();
   const query = `
-    SELECT empNo, lastName, firstName, gender, birthDate, hireDate, sepDate
+    SELECT empNo, lastName, firstName, gender, birthDate, hireDate, sepDate, is_deleted
     FROM EMPLOYEE
     ORDER BY empNo ASC
   `;
 
   try {
     const rows = db.prepare(query).all() as any[];
-    return rows.map((r) => ({
-      empNo: String(r.empNo),
-      lastName: r.lastName,
-      firstName: r.firstName,
-      gender: r.gender,
-      birthDate: r.birthDate,
-      hireDate: r.hireDate,
-      sepDate: r.sepDate,
-      status: r.sepDate ? 'Separated' : 'Active',
-    }));
+    return rows.map((r) => {
+      const isSep = Boolean(r.sepDate && String(r.sepDate).trim() !== '');
+      const isInactive = isSep || Boolean(r.is_deleted);
+      return {
+        empNo: String(r.empNo),
+        lastName: String(r.lastName || ''),
+        firstName: String(r.firstName || ''),
+        gender: String(r.gender || '—'),
+        birthDate: String(r.birthDate || '—'),
+        hireDate: String(r.hireDate || '—'),
+        sepDate: isSep ? String(r.sepDate) : null,
+        status: isInactive ? 'Inactive' : 'Active',
+      };
+    });
   } catch {
     return [];
   }
 }
 
-// 6. Employee Job History
+// ========================================================================
+// 6. EMPLOYEE JOB HISTORY (Figure 33)
+// ========================================================================
 export interface EmployeeJobHistoryRow {
   effDate: string;
   job: string;
@@ -213,6 +297,7 @@ export interface EmployeeJobHistoryRow {
 
 export function getEmployeeJobHistoryReport(empNo: string | number): EmployeeJobHistoryRow[] {
   const db = getDb();
+  const cleanEmpNo = String(empNo).trim();
   const query = `
     SELECT 
       jh.effDate,
@@ -222,25 +307,27 @@ export function getEmployeeJobHistoryReport(empNo: string | number): EmployeeJob
     FROM JOBHISTORY jh
     JOIN JOB j ON j.jobCode = jh.jobCode
     JOIN DEPARTMENT d ON d.deptCode = jh.deptCode
-    WHERE jh.empNo = ?
+    WHERE jh.empNo = ? AND jh.is_deleted = 0
     ORDER BY jh.effDate DESC
   `;
 
   try {
-    const rows = db.prepare(query).all(empNo) as any[];
+    const rows = db.prepare(query).all(cleanEmpNo) as any[];
     return rows.map((r) => ({
-      effDate: r.effDate,
-      job: r.job,
-      department: r.department,
-      salary: Number(r.salary),
-      salaryFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(r.salary),
+      effDate: String(r.effDate || ''),
+      job: String(r.job || ''),
+      department: String(r.department || ''),
+      salary: Number(r.salary || 0),
+      salaryFormatted: salaryFormatter.format(Number(r.salary || 0)),
     }));
   } catch {
     return [];
   }
 }
 
-// 7. Top Sales
+// ========================================================================
+// 7. TOP SALES (Figure 34)
+// ========================================================================
 export interface TopSaleRow {
   rank: number;
   transNo: string;
@@ -251,35 +338,50 @@ export interface TopSaleRow {
   totalFormatted: string;
 }
 
-export function getTopSales(fromDate = '2000-01-01', toDate = '2099-12-31', topN = 10): TopSaleRow[] {
+export function getTopSales(fromDate = '2010-01-01', toDate = '2026-12-31', topN = 10): TopSaleRow[] {
   const db = getDb();
+  const effectiveFrom = fromDate || '2000-01-01';
+  const effectiveTo = toDate || '2099-12-31';
+  const effectiveTopN = Math.max(1, Number(topN) || 10);
+
   const query = `
     SELECT 
       s.transNo,
       s.salesDate as date,
       c.custName as customer,
       e.firstName || ' ' || e.lastName as employee,
-      COALESCE(SUM(vsd.lineTotal), 0.0) as total
+      SUM(sd.quantity * (
+        SELECT ph.unitPrice 
+        FROM PRICEHIST ph 
+        WHERE ph.prodCode = sd.prodCode 
+          AND ph.effDate <= s.salesDate 
+          AND ph.is_deleted = 0
+        ORDER BY ph.effDate DESC 
+        LIMIT 1
+      )) as total
     FROM SALES s
     JOIN CUSTOMER c ON c.custNo = s.custNo
     JOIN EMPLOYEE e ON e.empNo = s.empNo
-    JOIN v_sales_details_priced vsd ON vsd.transNo = s.transNo
-    WHERE s.salesDate BETWEEN ? AND ?
+    JOIN SALESDETAIL sd ON sd.transNo = s.transNo
+    WHERE s.is_deleted = 0 
+      AND sd.is_deleted = 0
+      AND s.salesDate BETWEEN ? AND ?
     GROUP BY s.transNo, s.salesDate, c.custName, e.firstName, e.lastName
+    HAVING total > 0
     ORDER BY total DESC
     LIMIT ?
   `;
 
   try {
-    const rows = db.prepare(query).all(fromDate, toDate, topN) as any[];
+    const rows = db.prepare(query).all(effectiveFrom, effectiveTo, effectiveTopN) as any[];
     return rows.map((r, idx) => ({
       rank: idx + 1,
       transNo: String(r.transNo),
-      date: r.date,
-      customer: r.customer,
-      employee: r.employee,
-      total: Number(r.total),
-      totalFormatted: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(r.total),
+      date: String(r.date || ''),
+      customer: String(r.customer || ''),
+      employee: String(r.employee || ''),
+      total: Number(r.total || 0),
+      totalFormatted: currencyFormatter.format(Number(r.total || 0)),
     }));
   } catch {
     return [];
@@ -289,7 +391,16 @@ export function getTopSales(fromDate = '2000-01-01', toDate = '2099-12-31', topN
 export function getEmployeesListForDropdown(): Array<{ empNo: string; fullName: string }> {
   const db = getDb();
   try {
-    return db.prepare("SELECT empNo, empNo || ' — ' || firstName || ' ' || lastName as fullName FROM EMPLOYEE ORDER BY empNo ASC").all() as any[];
+    const rows = db.prepare(`
+      SELECT empNo, empNo || ' — ' || firstName || ' ' || lastName as fullName 
+      FROM EMPLOYEE 
+      WHERE is_deleted = 0
+      ORDER BY empNo ASC
+    `).all() as any[];
+    return rows.map((r) => ({
+      empNo: String(r.empNo),
+      fullName: String(r.fullName),
+    }));
   } catch {
     return [];
   }

@@ -9,6 +9,7 @@ import {
   getAllEmployeesReport,
   getTopSales,
   getEmployeesListForDropdown,
+  getEmployeeJobHistoryReport,
 } from '@/lib/data/reports';
 import { ReportsMainView } from '@/components/reports/ReportsMainView';
 
@@ -21,6 +22,9 @@ export default async function ReportsPage() {
     redirect('/login');
   }
 
+  const employeesList = getEmployeesListForDropdown();
+  const firstEmpNo = employeesList[0]?.empNo || '00001';
+
   // Pre-fetch reports dataset
   const [
     topCustomers,
@@ -29,7 +33,7 @@ export default async function ReportsPage() {
     activeEmployees,
     allEmployees,
     topSales,
-    employeesList,
+    initialJobHistory,
   ] = await Promise.all([
     getTopCustomers('2010-01-01', '2026-12-31', 10),
     getProductMasterList(),
@@ -37,7 +41,7 @@ export default async function ReportsPage() {
     getActiveEmployees(),
     getAllEmployeesReport(),
     getTopSales('2010-01-01', '2026-12-31', 10),
-    getEmployeesListForDropdown(),
+    getEmployeeJobHistoryReport(firstEmpNo),
   ]);
 
   return (
@@ -49,8 +53,10 @@ export default async function ReportsPage() {
         initialActiveEmployees={activeEmployees}
         initialAllEmployees={allEmployees}
         initialTopSales={topSales}
+        initialJobHistory={initialJobHistory}
         employeesList={employeesList}
         userRights={user.rights || []}
+        userRole={user.role || 'User'}
       />
     </div>
   );
