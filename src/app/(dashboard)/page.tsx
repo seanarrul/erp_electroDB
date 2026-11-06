@@ -27,26 +27,32 @@ export default async function HomePage({ searchParams }: PageProps) {
   const data = summary.data;
 
   return (
-    <div className="space-y-4 sm:space-y-5 max-w-[1440px] mx-auto pb-10 font-sans">
-      {/* 1. Dashboard Header */}
-      <DashboardHeader
-        fullName={user.fullName || 'Admin'}
-        checkedAt={data?.checkedAt || 'Nov 6, 2026 12:45 PM'}
-        totalTables={data?.totalTables || 10}
-        isConnected={summary.success}
-      />
+    <div className="flex flex-col min-[1100px]:flex-row items-start gap-4 sm:gap-5 max-w-[1440px] mx-auto pb-10 font-sans">
+      {/* ── Main Content Column (Title, Database Status, Live Monitoring Stats) ── */}
+      <div className="flex-1 min-w-0 w-full space-y-4 sm:space-y-5">
+        {/* 1. Dashboard Header (Title & Database Connected status card) */}
+        <DashboardHeader
+          fullName={user.fullName || 'Admin'}
+          checkedAt={data?.checkedAt || 'Nov 6, 2026 12:45 PM'}
+          totalTables={data?.totalTables || 10}
+          isConnected={summary.success}
+        />
 
-      {/* 2. Group 4 ElectronDB & Role Introductions */}
-      <section aria-label="Group 4 ElectronDB">
+        {/* 2. Key Performance Indicators Monitoring Grid (Moves up into freed space) */}
+        {data?.kpis && (
+          <section aria-label="Key Performance Indicators" className="w-full">
+            <DashboardKpis kpis={data.kpis} layout="grid" />
+          </section>
+        )}
+      </div>
+
+      {/* ── Right Rail: Slim, Sticky Team Credits Panel ── */}
+      <aside
+        aria-label="Team Credits"
+        className="w-full min-[1100px]:w-[250px] shrink-0 min-[1100px]:sticky min-[1100px]:top-4"
+      >
         <ProjectTeamCard />
-      </section>
-
-      {/* 3. Key Performance Indicators Monitoring Grid */}
-      {data?.kpis && (
-        <section aria-label="Key Performance Indicators" className="w-full">
-          <DashboardKpis kpis={data.kpis} layout="grid" />
-        </section>
-      )}
+      </aside>
     </div>
   );
 }

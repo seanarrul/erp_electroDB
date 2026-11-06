@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Database, Users } from 'lucide-react';
 
 interface TeamMember {
   role: string;
@@ -43,67 +42,55 @@ const MEMBERS: TeamMember[] = [
   },
 ];
 
+const DISPLAY_NAMES: Record<string, string> = {
+  '@seanarrul': 'Sean Arrul De Leon',
+  '@veil': 'Veil Dela Cruz',
+  '@arielle': 'Arielle Echague',
+  '@christianjay': 'Christian Jay Casing',
+  '@jeptah': 'Jeptah Ashley Ildefonso',
+};
+
 export function ProjectTeamCard() {
   return (
-    <article className="w-full rounded-2xl border border-border bg-surface-1 shadow-xs overflow-hidden font-sans transition-colors duration-150">
-      <div className="p-4 sm:p-5 space-y-4">
-        {/* ── Top Header Toolbar ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
-          <div className="space-y-1">
-            {/* Pill badges row */}
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-border bg-surface-2 text-[11px] font-semibold text-text shadow-2xs">
-                <Database className="w-3 h-3 text-text" />
-                <span>Group 4 ElectronDB</span>
-              </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-primary-bg text-primary-fg text-[11px] font-semibold tracking-wide shadow-2xs">
-                2 BSCS 1
-              </span>
-            </div>
+    <div
+      aria-label="Project Team Credits"
+      className="w-full rounded-md border border-border bg-surface-1 p-3 font-sans transition-colors duration-150"
+    >
+      {/* Header: Quiet monospace uppercase label */}
+      <div className="pb-2 mb-1.5 border-b border-border/80">
+        <span className="font-mono text-[10px] tracking-[0.14em] uppercase text-text-faint select-none">
+          TEAM &bull; GROUP 4 &bull; 2 BSCS 1
+        </span>
+      </div>
 
-            {/* Main title */}
-            <h2 className="font-editorial italic font-normal text-xl sm:text-2xl text-text tracking-tight leading-tight">
-              Group 4 ElectronDB
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-1.5 font-sans text-xs text-text-muted shrink-0 self-start sm:self-center">
-            <Users className="w-3.5 h-3.5 text-text-faint" />
-            <span>5 core contributors</span>
-          </div>
-        </div>
-
-        {/* ── 5 Member Boxes ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {MEMBERS.map((member) => (
+      {/* Members List: Compact vertical list (desktop rail) / compact wrapped row (below 1100px) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 min-[1100px]:grid-cols-1 gap-1">
+        {MEMBERS.map((member) => {
+          const displayName = DISPLAY_NAMES[member.handle] || member.name;
+          return (
             <div
-              key={member.name}
-              className="group relative rounded-xl border border-border hover:border-border-control bg-surface-1 dark:bg-surface-2/40 p-3.5 flex flex-col justify-between min-h-[116px] shadow-2xs hover:shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 cursor-default select-none"
+              key={member.handle}
+              title={`${displayName} (${member.handle}) — ${member.role}`}
+              className="flex items-center gap-2.5 px-2 py-1.5 rounded-[3px] hover:bg-surface-2/60 transition-colors duration-150 cursor-default min-h-[38px] select-none"
             >
-              {/* Author Avatar & Badge Row */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="w-9 h-9 rounded-full ring-2 ring-border select-none shrink-0 bg-[#041a24] dark:bg-white text-white dark:text-[#041a24] flex items-center justify-center font-mono font-bold text-[11px] shadow-2xs group-hover:scale-105 transition-transform duration-300">
-                  <span>{member.initials}</span>
-                </div>
+              {/* Compact initials avatar (24px) */}
+              <div className="w-6 h-6 rounded-full ring-1 ring-border bg-surface-2 text-text flex items-center justify-center font-mono text-[10px] font-semibold shrink-0">
+                {member.initials}
+              </div>
 
-                <span className="bg-primary-bg text-primary-fg text-[10px] px-2 py-0.5 rounded-md font-semibold tracking-wide shadow-2xs">
+              {/* Name & plain muted role */}
+              <div className="min-w-0 flex-1 flex flex-col justify-center">
+                <span className="text-[12px] font-medium text-text leading-tight truncate">
+                  {displayName}
+                </span>
+                <span className="text-[10px] text-text-muted leading-tight truncate">
                   {member.role}
                 </span>
               </div>
-
-              {/* Name & Handle */}
-              <div className="space-y-0.5 min-w-0 pt-2.5">
-                <h3 className="text-xs sm:text-[13px] font-bold text-text truncate leading-snug group-hover:text-accent transition-colors">
-                  {member.name}
-                </h3>
-                <p className="text-[11px] text-text-faint font-sans truncate">
-                  {member.handle}
-                </p>
-              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
-    </article>
+    </div>
   );
 }
