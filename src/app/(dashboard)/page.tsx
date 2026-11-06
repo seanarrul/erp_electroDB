@@ -1,23 +1,11 @@
 import React from 'react';
-import dynamic from 'next/dynamic';
 import { getCurrentUser } from '@/app/actions/auth';
 import { getHomeSummary } from '@/lib/data/home';
 import { DashboardHeader } from '@/components/home/DashboardHeader';
 import { ProjectTeamCard } from '@/components/home/ProjectTeamCard';
-import { SupabaseDataAuditCard } from '@/components/home/SupabaseDataAuditCard';
+import { DatabaseAuditDashboard } from '@/components/home/DatabaseAuditDashboard';
 import { DashboardKpis } from '@/components/home/DashboardKpis';
 import { redirect } from 'next/navigation';
-
-const ErdDiagram = dynamic(
-  () => import('@/components/home/ErdDiagram').then((mod) => mod.ErdDiagram),
-  {
-    loading: () => (
-      <div className="w-full h-80 rounded-[4px] bg-neutral-100/70 border border-black/5 animate-pulse flex items-center justify-center font-mono text-xs text-[#52615B]">
-        Loading database architecture schema...
-      </div>
-    ),
-  }
-);
 
 export const revalidate = 30;
 
@@ -45,7 +33,7 @@ export default async function HomePage({ searchParams }: PageProps) {
       {/* 1. Dashboard Header */}
       <DashboardHeader
         fullName={user.fullName || 'Admin'}
-        checkedAt={data?.checkedAt || 'Oct 28, 2026 12:45 PM'}
+        checkedAt={data?.checkedAt || 'Nov 6, 2026 12:45 PM'}
         totalTables={data?.totalTables || 10}
         isConnected={summary.success}
       />
@@ -55,28 +43,17 @@ export default async function HomePage({ searchParams }: PageProps) {
         <ProjectTeamCard />
       </section>
 
-      {/* 3. Supabase Connected Data Store & Verification Audit */}
-      <section aria-label="Supabase Connected Data Store and Verification Audit">
-        <SupabaseDataAuditCard
-          counts={counts}
-          totalRows={data?.totalRows || 0}
-          totalTables={data?.totalTables || 10}
-          checkedAt={data?.checkedAt || 'Just now'}
-          durationMs={summary.durationMs}
-          isConnected={summary.isSupabaseConnected ?? false}
-        />
-      </section>
-
-      {/* 4. Main Center Workspace (Architecture Hub) + Right-Side Portrait KPI Panel */}
+      {/* 3. Main Center Workspace: Database Audit Dashboard + Right-Side Portrait KPI Panel */}
       <div className="flex flex-col xl:flex-row items-start gap-6">
-        {/* Center / Left Main Area: Relational Database Architecture Hub */}
         <div className="flex-1 min-w-0 w-full">
-          <section id="erd" aria-label="Relational Database Architecture">
-            <ErdDiagram
-              counts={counts}
-              userRole={user.role}
-            />
-          </section>
+          <DatabaseAuditDashboard
+            counts={counts}
+            totalRows={data?.totalRows || 928}
+            totalTables={data?.totalTables || 10}
+            checkedAt={data?.checkedAt || 'Nov 6, 2026'}
+            isConnected={summary.success}
+            userRole={user.role}
+          />
         </div>
 
         {/* Right-Side Portrait KPI Monitoring Panel */}

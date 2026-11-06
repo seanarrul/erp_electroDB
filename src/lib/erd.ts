@@ -2,8 +2,31 @@
 // HOPE Group4: CANONICAL ERD METADATA & RENDERING SPECIFICATION
 // File: src/lib/erd.ts
 //
-// 100% ACCURATE TO HopeDB_audit.sql.txt & canonical coursework database (hope.db).
-// STRICT 10 TABLES (37 domain columns + audit columns) & 9 FOREIGN KEY RELATIONSHIPS.
+// RENDERING NOTES FOR SVG GENERATION:
+// 1. Table Boxes:
+//    - Rendered at coordinates from ERD_GEOMETRY.
+//    - Header fill derived from module tint token:
+//      - employees: var(--module-employees, #e6eef4)
+//      - products:  var(--module-products, #e8f2ea)
+//      - customers: var(--module-customers, #faf0e6)
+//      - sales:     var(--module-sales, #f4e8ee)
+//    - Border: 1px solid #041a24 (dark ink border).
+//    - Header contains table name (font-bold 12px) and a live row-count chip.
+//    - Columns list: PK columns are underlined with bold font, followed by '[PK]' tag.
+//    - FK columns include '[FK]' tag. Non-key columns rendered in normal weight.
+// 2. Relationships & Lines:
+//    - Straight / orthogonal SVG paths connecting parent and child tables.
+//    - Crow's foot notation on endings:
+//      - Exactly one (1): Two parallel ticks ||
+//      - Zero or many (0..*): Circle 'O' + crow's foot forks '<'
+//      - One or many (1..*): Tick '|' + crow's foot forks '<'
+//    - Each line displays an italic action label along its path midpoint.
+// 3. Interactivity & Access:
+//    - Hover or keyboard focus on a table highlights that table and all incident
+//      relationship lines while softly dimming unrelated elements.
+//    - Click or Enter on a table navigates to the associated module href.
+//    - Role restriction: If table belongs to Employees and user is not admin,
+//      navigation is prevented and an 'Admin only' tooltip is presented.
 // ========================================================================
 
 import type { UserRole } from '@/lib/types';
@@ -15,17 +38,13 @@ export interface ErdColumn {
   type: string;
   isPk?: boolean;
   isFk?: boolean;
-  fkTarget?: string;
   nullable?: boolean;
-  description?: string;
 }
 
 export interface ErdTable {
   name: string;
   moduleId: ErdModuleId;
-  moduleName: string;
   description: string;
-  businessUsage: string;
   columns: ErdColumn[];
 }
 
@@ -36,7 +55,6 @@ export interface ErdRelationship {
   fromCardinality: '1' | '0..1';
   toCardinality: '0..*' | '1..*';
   label: string;
-  businessMeaning: string;
   fkColumns: string[];
 }
 
@@ -55,173 +73,128 @@ export interface ErdModule {
   tintVar: string;
   tintBg: string;
   tintBorder: string;
-  textDark: string;
-  badgeBg: string;
-  badgeBorder: string;
-  badgeText: string;
   href: string;
   roles: UserRole[];
   tables: string[];
   mainList: string;
   detail: string;
-  workflowSummary: string;
 }
 
 // ------------------------------------------------------------------------
-// STRICT 10 CANONICAL TABLES (Accurate to hope.db & HopeDB_audit.sql)
+// STRICT 10 TABLES (Total: 37 Columns)
 // ------------------------------------------------------------------------
 export const ERD_TABLES: Record<string, ErdTable> = {
   DEPARTMENT: {
     name: 'DEPARTMENT',
     moduleId: 'employees',
-    moduleName: 'Employees & Organization',
-    description: 'Internal organizational units and retail sales branches.',
-    businessUsage: 'Categorizes staff members into operational branches (Sales Branch 1, IT, Admin, etc.) for performance tracking.',
+    description: 'Internal company organizational departments.',
     columns: [
-      { name: 'deptCode', type: 'VARCHAR(3)', isPk: true, description: 'Unique department code (10, 20... 80)' },
-      { name: 'deptName', type: 'VARCHAR(20)', description: 'Official organizational unit name' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag (0 = Active, 1 = Deleted)' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification timestamp & user' },
+      { name: 'deptCode', type: 'VARCHAR(10)', isPk: true },
+      { name: 'deptName', type: 'VARCHAR(100)' },
     ],
   },
   JOB: {
     name: 'JOB',
     moduleId: 'employees',
-    moduleName: 'Employees & Organization',
-    description: 'Standardized company positions, titles, and professional roles.',
-    businessUsage: 'Defines corporate hierarchy and role compensation brackets (AD1, MGR, PR2, SA1, etc.).',
+    description: 'Job titles and organizational roles.',
     columns: [
-      { name: 'jobCode', type: 'VARCHAR(4)', isPk: true, description: 'Standardized job role code' },
-      { name: 'jobDesc', type: 'VARCHAR(20)', description: 'Official position title description' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'jobCode', type: 'VARCHAR(10)', isPk: true },
+      { name: 'jobDesc', type: 'VARCHAR(100)' },
     ],
   },
   EMPLOYEE: {
     name: 'EMPLOYEE',
     moduleId: 'employees',
-    moduleName: 'Employees & Organization',
-    description: 'Permanent employee master directory with lifecycle biographical data.',
-    businessUsage: 'Tracks staff hire dates, tenure, separation dates, and links sales representatives to invoices.',
+    description: 'Staff member directory and employment lifecycle.',
     columns: [
-      { name: 'empNo', type: 'VARCHAR(5)', isPk: true, description: 'Unique employee ID (00001 - 00063)' },
-      { name: 'lastName', type: 'VARCHAR(15)', description: 'Employee family surname' },
-      { name: 'firstName', type: 'VARCHAR(15)', description: 'Employee given name' },
-      { name: 'gender', type: 'CHAR(1)', description: 'M = Male, F = Female' },
-      { name: 'birthDate', type: 'DATE', description: 'Date of birth' },
-      { name: 'hireDate', type: 'DATE', description: 'Employment commencement date' },
-      { name: 'sepDate', type: 'DATE', nullable: true, description: 'Separation/resignation date (if applicable)' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'empNo', type: 'INT', isPk: true },
+      { name: 'lastName', type: 'VARCHAR(50)' },
+      { name: 'firstName', type: 'VARCHAR(50)' },
+      { name: 'gender', type: 'CHAR(1)' },
+      { name: 'birthDate', type: 'DATE' },
+      { name: 'hireDate', type: 'DATE' },
+      { name: 'sepDate', type: 'DATE', nullable: true },
     ],
   },
   JOBHISTORY: {
     name: 'JOBHISTORY',
     moduleId: 'employees',
-    moduleName: 'Employees & Organization',
-    description: 'Chronological appointment record tracking salary, title promotions, and transfers.',
-    businessUsage: 'Maintains complete promotion records and historical compensation changes over time.',
+    description: 'Historical appointments, promotions, departments and salaries.',
     columns: [
-      { name: 'empNo', type: 'VARCHAR(5)', isPk: true, isFk: true, fkTarget: 'EMPLOYEE.empNo', description: 'Foreign key to EMPLOYEE' },
-      { name: 'jobCode', type: 'VARCHAR(4)', isPk: true, isFk: true, fkTarget: 'JOB.jobCode', description: 'Foreign key to JOB' },
-      { name: 'effDate', type: 'DATE', isPk: true, description: 'Effective start date of appointment' },
-      { name: 'salary', type: 'DECIMAL(10,2)', description: 'Monthly base salary compensation' },
-      { name: 'deptCode', type: 'VARCHAR(4)', isFk: true, fkTarget: 'DEPARTMENT.deptCode', description: 'Assigned department branch' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'empNo', type: 'INT', isPk: true, isFk: true },
+      { name: 'jobCode', type: 'VARCHAR(10)', isPk: true, isFk: true },
+      { name: 'effDate', type: 'DATE', isPk: true },
+      { name: 'salary', type: 'NUMERIC(12,2)' },
+      { name: 'deptCode', type: 'VARCHAR(10)', isFk: true },
     ],
   },
   CUSTOMER: {
     name: 'CUSTOMER',
     moduleId: 'customers',
-    moduleName: 'Customers & Payments',
-    description: 'Customer profiles, delivery addresses, and approved credit payment terms.',
-    businessUsage: 'Manages client accounts, shipping destinations, and default payment terms (COD, 15D, 30D).',
+    description: 'Customer profiles and agreed payment terms.',
     columns: [
-      { name: 'custNo', type: 'VARCHAR(5)', isPk: true, description: 'Unique customer code (C0001 - C0082)' },
-      { name: 'custName', type: 'VARCHAR(20)', description: 'Business or individual client name' },
-      { name: 'address', type: 'VARCHAR(50)', description: 'Primary billing and shipping address' },
-      { name: 'payterm', type: 'VARCHAR(3)', description: 'Payment terms code (COD, 15D, 30D)' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'custNo', type: 'INT', isPk: true },
+      { name: 'custName', type: 'VARCHAR(120)' },
+      { name: 'address', type: 'VARCHAR(255)' },
+      { name: 'payTerms', type: 'VARCHAR(50)' },
     ],
   },
   PRODUCT: {
     name: 'PRODUCT',
     moduleId: 'products',
-    moduleName: 'Products & Pricing',
-    description: 'Hardware merchandise catalog and packaging packaging units.',
-    businessUsage: 'Product master for 14 hardware families (storage, notebooks, mice, projectors, networking, etc.).',
+    description: 'Hardware component catalog and packaging units.',
     columns: [
-      { name: 'prodCode', type: 'VARCHAR(6)', isPk: true, description: 'Prefix-based SKU code (AD0001, NB0001)' },
-      { name: 'description', type: 'VARCHAR(30)', description: 'Hardware model and brand description' },
-      { name: 'unit', type: 'VARCHAR(3)', description: 'Standard unit of issue (ea, pc)' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'prodCode', type: 'VARCHAR(20)', isPk: true },
+      { name: 'description', type: 'VARCHAR(255)' },
+      { name: 'unit', type: 'VARCHAR(30)' },
     ],
   },
   PRICEHIST: {
     name: 'PRICEHIST',
     moduleId: 'products',
-    moduleName: 'Products & Pricing',
-    description: 'Temporal schedule of effective unit prices over historical timeline.',
-    businessUsage: 'Guarantees accurate historical pricing: invoice line amounts compute unit price effective on the sale date.',
+    description: 'Effective unit prices over time for point-in-time calculation.',
     columns: [
-      { name: 'effDate', type: 'DATE', isPk: true, description: 'Effective start date of pricing' },
-      { name: 'prodCode', type: 'VARCHAR(6)', isPk: true, isFk: true, fkTarget: 'PRODUCT.prodCode', description: 'Target catalog product' },
-      { name: 'unitPrice', type: 'DECIMAL(10,2)', description: 'Selling unit price (PHP)' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'effDate', type: 'DATE', isPk: true },
+      { name: 'prodCode', type: 'VARCHAR(20)', isPk: true, isFk: true },
+      { name: 'unitPrice', type: 'NUMERIC(12,2)' },
     ],
   },
   SALES: {
     name: 'SALES',
     moduleId: 'sales',
-    moduleName: 'Sales & Invoicing',
-    description: 'Sales transactions connecting dates, billed clients, and sales representatives.',
-    businessUsage: 'Central commercial transaction record generating the official sales invoice.',
+    description: 'Sales transactions linking date, customer, and representative.',
     columns: [
-      { name: 'transNo', type: 'VARCHAR(8)', isPk: true, description: 'Invoice number (TR000001 - TR000124)' },
-      { name: 'salesDate', type: 'DATE', description: 'Official transaction sales date' },
-      { name: 'custNo', type: 'VARCHAR(5)', isFk: true, fkTarget: 'CUSTOMER.custNo', description: 'Billed customer account' },
-      { name: 'empNo', type: 'VARCHAR(5)', isFk: true, fkTarget: 'EMPLOYEE.empNo', description: 'Handling sales representative' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'transNo', type: 'INT', isPk: true },
+      { name: 'salesDate', type: 'DATE' },
+      { name: 'custNo', type: 'INT', isFk: true },
+      { name: 'empNo', type: 'INT', isFk: true },
     ],
   },
   SALESDETAIL: {
     name: 'SALESDETAIL',
     moduleId: 'sales',
-    moduleName: 'Sales & Invoicing',
-    description: 'Itemized line items recording dispatched products and quantities sold.',
-    businessUsage: 'Composite junction table connecting transactions to products sold; derives total order revenue.',
+    description: 'Itemized line items recording dispatched products and quantities.',
     columns: [
-      { name: 'transNo', type: 'VARCHAR(8)', isPk: true, isFk: true, fkTarget: 'SALES.transNo', description: 'Parent sales transaction' },
-      { name: 'prodCode', type: 'VARCHAR(6)', isPk: true, isFk: true, fkTarget: 'PRODUCT.prodCode', description: 'Purchased product SKU' },
-      { name: 'quantity', type: 'DECIMAL(10,2)', description: 'Number of units ordered' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'transNo', type: 'INT', isPk: true, isFk: true },
+      { name: 'prodCode', type: 'VARCHAR(20)', isPk: true, isFk: true },
+      { name: 'quantity', type: 'INT' },
     ],
   },
   PAYMENT: {
     name: 'PAYMENT',
     moduleId: 'customers',
-    moduleName: 'Customers & Payments',
-    description: 'Official receipts (OR) issued for monetary payments toward specific invoices.',
-    businessUsage: 'Tracks customer cash/remittance receipts against sales invoices to settle account balances.',
+    description: 'Official receipts issued against sales invoices.',
     columns: [
-      { name: 'ORNo', type: 'VARCHAR(8)', isPk: true, description: 'Official receipt number (OR000001 - OR000165)' },
-      { name: 'payDate', type: 'DATE', description: 'Payment remittance date' },
-      { name: 'amount', type: 'DECIMAL(10,2)', description: 'Remitted payment amount (PHP)' },
-      { name: 'transNo', type: 'VARCHAR(8)', isFk: true, fkTarget: 'SALES.transNo', description: 'Paid sales transaction' },
-      { name: 'is_deleted', type: 'BOOLEAN', description: 'Soft delete flag' },
-      { name: 'stamp', type: 'VARCHAR(60)', description: 'Audit modification stamp' },
+      { name: 'ORNo', type: 'INT', isPk: true },
+      { name: 'payDate', type: 'DATE' },
+      { name: 'amount', type: 'NUMERIC(12,2)' },
+      { name: 'transNo', type: 'INT', isFk: true },
     ],
   },
 };
 
 // ------------------------------------------------------------------------
-// STRICT 9 CANONICAL RELATIONSHIPS
+// STRICT 9 RELATIONSHIPS
 // ------------------------------------------------------------------------
 export const ERD_RELATIONSHIPS: ErdRelationship[] = [
   {
@@ -230,8 +203,7 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     toTable: 'JOBHISTORY',
     fromCardinality: '1',
     toCardinality: '0..*',
-    label: 'Assigned Dept',
-    businessMeaning: 'One department assigns staff positions to zero or many job history entries.',
+    label: 'placed in',
     fkColumns: ['deptCode'],
   },
   {
@@ -240,8 +212,7 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     toTable: 'JOBHISTORY',
     fromCardinality: '1',
     toCardinality: '0..*',
-    label: 'Position Held',
-    businessMeaning: 'One job title is appointed to zero or many job history records.',
+    label: 'appointed to',
     fkColumns: ['jobCode'],
   },
   {
@@ -249,9 +220,8 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     fromTable: 'EMPLOYEE',
     toTable: 'JOBHISTORY',
     fromCardinality: '1',
-    toCardinality: '1..*',
-    label: 'Career History',
-    businessMeaning: 'Each employee has one or more chronological job appointments.',
+    toCardinality: '0..*',
+    label: 'career history',
     fkColumns: ['empNo'],
   },
   {
@@ -260,8 +230,7 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     toTable: 'SALES',
     fromCardinality: '1',
     toCardinality: '0..*',
-    label: 'Sales Rep Handled',
-    businessMeaning: 'An employee acts as the assigned representative for zero or many sales orders.',
+    label: 'handled by',
     fkColumns: ['empNo'],
   },
   {
@@ -270,9 +239,17 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     toTable: 'SALES',
     fromCardinality: '1',
     toCardinality: '0..*',
-    label: 'Customer Orders',
-    businessMeaning: 'A customer account places zero or many sales orders.',
+    label: 'makes sales',
     fkColumns: ['custNo'],
+  },
+  {
+    id: 'rel_sales_payment',
+    fromTable: 'SALES',
+    toTable: 'PAYMENT',
+    fromCardinality: '1',
+    toCardinality: '0..*',
+    label: 'has receipts',
+    fkColumns: ['transNo'],
   },
   {
     id: 'rel_sales_salesdetail',
@@ -280,8 +257,7 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     toTable: 'SALESDETAIL',
     fromCardinality: '1',
     toCardinality: '1..*',
-    label: 'Contains Line Items',
-    businessMeaning: 'A sales invoice must contain one or more itemized product line items.',
+    label: 'contains item',
     fkColumns: ['transNo'],
   },
   {
@@ -290,8 +266,7 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     toTable: 'SALESDETAIL',
     fromCardinality: '1',
     toCardinality: '0..*',
-    label: 'Purchased SKU',
-    businessMeaning: 'A catalog product appears in zero or many sales detail line items.',
+    label: 'ordered SKU',
     fkColumns: ['prodCode'],
   },
   {
@@ -300,42 +275,26 @@ export const ERD_RELATIONSHIPS: ErdRelationship[] = [
     toTable: 'PRICEHIST',
     fromCardinality: '1',
     toCardinality: '1..*',
-    label: 'Price Schedule',
-    businessMeaning: 'A product has one or more effective unit prices over its lifecycle.',
+    label: 'price history',
     fkColumns: ['prodCode'],
-  },
-  {
-    id: 'rel_sales_payment',
-    fromTable: 'SALES',
-    toTable: 'PAYMENT',
-    fromCardinality: '1',
-    toCardinality: '0..*',
-    label: 'Payment Receipts',
-    businessMeaning: 'A sales invoice receives zero or many official payment receipts.',
-    fkColumns: ['transNo'],
   },
 ];
 
 // ------------------------------------------------------------------------
-// SPACIOUS PRESENTATION GEOMETRY (1380 x 740 Canvas)
-// Generous gaps prevent overlapping text, clipped labels, or cramped crow's feet
+// DIAGRAM GEOMETRY (Layout in 1335 x 600 Canvas)
+// Clean orthogonal alignment with spacious clearance preventing text clipping
 // ------------------------------------------------------------------------
 export const ERD_GEOMETRY: Record<string, ErdTableGeometry> = {
-  // Left Zone: Human Resources
-  DEPARTMENT:  { tableName: 'DEPARTMENT',  x: 40,   y: 40,  width: 210, height: 96 },
-  JOB:         { tableName: 'JOB',         x: 40,   y: 175, width: 210, height: 96 },
-  EMPLOYEE:    { tableName: 'EMPLOYEE',    x: 40,   y: 320, width: 210, height: 216 },
-  JOBHISTORY:  { tableName: 'JOBHISTORY',  x: 350,  y: 105, width: 230, height: 168 },
-
-  // Center Zone: Commercial Orders & Receipts
-  CUSTOMER:    { tableName: 'CUSTOMER',    x: 680,  y: 40,  width: 210, height: 144 },
-  SALES:       { tableName: 'SALES',       x: 680,  y: 310, width: 210, height: 144 },
-  PAYMENT:     { tableName: 'PAYMENT',     x: 680,  y: 560, width: 210, height: 144 },
-
-  // Right Zone: Product Catalog & Pricing
-  SALESDETAIL: { tableName: 'SALESDETAIL', x: 960,  y: 310, width: 200, height: 122 },
-  PRICEHIST:   { tableName: 'PRICEHIST',   x: 1210, y: 50,  width: 200, height: 122 },
-  PRODUCT:     { tableName: 'PRODUCT',     x: 1210, y: 310, width: 200, height: 122 },
+  DEPARTMENT: { tableName: 'DEPARTMENT', x: 30, y: 30, width: 185, height: 86 },
+  JOB: { tableName: 'JOB', x: 30, y: 145, width: 185, height: 86 },
+  EMPLOYEE: { tableName: 'EMPLOYEE', x: 30, y: 260, width: 185, height: 194 },
+  JOBHISTORY: { tableName: 'JOBHISTORY', x: 280, y: 65, width: 205, height: 152 },
+  PAYMENT: { tableName: 'PAYMENT', x: 550, y: 45, width: 195, height: 128 },
+  SALES: { tableName: 'SALES', x: 550, y: 270, width: 195, height: 128 },
+  CUSTOMER: { tableName: 'CUSTOMER', x: 550, y: 450, width: 195, height: 128 },
+  SALESDETAIL: { tableName: 'SALESDETAIL', x: 840, y: 270, width: 195, height: 106 },
+  PRICEHIST: { tableName: 'PRICEHIST', x: 1125, y: 55, width: 180, height: 106 },
+  PRODUCT: { tableName: 'PRODUCT', x: 1125, y: 270, width: 180, height: 106 },
 };
 
 // ------------------------------------------------------------------------
@@ -345,73 +304,53 @@ export const ERD_MODULES: ErdModule[] = [
   {
     id: 'employees',
     order: 1,
-    name: 'Employees & Organization',
+    name: 'Employees',
     tintVar: '--module-employees',
-    tintBg: '#DBEAFE',
+    tintBg: '#BFDBFE',
     tintBorder: '#3B82F6',
-    textDark: '#1E3A8A',
-    badgeBg: '#EFF6FF',
-    badgeBorder: '#93C5FD',
-    badgeText: '#1D4ED8',
     href: '/employees',
     roles: ['admin'],
     tables: ['DEPARTMENT', 'JOB', 'EMPLOYEE', 'JOBHISTORY'],
-    mainList: 'Staff directory, active status, tenure, and compensation',
-    detail: 'Staff lifecycle, promotions & department assignments',
-    workflowSummary: 'Tracks personnel hiring, assigned roles, department transfers, and salary advancement through historical appointments.',
-  },
-  {
-    id: 'sales',
-    order: 2,
-    name: 'Sales & Invoicing',
-    tintVar: '--module-sales',
-    tintBg: '#FEE2E2',
-    tintBorder: '#EF4444',
-    textDark: '#7F1D1D',
-    badgeBg: '#FEF2F2',
-    badgeBorder: '#FCA5A5',
-    badgeText: '#B91C1C',
-    href: '/sales',
-    roles: ['admin', 'sales', 'cashier'],
-    tables: ['SALES', 'SALESDETAIL'],
-    mainList: 'Invoices with sales representative, customer, and itemized lines',
-    detail: 'Commercial invoices & dispatched line items',
-    workflowSummary: 'Records customer sales orders, links the handling sales representative, and itemizes product quantities dispatched.',
+    mainList: 'Staff directory with active status and tenure',
+    detail: 'Staff, jobs & departments',
   },
   {
     id: 'products',
-    order: 3,
+    order: 2,
     name: 'Products & Pricing',
     tintVar: '--module-products',
-    tintBg: '#DCFCE7',
-    tintBorder: '#22C55E',
-    textDark: '#14532D',
-    badgeBg: '#F0FDF4',
-    badgeBorder: '#86EFAC',
-    badgeText: '#15803D',
+    tintBg: '#BBF7D0',
+    tintBorder: '#16A34A',
     href: '/products',
     roles: ['admin', 'sales', 'cashier'],
     tables: ['PRODUCT', 'PRICEHIST'],
-    mainList: 'Hardware product catalog with point-in-time price history',
-    detail: 'Hardware catalog SKUs & temporal price schedule',
-    workflowSummary: 'Maintains catalog hardware SKUs and point-in-time unit price schedules, ensuring past transactions retain their historical prices.',
+    mainList: 'Product catalog with current unit prices',
+    detail: 'Catalog & price history',
   },
   {
     id: 'customers',
-    order: 4,
+    order: 3,
     name: 'Customers & Payments',
     tintVar: '--module-customers',
-    tintBg: '#FEF9C3',
-    tintBorder: '#EAB308',
-    textDark: '#713F12',
-    badgeBg: '#FEFCE8',
-    badgeBorder: '#FDE047',
-    badgeText: '#A16207',
+    tintBg: '#FEF08A',
+    tintBorder: '#CA8A04',
     href: '/customers',
     roles: ['admin', 'sales', 'cashier'],
     tables: ['CUSTOMER', 'PAYMENT'],
-    mainList: 'Customer profiles, agreed credit terms, and official receipts',
-    detail: 'Customer accounts & official receipt payments',
-    workflowSummary: 'Manages customer account credit terms and records official receipts (OR) to settle invoice balances.',
+    mainList: 'Searchable customer list with payment terms',
+    detail: 'Accounts & payment records',
+  },
+  {
+    id: 'sales',
+    order: 4,
+    name: 'Sales',
+    tintVar: '--module-sales',
+    tintBg: '#FECACA',
+    tintBorder: '#DC2626',
+    href: '/sales',
+    roles: ['admin', 'sales', 'cashier'],
+    tables: ['SALES', 'SALESDETAIL'],
+    mainList: 'Sales transactions with sellers and departments',
+    detail: 'Transactions & line items',
   },
 ];
