@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
 import { Bell, ChevronDown, Menu, LogOut, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
 import { logoutAction } from '@/app/actions/auth';
@@ -15,7 +14,6 @@ interface HeaderProps {
 }
 
 export function Header({ userRole = 'Admin', userName = 'Administrator' }: HeaderProps) {
-  const pathname = usePathname();
   const [dateString, setDateString] = useState<string>('Nov 6, 2026');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -53,16 +51,6 @@ export function Header({ userRole = 'Admin', userName = 'Administrator' }: Heade
     };
   }, [isMenuOpen]);
 
-  // Compute dynamic breadcrumb based on route
-  let breadcrumb = 'DASHBOARD';
-  if (pathname.startsWith('/customers')) breadcrumb = 'CUSTOMERS';
-  else if (pathname.startsWith('/sales')) breadcrumb = 'SALES';
-  else if (pathname.startsWith('/products')) breadcrumb = 'PRODUCTS';
-  else if (pathname.startsWith('/employees')) breadcrumb = 'HUMAN RESOURCES';
-  else if (pathname.startsWith('/reports')) breadcrumb = 'REPORTS';
-  else if (pathname.startsWith('/users')) breadcrumb = 'USER MANAGEMENT';
-  else if (pathname.startsWith('/payments') || pathname.startsWith('/receipts')) breadcrumb = 'PAYMENTS';
-
   const roleLabels: Record<string, string> = {
     Superadmin: 'Superadmin',
     Admin: 'Administrator',
@@ -76,7 +64,7 @@ export function Header({ userRole = 'Admin', userName = 'Administrator' }: Heade
 
   return (
     <header className="h-14 bg-surface-1 border-b border-border px-4 sm:px-6 md:px-8 flex items-center justify-between gap-3 shrink-0 select-none relative z-30 font-sans transition-colors duration-150">
-      {/* Left: Mobile Toggle + Breadcrumb (Stitch Style) */}
+      {/* Left: Mobile Toggle only (Redundant header breadcrumb removed per user request) */}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -86,12 +74,6 @@ export function Header({ userRole = 'Admin', userName = 'Administrator' }: Heade
         >
           <Menu className="w-4 h-4" />
         </button>
-
-        <nav className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] uppercase text-text-muted select-none">
-          <span>HOPE ERP</span>
-          <span className="opacity-40">/</span>
-          <span className="font-semibold text-text">{breadcrumb}</span>
-        </nav>
       </div>
 
       {/* Right Controls */}

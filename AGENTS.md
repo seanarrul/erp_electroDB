@@ -25,4 +25,4 @@
 
 ## 📖 Canonical System Architecture & Specification Reference
 - Refer strictly to [**`HOPE_ERP_SYSTEM_GUIDELINES.md`**](file:///c:/Development/PROJECTS/HopeERD/HOPE_ERP_SYSTEM_GUIDELINES.md) for the authoritative specification of the 6 core modules, 3 roles (`Superadmin`, `Admin`, `User`), 36 canonical rights, 7 reports, and UI/CRUD contracts.
-- Any new features, screens, or refactorings must remain faithful to this document while preserving your custom sidebar design (`ElectronDB` / `MONITORING • HOPEERD`).
+- Any new features, screens, or refactorings must remain faithful to this document while preserving your custom sidebar design (`ElectronDB` / `MONITORING • HOPEERP`).

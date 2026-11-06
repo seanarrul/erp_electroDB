@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
-import { getCurrentUser } from './auth';
+import { getCurrentUser, checkUserPermission } from './auth';
 
 function getHopeDbPath(): string {
   if (process.env.VERCEL) {
@@ -44,6 +44,14 @@ async function ensureStaff() {
     throw new Error('Access denied. Staff privileges required.');
   }
   return user?.fullName || user?.email?.split('@')[0] || role;
+}
+
+async function ensurePermission(rightCode: string) {
+  const auth = await checkUserPermission(rightCode);
+  if (!auth.authorized) {
+    throw new Error(auth.error || `Access denied. Missing right '${rightCode}'.`);
+  }
+  return auth.user?.fullName || auth.user?.email?.split('@')[0] || 'staff';
 }
 
 function logAudit(
@@ -100,7 +108,7 @@ const lineItemSchema = z.object({
 // ========================================================================
 export async function createSaleHeaderAction(input: z.infer<typeof createSaleHeaderSchema>) {
   try {
-    const userName = await ensureStaff();
+    const userName = await ensurePermission('add_sale');
     const validated = createSaleHeaderSchema.parse(input);
 
     const db = getSqliteDb();
@@ -150,7 +158,7 @@ export async function createSaleHeaderAction(input: z.infer<typeof createSaleHea
 // ========================================================================
 export async function updateSaleHeaderAction(input: z.infer<typeof updateSaleHeaderSchema>) {
   try {
-    const userName = await ensureStaff();
+    const userName = await ensurePermission('edit_sale');
     const validated = updateSaleHeaderSchema.parse(input);
     const stampStr = getStampString('EDITED', userName);
 
@@ -187,7 +195,7 @@ export async function updateSaleHeaderAction(input: z.infer<typeof updateSaleHea
 // ========================================================================
 export async function deleteSaleAction(transNo: string) {
   try {
-    const userName = await ensureStaff();
+    const userName = await ensurePermission('delete_sale');
     const cleanTrans = String(transNo).trim();
     const stampStr = getStampString('DELETED', userName);
 
@@ -210,7 +218,12 @@ export async function deleteSaleAction(transNo: string) {
 // ========================================================================
 export async function restoreSaleAction(transNo: string) {
   try {
-    const userName = await ensureStaff();
+    const user = await getCurrentUser();
+    const role = (user?.role || '').toLowerCase();
+    if (role !== 'admin' && role !== 'superadmin') {
+      return { error: 'Access denied: Only administrators can restore soft-deleted records.' };
+    }
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'admin';
     const cleanTrans = String(transNo).trim();
     const stampStr = getStampString('RESTORED', userName);
 
@@ -234,7 +247,7 @@ export async function restoreSaleAction(transNo: string) {
 
 export async function addLineItemAction(input: z.infer<typeof lineItemSchema>) {
   try {
-    const userName = await ensureStaff();
+    const userName = await ensurePermission('add_sale_detail');
     const validated = lineItemSchema.parse(input);
     const cleanTrans = validated.transNo.trim();
     const cleanProd = validated.prodCode.trim().toUpperCase();
@@ -286,7 +299,7 @@ export async function addLineItemAction(input: z.infer<typeof lineItemSchema>) {
 
 export async function updateLineItemAction(input: z.infer<typeof lineItemSchema>) {
   try {
-    const userName = await ensureStaff();
+    const userName = await ensurePermission('edit_sale_detail');
     const validated = lineItemSchema.parse(input);
     const cleanTrans = validated.transNo.trim();
     const cleanProd = validated.prodCode.trim().toUpperCase();
@@ -314,7 +327,7 @@ export async function updateLineItemAction(input: z.infer<typeof lineItemSchema>
 
 export async function deleteLineItemAction(transNo: string, prodCode: string) {
   try {
-    const userName = await ensureStaff();
+    const userName = await ensurePermission('delete_sale_detail');
     const cleanTrans = String(transNo).trim();
     const cleanProd = String(prodCode).trim().toUpperCase();
     const stampStr = getStampString('DELETED', userName);
@@ -335,7 +348,12 @@ export async function deleteLineItemAction(transNo: string, prodCode: string) {
 
 export async function restoreLineItemAction(transNo: string, prodCode: string) {
   try {
-    const userName = await ensureStaff();
+    const user = await getCurrentUser();
+    const role = (user?.role || '').toLowerCase();
+    if (role !== 'admin' && role !== 'superadmin') {
+      return { error: 'Access denied: Only administrators can restore soft-deleted records.' };
+    }
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'admin';
     const cleanTrans = String(transNo).trim();
     const cleanProd = String(prodCode).trim().toUpperCase();
     const stampStr = getStampString('RESTORED', userName);

@@ -23,7 +23,7 @@ export interface UserAccount {
   passwordHash: string;
   role: 'Superadmin' | 'Admin' | 'User';
   isBlocked: boolean;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'Blocked';
   stamp: string;
   createdAt?: string;
   rights?: string[];

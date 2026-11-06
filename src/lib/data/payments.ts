@@ -2,21 +2,38 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 
 export interface PaymentLedgerItem {
-  orNo: string | number;
+  orNo: string;
   payDate: string;
   amount: number;
-  transNo: string | number;
+  transNo: string;
   salesDate: string;
-  custNo: string | number;
+  custNo: string;
   custName: string;
+  saleTotal: number;
+  totalPaid: number;
+  balance: number;
+  status: 'Active' | 'Inactive';
+  stamp: string;
+  isDeleted: boolean;
+}
+
+export interface PaymentAuditItem {
+  id: string;
+  orNo: string;
+  action: 'CREATED' | 'EDITED' | 'DELETED' | 'RESTORED';
+  by: string;
+  timestamp: string;
+  details: string;
 }
 
 export interface SaleForPaymentOption {
-  transNo: string | number;
+  transNo: string;
   salesDate: string;
-  custNo: string | number;
+  custNo: string;
   custName: string;
   totalAmount: number;
+  alreadyPaid: number;
+  balance: number;
 }
 
 export interface OfficialReceiptData {
@@ -44,11 +61,16 @@ export interface PaymentsLedgerData {
   metrics: {
     totalPaymentsAmount: number;
     totalReceiptsCount: number;
+    activeCount: number;
+    inactiveCount: number;
+    totalOutstandingBalance: number;
   };
+  recentAudits: PaymentAuditItem[];
 }
 
 /**
- * Fetch payments ledger with optional period filter and search query
+ * Fetch payments ledger with outstanding balance calculations (§3.9 & §4.2)
+ * Formula: Balance = Sale Total - Sum(Payments)
  */
 export async function getPaymentsLedger(filter?: {
   period?: string;
@@ -63,27 +85,85 @@ export async function getPaymentsLedger(filter?: {
       p.payDate,
       p.amount,
       p.transNo,
+      p.stamp,
+      COALESCE(p.is_deleted, 0) AS isDeleted,
       s.salesDate,
       c.custNo,
-      c.custName
+      c.custName,
+      COALESCE((
+        SELECT SUM(sd.quantity * ph.unitPrice)
+        FROM SALESDETAIL sd
+        JOIN PRICEHIST ph ON ph.prodCode = sd.prodCode AND ph.effDate = (
+          SELECT MAX(effDate) FROM PRICEHIST WHERE prodCode = sd.prodCode AND effDate <= s.salesDate
+        )
+        WHERE sd.transNo = s.transNo AND (sd.is_deleted = 0 OR sd.is_deleted IS NULL)
+      ), 0.0) AS saleTotal,
+      COALESCE((
+        SELECT SUM(p2.amount)
+        FROM PAYMENT p2
+        WHERE p2.transNo = s.transNo AND (p2.is_deleted = 0 OR p2.is_deleted IS NULL)
+      ), 0.0) AS totalPaid
     FROM PAYMENT p
     JOIN SALES s ON s.transNo = p.transNo
     JOIN CUSTOMER c ON c.custNo = s.custNo
     ORDER BY p.payDate DESC, p.ORNo DESC
   `).all() as any[];
 
-  let items: PaymentLedgerItem[] = rawPayments.map((r) => ({
-    orNo: String(r.orNo),
-    payDate: String(r.payDate),
-    amount: Number(r.amount),
-    transNo: String(r.transNo),
-    salesDate: String(r.salesDate),
-    custNo: String(r.custNo),
-    custName: String(r.custName),
-  }));
+  let items: PaymentLedgerItem[] = rawPayments.map((r) => {
+    const sTotal = Number(r.saleTotal || 0);
+    const tPaid = Number(r.totalPaid || 0);
+    const bal = Math.max(0, Number((sTotal - tPaid).toFixed(2)));
+    const isDel = Boolean(r.isDeleted);
 
-  const totalPaymentsAmount = items.reduce((sum, item) => sum + item.amount, 0);
+    return {
+      orNo: String(r.orNo),
+      payDate: String(r.payDate),
+      amount: Number(r.amount),
+      transNo: String(r.transNo),
+      salesDate: String(r.salesDate),
+      custNo: String(r.custNo),
+      custName: String(r.custName),
+      saleTotal: sTotal,
+      totalPaid: tPaid,
+      balance: bal,
+      status: isDel ? 'Inactive' : 'Active',
+      stamp: r.stamp ? String(r.stamp) : '',
+      isDeleted: isDel,
+    };
+  });
+
+  const totalPaymentsAmount = items
+    .filter((i) => !i.isDeleted)
+    .reduce((sum, item) => sum + item.amount, 0);
   const totalReceiptsCount = items.length;
+  const activeCount = items.filter((i) => !i.isDeleted).length;
+  const inactiveCount = items.filter((i) => i.isDeleted).length;
+
+  // Compute distinct outstanding balance across all transactions with payments
+  const transMap = new Map<string, number>();
+  items.forEach((i) => {
+    if (!i.isDeleted && !transMap.has(i.transNo)) {
+      transMap.set(i.transNo, i.balance);
+    }
+  });
+  const totalOutstandingBalance = Array.from(transMap.values()).reduce((sum, b) => sum + b, 0);
+
+  // Parse audits from stamps
+  const recentAudits: PaymentAuditItem[] = items.slice(0, 15).map((item, idx) => {
+    const parts = (item.stamp || '').split(' ');
+    const act = (parts[0] || 'CREATED').toUpperCase() as any;
+    const by = parts[1] || 'system';
+    const time = parts.slice(2).join(' ') || item.payDate;
+
+    return {
+      id: `audit-${idx}-${item.orNo}`,
+      orNo: item.orNo,
+      action: act === 'ADD' ? 'CREATED' : act,
+      by,
+      timestamp: time,
+      details: `Payment receipt ₱${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} on #${item.transNo}`,
+    };
+  });
 
   // Period filtering matching Sales page
   if (filter?.period && filter.period !== 'ALL') {
@@ -117,7 +197,11 @@ export async function getPaymentsLedger(filter?: {
     metrics: {
       totalPaymentsAmount,
       totalReceiptsCount,
+      activeCount,
+      inactiveCount,
+      totalOutstandingBalance,
     },
+    recentAudits,
   };
 }
 
@@ -134,26 +218,38 @@ export async function getSalesForPayment(preselectedTransNo?: number): Promise<S
       s.salesDate,
       c.custNo,
       c.custName,
-      COALESCE(SUM(sd.quantity * ph.unitPrice), 0.00) AS totalAmount
+      COALESCE((
+        SELECT SUM(sd.quantity * ph.unitPrice)
+        FROM SALESDETAIL sd
+        JOIN PRICEHIST ph ON ph.prodCode = sd.prodCode AND ph.effDate = (
+          SELECT MAX(effDate) FROM PRICEHIST WHERE prodCode = sd.prodCode AND effDate <= s.salesDate
+        )
+        WHERE sd.transNo = s.transNo AND (sd.is_deleted = 0 OR sd.is_deleted IS NULL)
+      ), 0.0) AS totalAmount,
+      COALESCE((
+        SELECT SUM(p.amount)
+        FROM PAYMENT p
+        WHERE p.transNo = s.transNo AND (p.is_deleted = 0 OR p.is_deleted IS NULL)
+      ), 0.0) AS alreadyPaid
     FROM SALES s
     JOIN CUSTOMER c ON c.custNo = s.custNo
-    LEFT JOIN SALESDETAIL sd ON sd.transNo = s.transNo
-    LEFT JOIN (
-      SELECT ph1.prodCode, ph1.effDate, ph1.unitPrice FROM PRICEHIST ph1
-    ) ph ON ph.prodCode = sd.prodCode AND ph.effDate = (
-      SELECT MAX(ph2.effDate) FROM PRICEHIST ph2 WHERE ph2.prodCode = sd.prodCode AND ph2.effDate <= s.salesDate
-    )
-    GROUP BY s.transNo, s.salesDate, c.custNo, c.custName
+    WHERE s.is_deleted = 0 OR s.is_deleted IS NULL
     ORDER BY s.salesDate DESC, s.transNo DESC
   `).all() as any[];
 
-  return rawRows.map((r) => ({
-    transNo: String(r.transNo),
-    salesDate: String(r.salesDate),
-    custNo: String(r.custNo),
-    custName: String(r.custName),
-    totalAmount: Number(r.totalAmount || 0),
-  }));
+  return rawRows.map((r) => {
+    const tot = Number(r.totalAmount || 0);
+    const paid = Number(r.alreadyPaid || 0);
+    return {
+      transNo: String(r.transNo),
+      salesDate: String(r.salesDate),
+      custNo: String(r.custNo),
+      custName: String(r.custName),
+      totalAmount: tot,
+      alreadyPaid: paid,
+      balance: Math.max(0, Number((tot - paid).toFixed(2))),
+    };
+  });
 }
 
 /**

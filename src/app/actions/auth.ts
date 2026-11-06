@@ -15,6 +15,8 @@ import {
   getAllUsers,
   toggleBlockUser,
   updateUserRights,
+  adminCreateUser,
+  updateUserProfile,
 } from '@/lib/auth-db';
 
 /**
@@ -258,6 +260,32 @@ export async function fetchUsersAction(): Promise<{ users: UserAccount[]; error?
   }
 }
 
+/**
+ * Validates whether the currently authenticated user is authorized for a specific canonical right.
+ * Superadmin and Admin have universal authority across all modules.
+ * Users are strictly checked against their granted rights in USERRIGHTS.
+ */
+export async function checkUserPermission(
+  rightCode: string
+): Promise<{ authorized: boolean; user: UserSession | null; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { authorized: false, user: null, error: 'Unauthorized: Please sign in.' };
+  }
+  const role = user.role.toLowerCase();
+  if (role === 'superadmin' || role === 'admin') {
+    return { authorized: true, user };
+  }
+  if (user.rights && user.rights.includes(rightCode)) {
+    return { authorized: true, user };
+  }
+  return {
+    authorized: false,
+    user,
+    error: `Access Denied: Missing required permission '${rightCode}'.`,
+  };
+}
+
 export async function toggleBlockUserAction(targetUserId: string): Promise<{ success: boolean; isBlocked?: boolean; error?: string }> {
   try {
     const currentUser = await getCurrentUser();
@@ -285,5 +313,90 @@ export async function updateUserRightsAction(targetUserId: string, rightCodes: s
     return res;
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to update user rights.' };
+  }
+}
+
+export async function createUserAction(data: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: 'User' | 'Admin';
+}): Promise<{ success: boolean; userId?: string; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || (currentUser.role !== 'Superadmin' && currentUser.role !== 'Admin' && currentUser.role !== 'admin')) {
+      return { success: false, error: 'Access denied: Only administrators can create users.' };
+    }
+
+    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.email?.trim() || !data.password?.trim()) {
+      return { success: false, error: 'All fields (First Name, Last Name, Email, Password) are required.' };
+    }
+
+    if (data.password.length < 4) {
+      return { success: false, error: 'Password must be at least 4 characters.' };
+    }
+
+    const passwordHash = await hashPassword(data.password);
+    const res = adminCreateUser(
+      data.firstName,
+      data.lastName,
+      data.email,
+      passwordHash,
+      data.role,
+      currentUser.fullName || 'Admin'
+    );
+
+    if (res.success) {
+      revalidatePath('/users');
+    }
+    return res;
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to create user.' };
+  }
+}
+
+export async function updateUserProfileAction(data: {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role?: 'User' | 'Admin';
+  newPassword?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || (currentUser.role !== 'Superadmin' && currentUser.role !== 'Admin' && currentUser.role !== 'admin')) {
+      return { success: false, error: 'Access denied: Only administrators can update users.' };
+    }
+
+    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.email?.trim()) {
+      return { success: false, error: 'First Name, Last Name, and Email are required.' };
+    }
+
+    let passwordHash: string | undefined;
+    if (data.newPassword && data.newPassword.trim()) {
+      if (data.newPassword.trim().length < 4) {
+        return { success: false, error: 'New password must be at least 4 characters.' };
+      }
+      passwordHash = await hashPassword(data.newPassword.trim());
+    }
+
+    const res = updateUserProfile(
+      data.userId,
+      data.firstName,
+      data.lastName,
+      data.email,
+      data.role,
+      passwordHash,
+      currentUser.fullName || 'Admin'
+    );
+
+    if (res.success) {
+      revalidatePath('/users');
+    }
+    return res;
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to update user profile.' };
   }
 }

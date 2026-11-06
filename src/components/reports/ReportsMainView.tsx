@@ -206,10 +206,10 @@ export function ReportsMainView({
       {/* Top Header Row with Title and User Role Badge (matching Figures 28-34) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 print:hidden">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
             Reports
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="font-sans text-xs text-text-muted mt-1">
             Read-only analytical summaries exportable to printable documents or PDF.
           </p>
         </div>

@@ -247,7 +247,7 @@ export function AddProductModal({
               type="submit"
               size="sm"
               disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-[#001A2B] hover:bg-[#00263E] text-white transition-colors"
             >
               {isSubmitting ? 'Saving...' : 'Add Product'}
             </Button>

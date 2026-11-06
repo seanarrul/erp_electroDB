@@ -45,10 +45,12 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
     // 1. Validate input parameters with Zod
     const validated = recordPaymentSchema.parse(input);
 
-    // 2. Check user role: only cashier and admin can record payments
+    // 2. Check user role: only authorized staff or administrators can record payments
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'cashier')) {
-      return { error: 'Access denied: Only cashiers or administrators can record payments.' };
+    const role = (user?.role || '').toLowerCase();
+    const isAllowed = role === 'admin' || role === 'superadmin' || role === 'cashier' || role === 'sales' || user?.rights?.some((r) => r.includes('sale'));
+    if (!user || !isAllowed) {
+      return { error: 'Access denied: Only authorized staff or administrators can record payments.' };
     }
 
     const isSupabaseConfigured =
@@ -72,6 +74,7 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
           return { error: error.message };
         }
 
+        revalidatePath('/payments');
         revalidatePath('/customers');
         revalidatePath('/sales');
         revalidatePath('/');
@@ -161,6 +164,7 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
 
       db.exec('COMMIT');
 
+      revalidatePath('/payments');
       revalidatePath('/customers');
       revalidatePath('/sales');
       revalidatePath('/');

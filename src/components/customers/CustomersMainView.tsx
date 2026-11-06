@@ -28,6 +28,7 @@ interface CustomersMainViewProps {
   metrics: CustomerMetrics;
   recentAudits?: CustomerAuditLogItem[];
   userRole?: string;
+  userRights?: string[];
 }
 
 export function CustomersMainView({
@@ -35,12 +36,17 @@ export function CustomersMainView({
   metrics,
   recentAudits = [],
   userRole = 'admin',
+  userRights = [],
 }: CustomersMainViewProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   const roleUpper = userRole.toUpperCase();
-  const canModify = ['ADMIN', 'SUPERADMIN', 'SALES'].includes(roleUpper);
+  const isAdmin = roleUpper === 'ADMIN' || roleUpper === 'SUPERADMIN';
+  const canAdd = isAdmin || userRights.includes('add_customer');
+  const canEdit = isAdmin || userRights.includes('edit_customer');
+  const canDelete = isAdmin || userRights.includes('delete_customer');
+  const canModify = canAdd || canEdit || canDelete;
 
   // Status Filter: 'active' | 'inactive' | 'all'
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
@@ -76,11 +82,16 @@ export function CustomersMainView({
   const filteredCustomers = useMemo(() => {
     let result = initialCustomers;
 
-    // 1. Status Filter
-    if (statusFilter === 'active') {
+    // For User role, strictly filter to Active records (Figure 10)
+    if (!isAdmin) {
       result = result.filter((c) => !c.isDeleted);
-    } else if (statusFilter === 'inactive') {
-      result = result.filter((c) => c.isDeleted);
+    } else {
+      // 1. Status Filter (Admin / Superadmin only)
+      if (statusFilter === 'active') {
+        result = result.filter((c) => !c.isDeleted);
+      } else if (statusFilter === 'inactive') {
+        result = result.filter((c) => c.isDeleted);
+      }
     }
 
     // 2. Search Query Filter
@@ -178,10 +189,10 @@ export function CustomersMainView({
       {/* Top Header Row with Title and Role */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
+          <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
             Customer Management
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="font-sans text-xs text-text-muted mt-1">
             Canonical 3NF module managing company client entities, address directory, and credit terms.
           </p>
         </div>
@@ -225,53 +236,55 @@ export function CustomersMainView({
         <div className="flex-1 min-w-0 w-full space-y-4">
           {/* Controls Bar (Filter Tabs, Search, Add Button) strictly following Figure 3.3 */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-            {/* Status Filter Tabs (Item 1 in Fig 3.3) */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-md text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusFilter('active');
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                  statusFilter === 'active'
-                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-semibold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                Active ({metrics.activeCount})
-              </button>
+            {/* Status Filter Tabs (Item 1 in Fig 3.3 - Admin only) */}
+            {isAdmin && (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-md text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('active');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'active'
+                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Active ({metrics.activeCount})
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusFilter('inactive');
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                  statusFilter === 'inactive'
-                    ? 'bg-white dark:bg-slate-700 text-rose-700 dark:text-rose-300 font-semibold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                Inactive ({metrics.inactiveCount})
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('inactive');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'inactive'
+                      ? 'bg-white dark:bg-slate-700 text-rose-700 dark:text-rose-300 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Inactive ({metrics.inactiveCount})
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setStatusFilter('all');
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                  statusFilter === 'all'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                All ({metrics.totalCustomers})
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                    statusFilter === 'all'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  All ({metrics.totalCustomers})
+                </button>
+              </div>
+            )}
 
             {/* Right Controls: Search Input & Add Button (Items 2 & 3 in Fig 3.3) */}
             <div className="flex items-center gap-2 flex-1 md:justify-end">
@@ -289,15 +302,15 @@ export function CustomersMainView({
                 />
               </div>
 
-              {canModify && (
-                <Button
+              {canAdd && (
+                <button
                   type="button"
                   onClick={() => setIsAddOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 text-xs px-3 py-1.5 font-medium flex items-center gap-1.5 shadow-sm"
+                  className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                 >
                   <UserPlus className="h-3.5 w-3.5" />
-                  <span>+ Add Customer</span>
-                </Button>
+                  <span>Add Customer</span>
+                </button>
               )}
             </div>
           </div>
@@ -312,15 +325,15 @@ export function CustomersMainView({
                     <th scope="col" className="px-4 py-3">CUSTOMER NAME</th>
                     <th scope="col" className="px-4 py-3">ADDRESS</th>
                     <th scope="col" className="px-4 py-3">PAY TERMS</th>
-                    <th scope="col" className="px-4 py-3">STATUS</th>
-                    <th scope="col" className="px-4 py-3">STAMP</th>
+                    {isAdmin && <th scope="col" className="px-4 py-3">STATUS</th>}
+                    {isAdmin && <th scope="col" className="px-4 py-3">STAMP</th>}
                     <th scope="col" className="px-4 py-3 text-right">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {paginatedCustomers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                      <td colSpan={isAdmin ? 7 : 5} className="px-4 py-12 text-center text-slate-400">
                         <Users className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
                         <p className="font-medium text-slate-600 dark:text-slate-300">No customers found</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">
@@ -364,30 +377,34 @@ export function CustomersMainView({
                             </span>
                           </td>
 
-                          {/* STATUS (Item 4 in Fig 3.3) */}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {isDeleted ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50">
-                                Inactive
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
-                                Active
-                              </span>
-                            )}
-                          </td>
+                          {/* STATUS (Item 4 in Fig 3.3 - Admin only) */}
+                          {isAdmin && (
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isDeleted ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50">
+                                  Inactive
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
+                                  Active
+                                </span>
+                              )}
+                            </td>
+                          )}
 
-                          {/* STAMP (Item 5 in Fig 3.3) */}
-                          <td className="px-4 py-3 text-[11px] font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                            {cust.stamp || '—'}
-                          </td>
+                          {/* STAMP (Item 5 in Fig 3.3 - Admin only) */}
+                          {isAdmin && (
+                            <td className="px-4 py-3 text-[11px] font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                              {cust.stamp || '—'}
+                            </td>
+                          )}
 
-                          {/* ACTIONS (Item 6 in Fig 3.3) */}
+                          {/* ACTIONS (Figure 9 & Figure 10) */}
                           <td className="px-4 py-3 text-right whitespace-nowrap">
-                            {canModify && (
-                              <div className="inline-flex items-center justify-end gap-1.5">
-                                {!isDeleted ? (
-                                  <>
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              {!isDeleted ? (
+                                <>
+                                  {canEdit && (
                                     <button
                                       type="button"
                                       onClick={() => setEditingCustomer(cust)}
@@ -395,6 +412,8 @@ export function CustomersMainView({
                                     >
                                       Edit
                                     </button>
+                                  )}
+                                  {canDelete && (
                                     <button
                                       type="button"
                                       onClick={() => setDeletingCustomer(cust)}
@@ -402,8 +421,10 @@ export function CustomersMainView({
                                     >
                                       Delete
                                     </button>
-                                  </>
-                                ) : (
+                                  )}
+                                </>
+                              ) : (
+                                isAdmin && (
                                   <button
                                     type="button"
                                     onClick={() => handleRestore(cust)}
@@ -413,9 +434,9 @@ export function CustomersMainView({
                                     <RotateCcw className="h-3 w-3" />
                                     <span>Restore</span>
                                   </button>
-                                )}
-                              </div>
-                            )}
+                                )
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

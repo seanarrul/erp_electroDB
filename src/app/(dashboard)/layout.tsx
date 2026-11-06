@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     <SidebarProvider>
       <div className="flex h-screen overflow-hidden bg-bg text-text font-sans transition-colors duration-150">
         {/* Left Rail: Navigation Sidebar connected to user account */}
-        <Sidebar userRole={user.role} userName={displayName} />
+        <Sidebar userRole={user.role} userName={displayName} userRights={user.rights || []} />
 
         {/* Center Main Channel */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg">

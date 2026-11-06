@@ -129,6 +129,15 @@ export function ensureAuthDb(): void {
       stamp: getStampString('CREATED', 'system'),
     },
     {
+      userId: 'usr-manager',
+      firstName: 'David',
+      lastName: 'Kim',
+      email: 'manager@hope.com',
+      role: 'Admin' as const,
+      pass: 'demo',
+      stamp: getStampString('CREATED', 'system'),
+    },
+    {
       userId: 'usr-user',
       firstName: 'Alex',
       lastName: 'Rivera',
@@ -375,4 +384,111 @@ export function getUserRights(userId: string): string[] {
   ensureAuthDb();
   const db = getAuthDb();
   return db.prepare('SELECT rightCode FROM USERRIGHTS WHERE userId = ?').all(userId).map((r: any) => r.rightCode);
+}
+
+export function adminCreateUser(
+  firstName: string,
+  lastName: string,
+  email: string,
+  passwordHash: string,
+  role: 'Admin' | 'User',
+  updatedBy = 'Admin'
+): { success: boolean; userId?: string; error?: string } {
+  ensureAuthDb();
+  const db = getAuthDb();
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (emailExists(cleanEmail)) {
+    return { success: false, error: 'An account with this email address already exists.' };
+  }
+
+  const userId = `usr-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+  const stamp = getStampString('CREATED', updatedBy);
+
+  try {
+    db.prepare(`
+      INSERT INTO USERS (userId, firstName, lastName, email, passwordHash, role, isBlocked, status, stamp)
+      VALUES (?, ?, ?, ?, ?, ?, 0, 'Active', ?)
+    `).run(userId, firstName.trim(), lastName.trim(), cleanEmail, passwordHash, role, stamp);
+
+    // If role is User, grant canonical baseline user rights
+    if (role === 'User') {
+      const defaultUserRights = [
+        'add_customer', 'edit_customer',
+        'add_product', 'edit_product',
+        'view_sale_details', 'edit_sale_detail',
+        'report_top_customers', 'report_product_master', 'report_top_products',
+      ];
+      const insertRightStmt = db.prepare('INSERT OR IGNORE INTO USERRIGHTS (userId, rightCode) VALUES (?, ?)');
+      for (const rc of defaultUserRights) {
+        insertRightStmt.run(userId, rc);
+      }
+    }
+
+    return { success: true, userId };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to create user in database.' };
+  }
+}
+
+export function updateUserProfile(
+  userId: string,
+  firstName: string,
+  lastName: string,
+  email: string,
+  role?: 'Admin' | 'User',
+  passwordHash?: string,
+  updatedBy = 'Admin'
+): { success: boolean; error?: string } {
+  ensureAuthDb();
+  const db = getAuthDb();
+  const cleanEmail = email.trim().toLowerCase();
+
+  const user = db.prepare('SELECT userId, role, email FROM USERS WHERE userId = ?').get(userId) as any;
+  if (!user) return { success: false, error: 'User not found' };
+
+  // Check if new email is taken by someone else
+  if (cleanEmail !== user.email.toLowerCase()) {
+    const existing = db.prepare('SELECT userId FROM USERS WHERE LOWER(email) = ? AND userId != ?').get(cleanEmail, userId);
+    if (existing) {
+      return { success: false, error: 'This email is already in use by another account.' };
+    }
+  }
+
+  const stamp = getStampString('EDITED', updatedBy);
+
+  try {
+    if (passwordHash) {
+      if (role) {
+        db.prepare(`
+          UPDATE USERS 
+          SET firstName = ?, lastName = ?, email = ?, role = ?, passwordHash = ?, stamp = ?
+          WHERE userId = ?
+        `).run(firstName.trim(), lastName.trim(), cleanEmail, role, passwordHash, stamp, userId);
+      } else {
+        db.prepare(`
+          UPDATE USERS 
+          SET firstName = ?, lastName = ?, email = ?, passwordHash = ?, stamp = ?
+          WHERE userId = ?
+        `).run(firstName.trim(), lastName.trim(), cleanEmail, passwordHash, stamp, userId);
+      }
+    } else {
+      if (role) {
+        db.prepare(`
+          UPDATE USERS 
+          SET firstName = ?, lastName = ?, email = ?, role = ?, stamp = ?
+          WHERE userId = ?
+        `).run(firstName.trim(), lastName.trim(), cleanEmail, role, stamp, userId);
+      } else {
+        db.prepare(`
+          UPDATE USERS 
+          SET firstName = ?, lastName = ?, email = ?, stamp = ?
+          WHERE userId = ?
+        `).run(firstName.trim(), lastName.trim(), cleanEmail, stamp, userId);
+      }
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to update user profile.' };
+  }
 }

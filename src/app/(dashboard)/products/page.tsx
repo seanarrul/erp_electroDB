@@ -28,6 +28,7 @@ export default async function ProductsPage() {
         metrics={data.metrics}
         recentAudits={data.recentAudits}
         userRole={userRole}
+        userRights={user?.rights || []}
       />
     </Suspense>
   );

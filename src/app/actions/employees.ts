@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
-import { getCurrentUser } from './auth';
+import { getCurrentUser, checkUserPermission } from './auth';
 
 function getHopeDbPath(): string {
   if (process.env.VERCEL) {
@@ -48,6 +48,14 @@ async function ensureAdmin() {
     throw new Error('Access denied. Administrator privileges required.');
   }
   return user?.fullName || user?.email?.split('@')[0] || 'admin';
+}
+
+async function ensurePermission(rightCode: string) {
+  const auth = await checkUserPermission(rightCode);
+  if (!auth.authorized) {
+    throw new Error(auth.error || `Access denied. Missing right '${rightCode}'.`);
+  }
+  return auth.user?.fullName || auth.user?.email?.split('@')[0] || 'staff';
 }
 
 function logAudit(db: DatabaseSync, tableName: string, action: string, recordKey: string, oldValues: any, newValues: any, actionBy: string) {
@@ -140,7 +148,7 @@ export type SeparateEmployeeInput = {
  */
 export async function addEmployeeAction(input: AddEmployeeInput) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('add_employee');
     const validated = addEmployeeSchema.parse(input);
     const manilaToday = getManilaToday();
 
@@ -242,7 +250,7 @@ export async function addEmployeeAction(input: AddEmployeeInput) {
  */
 export async function updateEmployeeAction(input: UpdateEmployeeInput) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('edit_employee');
     const validated = updateEmployeeSchema.parse(input);
     const manilaToday = getManilaToday();
 
@@ -327,7 +335,7 @@ export async function updateEmployeeAction(input: UpdateEmployeeInput) {
  */
 export async function deleteEmployeeAction(empNo: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('delete_employee');
     const cleanEmpNo = String(empNo).trim().padStart(5, '0');
     const stampStr = getStampString('DELETED', userName);
 
@@ -387,7 +395,7 @@ export async function restoreEmployeeAction(empNo: string) {
  */
 export async function addJobAction(jobCode: string, jobDesc: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('add_job');
     const validated = jobSchema.parse({ jobCode, jobDesc });
     const code = validated.jobCode.toUpperCase();
     const desc = validated.jobDesc.trim();
@@ -426,7 +434,7 @@ export async function addJobAction(jobCode: string, jobDesc: string) {
  */
 export async function updateJobAction(jobCode: string, jobDesc: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('edit_job');
     const code = String(jobCode).trim().toUpperCase();
     const desc = String(jobDesc).trim();
     if (desc.length < 1 || desc.length > 20) {
@@ -454,7 +462,7 @@ export async function updateJobAction(jobCode: string, jobDesc: string) {
  */
 export async function deleteJobAction(jobCode: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('delete_job');
     const code = String(jobCode).trim().toUpperCase();
     const stampStr = getStampString('DELETED', userName);
 
@@ -506,7 +514,7 @@ export async function restoreJobAction(jobCode: string) {
  */
 export async function addDepartmentAction(deptCode: string, deptName: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('add_department');
     const validated = departmentSchema.parse({ deptCode, deptName });
     const code = validated.deptCode.toUpperCase();
     const name = validated.deptName.trim();
@@ -544,7 +552,7 @@ export async function addDepartmentAction(deptCode: string, deptName: string) {
  */
 export async function updateDepartmentAction(deptCode: string, deptName: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('edit_department');
     const code = String(deptCode).trim().toUpperCase();
     const name = String(deptName).trim();
     if (name.length < 1 || name.length > 20) {
@@ -572,7 +580,7 @@ export async function updateDepartmentAction(deptCode: string, deptName: string)
  */
 export async function deleteDepartmentAction(deptCode: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('delete_department');
     const code = String(deptCode).trim().toUpperCase();
     const stampStr = getStampString('DELETED', userName);
 
@@ -624,7 +632,7 @@ export async function restoreDepartmentAction(deptCode: string) {
  */
 export async function addJobHistoryAction(input: JobHistoryInput) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('add_job_history');
     const validated = jobHistorySchema.parse(input);
     const cleanEmpNo = String(validated.empNo).trim().padStart(5, '0');
     const cleanJobCode = validated.jobCode.toUpperCase();
@@ -700,7 +708,7 @@ export async function updateJobHistoryAction(input: {
   deptCode: string;
 }) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('edit_job_history');
     const cleanEmpNo = String(input.empNo).trim().padStart(5, '0');
     const cleanJobCode = String(input.jobCode).trim().toUpperCase();
     const cleanEffDate = String(input.effDate).trim();
@@ -748,7 +756,7 @@ export async function updateJobHistoryAction(input: {
  */
 export async function deleteJobHistoryAction(empNo: string, jobCode: string, effDate: string) {
   try {
-    const userName = await ensureAdmin();
+    const userName = await ensurePermission('delete_job_history');
     const cleanEmpNo = String(empNo).trim().padStart(5, '0');
     const cleanJobCode = String(jobCode).trim().toUpperCase();
     const cleanEffDate = String(effDate).trim();

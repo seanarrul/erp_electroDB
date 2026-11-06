@@ -319,7 +319,7 @@ Dedicated `/reports` route with 7 tabs, including **Print** and **Save as PDF** 
 
 The application maintains the high-aesthetic editorial typographic sidebar:
 - **Title:** `ElectronDB` in `font-editorial italic text-[25px]`
-- **Subtitle:** `MONITORING • HOPEERD` in `font-mono text-[10px] tracking-widest`
+- **Subtitle:** `MONITORING • HOPEERP` in `font-mono text-[10px] tracking-widest`
 - **Sections:** `OVERVIEW`, `TRANSACTIONS`, `CATALOG`, `ORGANIZATION`, `ADMINISTRATION` in `font-mono text-[10px]`
 - **Items:** `text-[15px] font-sans` with `ChevronRight`
 - **Profile:** Verified user handle with `CheckCircle2` and lock sign-out.

@@ -79,7 +79,7 @@ export default async function SaleDetailPage({ params }: PageProps) {
           </div>
 
           <div className="text-left sm:text-right">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17231F] font-mono">
+            <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
               Transaction #{sale.transNo}
             </h1>
             <div className="mt-1 text-xs text-[#52615B]">

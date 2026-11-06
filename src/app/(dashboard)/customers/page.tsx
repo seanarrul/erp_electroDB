@@ -20,6 +20,7 @@ export default async function CustomersPage() {
         metrics={pageData.metrics}
         recentAudits={pageData.recentAudits}
         userRole={userRole}
+        userRights={user?.rights || []}
       />
     </div>
   );

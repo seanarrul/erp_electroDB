@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from './auth';
+import { getCurrentUser, checkUserPermission } from './auth';
 
 function getHopeDbPath(): string {
   if (process.env.VERCEL) {
@@ -111,13 +111,12 @@ export type RecordPaymentInput = {
  */
 export async function addCustomerAction(input: AddCustomerInput) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Unauthorized: Only Admin and Sales staff can add customers.' };
+    const auth = await checkUserPermission('add_customer');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right add_customer.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
 
     // Normalize custNo string (e.g. 83 -> C0083, c0083 -> C0083)
     let rawCustNo = String(input.custNo).trim().toUpperCase();
@@ -206,13 +205,12 @@ export async function addCustomerAction(input: AddCustomerInput) {
  */
 export async function updateCustomerAction(input: UpdateCustomerInput) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Unauthorized: Only Admin and Sales staff can edit customers.' };
+    const auth = await checkUserPermission('edit_customer');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right edit_customer.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
 
     let rawCustNo = String(input.custNo).trim().toUpperCase();
     if (/^\d+$/.test(rawCustNo)) {
@@ -303,13 +301,12 @@ export async function updateCustomerAction(input: UpdateCustomerInput) {
  */
 export async function deleteCustomerAction(custNo: string) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Unauthorized: Only Admin and Sales staff can soft-delete customers.' };
+    const auth = await checkUserPermission('delete_customer');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right delete_customer.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
     const cleanCustNo = String(custNo).trim();
 
     const isSupabaseConfigured =
@@ -386,9 +383,9 @@ export async function deleteCustomerAction(custNo: string) {
 export async function restoreCustomerAction(custNo: string) {
   try {
     const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Unauthorized: Only Admin and Sales staff can restore customers.' };
+    const role = (user?.role || '').toLowerCase();
+    if (role !== 'admin' && role !== 'superadmin') {
+      return { error: 'Access denied: Only administrators can restore soft-deleted records.' };
     }
 
     const userName = user?.fullName || user?.email?.split('@')[0] || role;

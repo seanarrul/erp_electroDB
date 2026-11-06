@@ -73,7 +73,7 @@ export function EmployeeDetailView({
           </Link>
 
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-[28px] font-semibold text-[#17231F] tracking-tight">
+            <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
               {employee.lastName}, {employee.firstName}
             </h1>
             <span

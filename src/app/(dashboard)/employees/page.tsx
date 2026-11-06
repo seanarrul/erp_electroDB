@@ -29,6 +29,7 @@ export default async function EmployeesPage() {
       metrics={hrData.metrics}
       recentAudits={hrData.recentAudits}
       userRole={role}
+      userRights={user?.rights || []}
     />
   );
 }

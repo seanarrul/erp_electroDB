@@ -52,6 +52,7 @@ interface EmployeesListViewProps {
   metrics?: HumanResourcesMetrics;
   recentAudits?: HumanResourcesAuditItem[];
   userRole?: string;
+  userRights?: string[];
   // Legacy props fallback
   departments?: any;
   departmentLookups?: any;
@@ -70,6 +71,7 @@ export function EmployeesListView({
   metrics,
   recentAudits = [],
   userRole = 'admin',
+  userRights = [],
 }: EmployeesListViewProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -77,6 +79,20 @@ export function EmployeesListView({
   const roleUpper = userRole.toUpperCase();
   const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'superadmin';
   const canModify = isAdmin;
+
+  // Individual permissions
+  const canAddEmployee = isAdmin || userRights.includes('add_employee');
+  const canEditEmployee = isAdmin || userRights.includes('edit_employee');
+  const canDeleteEmployee = isAdmin || userRights.includes('delete_employee');
+  const canViewJobHistory = isAdmin || userRights.includes('view_job_history');
+
+  const canAddJob = isAdmin || userRights.includes('add_job');
+  const canEditJob = isAdmin || userRights.includes('edit_job');
+  const canDeleteJob = isAdmin || userRights.includes('delete_job');
+
+  const canAddDepartment = isAdmin || userRights.includes('add_department');
+  const canEditDepartment = isAdmin || userRights.includes('edit_department');
+  const canDeleteDepartment = isAdmin || userRights.includes('delete_department');
 
   // Active Main Tab: Employees (default), Jobs, Departments
   const [activeTab, setActiveTab] = useState<TabType>('employees');
@@ -415,10 +431,10 @@ export function EmployeesListView({
       {/* Top Header Row with Title and Role */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
             Human Resources
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="font-sans text-xs text-text-muted mt-1">
             Section 3.5: Employees, job titles, departments and each employee&apos;s job/salary history.
           </p>
         </div>
@@ -509,13 +525,6 @@ export function EmployeesListView({
       <div className="flex flex-col xl:flex-row gap-5 items-start">
         {/* Left Column: Tab Data & Table */}
         <div className="flex-1 min-w-0 w-full space-y-4">
-          {/* Subheading Title based on current tab */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 capitalize">
-              {activeTab}
-            </h2>
-          </div>
-
           {/* Controls Bar (Status Filters + Search + Primary Button with #001A2B) */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
             {/* Status Filter Pills (Admin only per Figures 15, 18, 19) */}
@@ -618,39 +627,36 @@ export function EmployeesListView({
                 )}
               </div>
 
-              {canModify && (
-                <>
-                  {activeTab === 'employees' && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddEmpOpen(true)}
-                      className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>+ Add Employee</span>
-                    </button>
-                  )}
-                  {activeTab === 'jobs' && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddJobOpen(true)}
-                      className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>+ Add Job</span>
-                    </button>
-                  )}
-                  {activeTab === 'departments' && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddDeptOpen(true)}
-                      className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>+ Add Department</span>
-                    </button>
-                  )}
-                </>
+              {/* Add buttons conditioned on tab and rights */}
+              {activeTab === 'employees' && canAddEmployee && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddEmpOpen(true)}
+                  className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Employee</span>
+                </button>
+              )}
+              {activeTab === 'jobs' && canAddJob && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddJobOpen(true)}
+                  className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Job</span>
+                </button>
+              )}
+              {activeTab === 'departments' && canAddDepartment && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddDeptOpen(true)}
+                  className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Department</span>
+                </button>
               )}
             </div>
           </div>
@@ -739,47 +745,51 @@ export function EmployeesListView({
                             <td className="px-3.5 py-3 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
                                 {/* History Button: opens JOBHISTORY modal */}
-                                <button
-                                  type="button"
-                                  onClick={() => setHistoryEmp(emp)}
-                                  className="px-2.5 py-1 text-xs rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs cursor-pointer font-medium"
-                                >
-                                  History
-                                </button>
+                                {canViewJobHistory && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setHistoryEmp(emp)}
+                                    className="px-2.5 py-1 text-xs rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs cursor-pointer font-medium"
+                                  >
+                                    History
+                                  </button>
+                                )}
 
-                                {canModify && (
+                                {!emp.isDeleted ? (
                                   <>
-                                    {!emp.isDeleted ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => setEditingEmp(emp)}
-                                          className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setDeletingTarget({ type: 'employee', data: emp })
-                                          }
-                                          className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          Delete
-                                        </button>
-                                      </>
-                                    ) : (
+                                    {canEditEmployee && (
                                       <button
                                         type="button"
-                                        onClick={() => handleRestoreEmployee(emp)}
-                                        disabled={isSubmitting}
-                                        className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                        onClick={() => setEditingEmp(emp)}
+                                        className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
                                       >
-                                        <RotateCcw className="h-3 w-3" />
-                                        <span>Restore</span>
+                                        Edit
+                                      </button>
+                                    )}
+                                    {canDeleteEmployee && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setDeletingTarget({ type: 'employee', data: emp })
+                                        }
+                                        className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                      >
+                                        Delete
                                       </button>
                                     )}
                                   </>
+                                ) : (
+                                  isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRestoreEmployee(emp)}
+                                      disabled={isSubmitting}
+                                      className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                      <span>Restore</span>
+                                    </button>
+                                  )
                                 )}
                               </div>
                             </td>
@@ -915,39 +925,41 @@ export function EmployeesListView({
 
                             <td className="px-3.5 py-3 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
-                                {canModify && (
+                                {!isDeleted ? (
                                   <>
-                                    {!isDeleted ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => setEditingJob(job)}
-                                          className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setDeletingTarget({ type: 'job', data: job })
-                                          }
-                                          className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          Delete
-                                        </button>
-                                      </>
-                                    ) : (
+                                    {canEditJob && (
                                       <button
                                         type="button"
-                                        onClick={() => handleRestoreJob(job)}
-                                        disabled={isSubmitting}
-                                        className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                        onClick={() => setEditingJob(job)}
+                                        className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
                                       >
-                                        <RotateCcw className="h-3 w-3" />
-                                        <span>Restore</span>
+                                        Edit
+                                      </button>
+                                    )}
+                                    {canDeleteJob && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setDeletingTarget({ type: 'job', data: job })
+                                        }
+                                        className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                      >
+                                        Delete
                                       </button>
                                     )}
                                   </>
+                                ) : (
+                                  isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRestoreJob(job)}
+                                      disabled={isSubmitting}
+                                      className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                      <span>Restore</span>
+                                    </button>
+                                  )
                                 )}
                               </div>
                             </td>
@@ -1082,39 +1094,41 @@ export function EmployeesListView({
 
                             <td className="px-3.5 py-3 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
-                                {canModify && (
+                                {!isDeleted ? (
                                   <>
-                                    {!isDeleted ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => setEditingDept(dept)}
-                                          className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setDeletingTarget({ type: 'department', data: dept })
-                                          }
-                                          className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
-                                        >
-                                          Delete
-                                        </button>
-                                      </>
-                                    ) : (
+                                    {canEditDepartment && (
                                       <button
                                         type="button"
-                                        onClick={() => handleRestoreDepartment(dept)}
-                                        disabled={isSubmitting}
-                                        className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                        onClick={() => setEditingDept(dept)}
+                                        className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
                                       >
-                                        <RotateCcw className="h-3 w-3" />
-                                        <span>Restore</span>
+                                        Edit
+                                      </button>
+                                    )}
+                                    {canDeleteDepartment && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setDeletingTarget({ type: 'department', data: dept })
+                                        }
+                                        className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                      >
+                                        Delete
                                       </button>
                                     )}
                                   </>
+                                ) : (
+                                  isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRestoreDepartment(dept)}
+                                      disabled={isSubmitting}
+                                      className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                      <span>Restore</span>
+                                    </button>
+                                  )
                                 )}
                               </div>
                             </td>

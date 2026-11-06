@@ -32,6 +32,7 @@ interface ProductsMainViewProps {
   metrics: ProductsMetrics;
   recentAudits?: ProductAuditLogItem[];
   userRole?: string;
+  userRights?: string[];
 }
 
 export function ProductsMainView({
@@ -40,13 +41,16 @@ export function ProductsMainView({
   metrics,
   recentAudits = [],
   userRole = 'admin',
+  userRights = [],
 }: ProductsMainViewProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   const roleUpper = userRole.toUpperCase();
   const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(roleUpper);
-  const canModify = ['ADMIN', 'SUPERADMIN', 'SALES'].includes(roleUpper);
+  const canAddProduct = isAdmin || userRights.includes('add_product');
+  const canEditProduct = isAdmin || userRights.includes('edit_product');
+  const canDeleteProduct = isAdmin || userRights.includes('delete_product');
 
   // Status Filter: 'active' | 'inactive' | 'all'
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
@@ -181,10 +185,10 @@ export function ProductsMainView({
       {/* Top Header Row with Title and Role */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
+          <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
             Product Management
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="font-sans text-xs text-text-muted mt-1">
             Canonical 3NF module managing product catalog entities and historical unit price schedules (Figure 3.4).
           </p>
         </div>
@@ -296,15 +300,15 @@ export function ProductsMainView({
                 />
               </div>
 
-              {canModify && (
-                <Button
+              {canAddProduct && (
+                <button
                   type="button"
                   onClick={() => setIsAddOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 text-xs px-3 py-1.5 font-medium flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  <span>+ Add Product</span>
-                </Button>
+                  <span>Add Product</span>
+                </button>
               )}
             </div>
           </div>
@@ -403,37 +407,39 @@ export function ProductsMainView({
                                 Prices
                               </button>
 
-                              {canModify && (
+                              {!isDeleted ? (
                                 <>
-                                  {!isDeleted ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => setEditingProduct(prod)}
-                                        className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setDeletingProduct(prod)}
-                                        className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
-                                      >
-                                        Delete
-                                      </button>
-                                    </>
-                                  ) : (
+                                  {canEditProduct && (
                                     <button
                                       type="button"
-                                      onClick={() => handleRestore(prod)}
-                                      disabled={isSubmitting}
-                                      className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                      onClick={() => setEditingProduct(prod)}
+                                      className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
                                     >
-                                      <RotateCcw className="h-3 w-3" />
-                                      <span>Restore</span>
+                                      Edit
+                                    </button>
+                                  )}
+                                  {canDeleteProduct && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingProduct(prod)}
+                                      className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                    >
+                                      Delete
                                     </button>
                                   )}
                                 </>
+                              ) : (
+                                isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestore(prod)}
+                                    disabled={isSubmitting}
+                                    className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                    <span>Restore</span>
+                                  </button>
+                                )
                               )}
                             </div>
                           </td>

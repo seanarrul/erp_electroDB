@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from './auth';
+import { getCurrentUser, checkUserPermission } from './auth';
 
 function getHopeDbPath(): string {
   if (process.env.VERCEL) {
@@ -90,13 +90,12 @@ export type CorrectPriceInput = { prodCode: string; unitPrice: number };
 // ========================================================================
 export async function addProductAction(input: AddProductInput) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Access denied: Only administrative and sales staff can add products.' };
+    const auth = await checkUserPermission('add_product');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right add_product.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
     const validated = addProductSchema.parse(input);
     const code = validated.prodCode.toUpperCase();
     const stampStr = getStampString('CREATED', userName);
@@ -177,13 +176,12 @@ export async function addProductAction(input: AddProductInput) {
 // ========================================================================
 export async function updateProductAction(input: UpdateProductInput) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Access denied: Only administrative and sales staff can edit products.' };
+    const auth = await checkUserPermission('edit_product');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right edit_product.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
     const validated = updateProductSchema.parse(input);
     const code = validated.prodCode.toUpperCase();
     const stampStr = getStampString('EDITED', userName);
@@ -251,13 +249,12 @@ export async function updateProductAction(input: UpdateProductInput) {
 // ========================================================================
 export async function deleteProductAction(prodCode: string) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Access denied: Only administrative staff can soft-delete products.' };
+    const auth = await checkUserPermission('delete_product');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right delete_product.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
     const cleanCode = String(prodCode).trim().toUpperCase();
     const stampStr = getStampString('DELETED', userName);
 
@@ -296,8 +293,8 @@ export async function deleteProductAction(prodCode: string) {
 export async function restoreProductAction(prodCode: string) {
   try {
     const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
+    const role = (user?.role || '').toLowerCase();
+    if (role !== 'admin' && role !== 'superadmin') {
       return { error: 'Access denied: Only administrative staff can restore products.' };
     }
 
@@ -342,13 +339,12 @@ export async function restoreProductAction(prodCode: string) {
 // ========================================================================
 export async function addPriceAction(input: PriceRecordInput) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Access denied: Only administrators and sales can add price records.' };
+    const auth = await checkUserPermission('add_price');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right add_price.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
     const validated = priceRecordSchema.parse(input);
     const code = validated.prodCode.toUpperCase();
     const stampStr = getStampString('CREATED', userName);
@@ -391,13 +387,12 @@ export async function addPriceAction(input: PriceRecordInput) {
 
 export async function updatePriceAction(input: PriceRecordInput) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Access denied: Only administrators and sales can update price records.' };
+    const auth = await checkUserPermission('edit_price');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right edit_price.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
     const validated = priceRecordSchema.parse(input);
     const code = validated.prodCode.toUpperCase();
     const stampStr = getStampString('EDITED', userName);
@@ -440,13 +435,12 @@ export async function updatePriceAction(input: PriceRecordInput) {
 
 export async function deletePriceAction(prodCode: string, effDate: string) {
   try {
-    const user = await getCurrentUser();
-    const role = (user?.role || 'admin').toLowerCase();
-    if (!['admin', 'superadmin', 'sales'].includes(role)) {
-      return { error: 'Access denied: Only administrators can soft-delete price records.' };
+    const auth = await checkUserPermission('delete_price');
+    if (!auth.authorized) {
+      return { error: auth.error || 'Access denied: Missing right delete_price.' };
     }
-
-    const userName = user?.fullName || user?.email?.split('@')[0] || role;
+    const user = auth.user;
+    const userName = user?.fullName || user?.email?.split('@')[0] || 'staff';
     const cleanCode = String(prodCode).trim().toUpperCase();
     const cleanDate = String(effDate).trim();
     const stampStr = getStampString('DELETED', userName);

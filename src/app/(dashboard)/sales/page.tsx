@@ -28,6 +28,7 @@ export default async function SalesPage({ searchParams }: PageProps) {
         lookups={data.lookups}
         recentAudits={data.recentAudits}
         userRole={userRole}
+        userRights={user?.rights || []}
         initialOpenNewSale={shouldOpenNewSale}
       />
     </div>

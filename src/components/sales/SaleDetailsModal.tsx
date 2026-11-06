@@ -210,7 +210,7 @@ export function SaleDetailsModal({
               className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-[#001A2B] hover:bg-[#00263E] text-white shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>+ Add Line</span>
+              <span>Add Line</span>
             </button>
           )}
         </div>

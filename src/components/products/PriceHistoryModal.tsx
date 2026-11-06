@@ -272,10 +272,10 @@ export function PriceHistoryModal({
               type="button"
               size="sm"
               onClick={handleOpenAdd}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="bg-[#001A2B] hover:bg-[#00263E] text-white text-xs px-3.5 py-1.5 rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>+ Add Price</span>
+              <span>Add Price</span>
             </Button>
           )}
         </div>
@@ -349,7 +349,7 @@ export function PriceHistoryModal({
                 type="submit"
                 size="sm"
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-[#001A2B] hover:bg-[#00263E] text-white transition-colors"
               >
                 {isSubmitting ? 'Saving...' : editingPrice ? 'Save Price' : 'Add Price'}
               </Button>

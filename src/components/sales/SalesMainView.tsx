@@ -39,6 +39,7 @@ interface SalesMainViewProps {
   lookups: SalesLookupData;
   recentAudits?: SalesAuditItem[];
   userRole?: string;
+  userRights?: string[];
   initialOpenNewSale?: boolean;
 }
 
@@ -51,6 +52,7 @@ export function SalesMainView({
   lookups,
   recentAudits = [],
   userRole = 'sales',
+  userRights = [],
   initialOpenNewSale = false,
 }: SalesMainViewProps) {
   const router = useRouter();
@@ -58,7 +60,10 @@ export function SalesMainView({
 
   const roleUpper = userRole.toUpperCase();
   const isAdmin = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'superadmin';
-  const canModify = isAdmin || userRole.toLowerCase() === 'sales';
+  const canAddSale = isAdmin || userRights.includes('add_sale');
+  const canEditSale = isAdmin || userRights.includes('edit_sale');
+  const canDeleteSale = isAdmin || userRights.includes('delete_sale');
+  const canViewSaleDetails = isAdmin || userRights.includes('view_sale_details');
 
   // Status Filter: Active, Inactive, All (Admin only per Figures 23 & 27)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
@@ -219,10 +224,10 @@ export function SalesMainView({
       {/* Top Header Row with Title and Role */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
             Sales Management
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="font-sans text-xs text-text-muted mt-1">
             Section 3.6: Sales transactions (header) and product line items (detail lines).
           </p>
         </div>
@@ -265,12 +270,6 @@ export function SalesMainView({
       <div className="flex flex-col xl:flex-row gap-5 items-start">
         {/* Left Column: Sales CRUD Table */}
         <div className="flex-1 min-w-0 w-full space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-              Sales Management
-            </h2>
-          </div>
-
           {/* Controls Bar (Filter Tabs, Search, Add Button) matching Figures 23 & 27 */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
             {/* Status Filter Tabs (Figure 23 - Admin only) */}
@@ -341,14 +340,14 @@ export function SalesMainView({
                 />
               </div>
 
-              {canModify && (
+              {canAddSale && (
                 <button
                   type="button"
                   onClick={() => setIsNewSaleOpen(true)}
                   className="bg-[#001A2B] hover:bg-[#00263E] text-white shrink-0 text-xs px-3.5 py-1.5 font-medium rounded-md flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  <span>+ New Sale</span>
+                  <span>New Sale</span>
                 </button>
               )}
             </div>
@@ -432,45 +431,49 @@ export function SalesMainView({
                           <td className="px-3.5 py-3 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* Details Button opens SaleDetailsModal (Figures 25 & 26) */}
-                              <button
-                                type="button"
-                                onClick={() => setDetailsSale(sale)}
-                                className="px-2.5 py-1 text-xs rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs cursor-pointer font-medium"
-                              >
-                                Details
-                              </button>
+                              {canViewSaleDetails && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDetailsSale(sale)}
+                                  className="px-2.5 py-1 text-xs rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs cursor-pointer font-medium"
+                                >
+                                  Details
+                                </button>
+                              )}
 
-                              {canModify && (
+                              {!isDeleted ? (
                                 <>
-                                  {!isDeleted ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => setEditingSale(sale)}
-                                        className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setDeletingSale(sale)}
-                                        className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
-                                      >
-                                        Delete
-                                      </button>
-                                    </>
-                                  ) : (
+                                  {canEditSale && (
                                     <button
                                       type="button"
-                                      onClick={() => handleRestoreSale(sale)}
-                                      disabled={isSubmitting}
-                                      className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                      onClick={() => setEditingSale(sale)}
+                                      className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer"
                                     >
-                                      <RotateCcw className="h-3 w-3" />
-                                      <span>Restore</span>
+                                      Edit
+                                    </button>
+                                  )}
+                                  {canDeleteSale && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingSale(sale)}
+                                      className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs cursor-pointer"
+                                    >
+                                      Delete
                                     </button>
                                   )}
                                 </>
+                              ) : (
+                                isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestoreSale(sale)}
+                                    disabled={isSubmitting}
+                                    className="px-2.5 py-1 text-xs rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors shadow-2xs inline-flex items-center gap-1 font-medium cursor-pointer"
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                    <span>Restore</span>
+                                  </button>
+                                )
                               )}
                             </div>
                           </td>
