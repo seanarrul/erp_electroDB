@@ -2,6 +2,7 @@ import React from 'react';
 import { getCurrentUser } from '@/app/actions/auth';
 import { getHomeSummary } from '@/lib/data/home';
 import { DashboardHeader } from '@/components/home/DashboardHeader';
+import { DatabaseStatusWidget } from '@/components/home/DatabaseStatusWidget';
 import { ProjectTeamCard } from '@/components/home/ProjectTeamCard';
 import { DashboardKpis } from '@/components/home/DashboardKpis';
 import { redirect } from 'next/navigation';
@@ -46,11 +47,17 @@ export default async function HomePage({ searchParams }: PageProps) {
         )}
       </div>
 
-      {/* ── Right Rail: Floating, Formal Vertical Team Panel ── */}
+      {/* ── Right Rail: Floating, Formal Vertical Team Panel & Database Status Widget ── */}
       <aside
-        aria-label="Team Credits"
-        className="w-full max-w-[480px] min-[1200px]:max-w-[288px] min-[1200px]:w-[288px] shrink-0 min-[1200px]:sticky min-[1200px]:top-24 min-[1200px]:mr-6 self-start"
+        aria-label="Team Credits and Database Status"
+        className="w-full max-w-[480px] min-[1200px]:max-w-[288px] min-[1200px]:w-[288px] shrink-0 min-[1200px]:sticky min-[1200px]:top-24 min-[1200px]:mr-6 self-start space-y-3.5"
       >
+        {/* Database Connected Status Box above Project Team */}
+        <DatabaseStatusWidget
+          checkedAt={data?.checkedAt || 'Nov 6, 2026, 5:27 PM'}
+          totalTables={data?.totalTables || 10}
+          isConnected={summary.isSupabaseConnected ?? summary.success}
+        />
         <ProjectTeamCard />
       </aside>
     </div>
