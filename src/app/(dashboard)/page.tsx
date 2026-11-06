@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/app/actions/auth';
 import { getHomeSummary } from '@/lib/data/home';
 import { DashboardHeader } from '@/components/home/DashboardHeader';
 import { ProjectTeamCard } from '@/components/home/ProjectTeamCard';
+import { SupabaseDataAuditCard } from '@/components/home/SupabaseDataAuditCard';
 import { DashboardKpis } from '@/components/home/DashboardKpis';
 import { redirect } from 'next/navigation';
 
@@ -54,7 +55,19 @@ export default async function HomePage({ searchParams }: PageProps) {
         <ProjectTeamCard />
       </section>
 
-      {/* 3. Main Center Workspace (ERD) + Right-Side Portrait KPI Panel */}
+      {/* 3. Supabase Connected Data Store & Verification Audit */}
+      <section aria-label="Supabase Connected Data Store and Verification Audit">
+        <SupabaseDataAuditCard
+          counts={counts}
+          totalRows={data?.totalRows || 0}
+          totalTables={data?.totalTables || 10}
+          checkedAt={data?.checkedAt || 'Just now'}
+          durationMs={summary.durationMs}
+          isConnected={summary.success}
+        />
+      </section>
+
+      {/* 4. Main Center Workspace (ERD) + Right-Side Portrait KPI Panel */}
       <div className="flex flex-col xl:flex-row items-start gap-6">
         {/* Center / Left Main Area: Relational Database Architecture ERD */}
         <div className="flex-1 min-w-0 w-full">
