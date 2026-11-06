@@ -46,6 +46,9 @@ function getStampString(action: 'CREATED' | 'EDITED' | 'DELETED' | 'RESTORED' | 
 /**
  * Initializes USERS, RIGHTS, USERRIGHTS tables (Student Guide §2.4)
  * and seeds canonical demo accounts & 36 rights.
+ * 
+ * Note: On Vercel serverless deployments, /tmp is ephemeral and resets on cold start;
+ * changes made on the deployed site are not persistent across serverless restarts.
  */
 export function ensureAuthDb(): void {
   const db = getAuthDb();
@@ -108,6 +111,12 @@ export function ensureAuthDb(): void {
     insertRightStmt.run(r.rightCode, r.module, r.label);
   }
 
+  // Precomputed salted bcrypt hashes (never plaintext passwords in source code)
+  // 'demo' -> $2b$10$uD1Nx8kdhqM4wL0PHA4f2.8v2SFuT5cYRDTqDcvWQJPDe8vorujOe
+  // developer pass -> $2b$10$gEd44NE4L.9y2tmLcVQsw.O4wZmRSyZ4zbfba9i6fjsCb9oEzCqGq
+  const HASH_DEMO = '$2b$10$uD1Nx8kdhqM4wL0PHA4f2.8v2SFuT5cYRDTqDcvWQJPDe8vorujOe';
+  const HASH_DEV = '$2b$10$gEd44NE4L.9y2tmLcVQsw.O4wZmRSyZ4zbfba9i6fjsCb9oEzCqGq';
+
   // Seed Default Accounts matching Student Guide & preserving developer credentials
   const defaultAccounts = [
     {
@@ -116,7 +125,7 @@ export function ensureAuthDb(): void {
       lastName: 'Superadmin',
       email: 'superadmin@hope.com',
       role: 'Superadmin' as const,
-      pass: 'demo',
+      passwordHash: HASH_DEMO,
       stamp: getStampString('CREATED', 'system'),
     },
     {
@@ -125,7 +134,7 @@ export function ensureAuthDb(): void {
       lastName: 'Park',
       email: 'admin@hope.com',
       role: 'Admin' as const,
-      pass: 'demo',
+      passwordHash: HASH_DEMO,
       stamp: getStampString('CREATED', 'system'),
     },
     {
@@ -134,7 +143,7 @@ export function ensureAuthDb(): void {
       lastName: 'Kim',
       email: 'manager@hope.com',
       role: 'Admin' as const,
-      pass: 'demo',
+      passwordHash: HASH_DEMO,
       stamp: getStampString('CREATED', 'system'),
     },
     {
@@ -143,7 +152,7 @@ export function ensureAuthDb(): void {
       lastName: 'Rivera',
       email: 'user@hope.com',
       role: 'User' as const,
-      pass: 'demo',
+      passwordHash: HASH_DEMO,
       stamp: getStampString('CREATED', 'system'),
     },
     {
@@ -152,7 +161,7 @@ export function ensureAuthDb(): void {
       lastName: 'Ildefonso',
       email: 'ildefonsojeptahashleyr@gmail.com',
       role: 'Superadmin' as const,
-      pass: '09355566245',
+      passwordHash: HASH_DEV,
       stamp: getStampString('CREATED', 'system'),
     },
   ];
@@ -165,8 +174,7 @@ export function ensureAuthDb(): void {
   for (const acc of defaultAccounts) {
     const existing = db.prepare('SELECT userId FROM USERS WHERE LOWER(email) = LOWER(?)').get(acc.email);
     if (!existing) {
-      const hash = bcrypt.hashSync(acc.pass, 10);
-      insertUserStmt.run(acc.userId, acc.firstName, acc.lastName, acc.email.toLowerCase(), hash, acc.role, acc.stamp);
+      insertUserStmt.run(acc.userId, acc.firstName, acc.lastName, acc.email.toLowerCase(), acc.passwordHash, acc.role, acc.stamp);
     }
   }
 
@@ -364,6 +372,7 @@ export function updateUserRights(userId: string, rightCodes: string[], updatedBy
 
   const user = db.prepare('SELECT role FROM USERS WHERE userId = ?').get(userId) as any;
   if (!user) return { success: false, error: 'User not found' };
+  if (user.role === 'Superadmin') return { success: false, error: 'Superadmin rights cannot be modified.' };
 
   // Clear existing rights
   db.prepare('DELETE FROM USERRIGHTS WHERE userId = ?').run(userId);
@@ -446,6 +455,9 @@ export function updateUserProfile(
 
   const user = db.prepare('SELECT userId, role, email FROM USERS WHERE userId = ?').get(userId) as any;
   if (!user) return { success: false, error: 'User not found' };
+  if (user.role === 'Superadmin' && updatedBy !== 'Superadmin') {
+    return { success: false, error: 'Administrators cannot modify Superadmin accounts.' };
+  }
 
   // Check if new email is taken by someone else
   if (cleanEmail !== user.email.toLowerCase()) {

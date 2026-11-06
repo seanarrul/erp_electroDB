@@ -1,6 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/actions/auth';
+import { canAccess } from '@/lib/permissions';
 import {
   getTopCustomers,
   getProductMasterList,
@@ -20,6 +21,11 @@ export default async function ReportsPage() {
 
   if (!user) {
     redirect('/login');
+  }
+
+  // Route Guard: Reports module access (A5)
+  if (!canAccess(user.role, 'reports', user.rights || [])) {
+    redirect('/?denied=1');
   }
 
   const employeesList = getEmployeesListForDropdown();

@@ -1,7 +1,8 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getCurrentUser } from '@/app/actions/auth';
+import { canAccess } from '@/lib/permissions';
 import {
   getEmployeeDetailPageData,
   getDepartmentsAndJobsLookups,
@@ -17,9 +18,12 @@ interface EmployeeDetailPageProps {
 export default async function EmployeeDetailPage({ params }: EmployeeDetailPageProps) {
   const user = await getCurrentUser();
 
-  // Section 5: Admin only
-  if (!user || user.role !== 'admin') {
-    notFound();
+  if (!user) {
+    redirect('/login');
+  }
+
+  if (!canAccess(user.role, 'human-resources', user.rights || [])) {
+    redirect('/?denied=1');
   }
 
   const resolvedParams = await params;

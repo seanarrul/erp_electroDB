@@ -1,12 +1,14 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 
 interface TeamMember {
   role: string;
   name: string;
   handle: string;
   initials: string;
+  avatar?: string;
 }
 
 const MEMBERS: TeamMember[] = [
@@ -15,30 +17,35 @@ const MEMBERS: TeamMember[] = [
     name: 'DE LEON, Sean Arrul',
     handle: '@seanarrul',
     initials: 'SD',
+    avatar: '/avatars/default-avatar.jpg',
   },
   {
     role: 'DB Admin',
     name: 'DELA CRUZ, Veil',
     handle: '@veil',
     initials: 'VD',
+    avatar: '/avatars/default-avatar.jpg',
   },
   {
     role: 'Tester',
     name: 'ECHAGUE, Arielle',
     handle: '@arielle',
     initials: 'AE',
+    avatar: '/avatars/default-avatar.jpg',
   },
   {
     role: 'UI Designer',
     name: 'CASING, Christian Jay',
     handle: '@christianjay',
     initials: 'CC',
+    avatar: '/avatars/default-avatar.jpg',
   },
   {
     role: 'Developer',
     name: 'Ildefonso, Jeptah Ashley',
     handle: '@jeptah',
     initials: 'JI',
+    avatar: '/avatars/default-avatar.jpg',
   },
 ];
 
@@ -86,9 +93,16 @@ export function ProjectTeamCard() {
                 title={`${displayName} (${member.handle}) — ${member.role}`}
                 className="group relative flex items-center gap-3.5 px-2 py-1.5 -mx-2 rounded-lg hover:bg-white/[0.04] transition-colors duration-150 cursor-default select-none min-h-[56px]"
               >
-                {/* 36px circular avatar with solid navy-raised background so hairline does not show through */}
-                <div className="relative z-10 w-9 h-9 rounded-full ring-1 ring-white/[0.18] group-hover:ring-panel-accent bg-panel-navy-raised text-white flex items-center justify-center font-mono text-[11px] font-semibold shrink-0 shadow-2xs transition-colors duration-150">
-                  <span>{member.initials}</span>
+                {/* 36px circular avatar with permanent default avatar image */}
+                <div className="relative z-10 w-9 h-9 rounded-full ring-1 ring-white/[0.18] group-hover:ring-panel-accent bg-panel-navy-raised overflow-hidden shrink-0 shadow-2xs transition-colors duration-150">
+                  <Image
+                    src={member.avatar || '/avatars/default-avatar.jpg'}
+                    alt={displayName}
+                    width={36}
+                    height={36}
+                    className="w-full h-full object-cover select-none pointer-events-none"
+                    priority
+                  />
                 </div>
 
                 {/* Name & Monospace Role */}

@@ -1,42 +1,26 @@
 'use client';
 
 import React from 'react';
-import { DatabaseStatusWidget } from './DatabaseStatusWidget';
+import { DbStatusPill } from './DbStatusPill';
 
 interface DashboardHeaderProps {
-  fullName?: string;
-  checkedAt?: string;
-  totalTables?: number;
-  isConnected?: boolean;
-  showStatusWidget?: boolean;
+  onDbStatusChange?: (status: 'connected' | 'partial' | 'disconnected' | 'checking') => void;
 }
 
-export function DashboardHeader({
-  fullName = 'Admin',
-  checkedAt = 'Nov 6, 2026, 5:27 PM',
-  totalTables = 10,
-  isConnected = true,
-  showStatusWidget = false,
-}: DashboardHeaderProps) {
+export function DashboardHeader({ onDbStatusChange }: DashboardHeaderProps) {
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border transition-colors duration-150">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-border transition-colors duration-150">
       {/* Editorial Dashboard Title */}
       <div>
         <h1 className="font-editorial italic text-2xl sm:text-3xl font-normal text-text tracking-tight">
-          Overview 3NF Data Managed
+          Overview
         </h1>
-        <p className="font-sans text-xs text-text-muted mt-1">
-          Live monitoring ledger for PC parts inventory, customer receivables, and employee records.
-        </p>
       </div>
 
-      {showStatusWidget && (
-        <DatabaseStatusWidget
-          checkedAt={checkedAt}
-          totalTables={totalTables}
-          isConnected={isConnected}
-        />
-      )}
+      {/* Clickable, timed Database Status Pill */}
+      <div className="shrink-0 flex items-center">
+        <DbStatusPill onStatusChange={onDbStatusChange} />
+      </div>
     </div>
   );
 }

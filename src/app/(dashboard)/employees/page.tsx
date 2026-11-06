@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/actions/auth';
 import { getHumanResourcesPageData } from '@/lib/data/employees';
 import { EmployeesListView } from '@/components/employees/EmployeesListView';
+import { canAccess } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,11 @@ export default async function EmployeesPage() {
 
   if (!user) {
     redirect('/login');
+  }
+
+  // Route Guard: Human Resources module access (A5)
+  if (!canAccess(user.role, 'human-resources', user.rights || [])) {
+    redirect('/?denied=1');
   }
 
   const role =

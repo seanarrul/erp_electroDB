@@ -1,17 +1,26 @@
 import React, { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 import { getProductsPageData } from '@/lib/data/products';
 import { ProductsMainView } from '@/components/products/ProductsMainView';
 import { getCurrentUser } from '@/app/actions/auth';
+import { canAccess } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage() {
-  const [data, user] = await Promise.all([
-    getProductsPageData(),
-    getCurrentUser(),
-  ]);
+  const user = await getCurrentUser();
 
-  const userRole = user?.role || 'admin';
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Route Guard: Products module access
+  if (!canAccess(user.role, 'products', user.rights || [])) {
+    redirect('/?denied=1');
+  }
+
+  const userRole = user?.role || 'user';
+  const data = await getProductsPageData();
 
   return (
     <Suspense

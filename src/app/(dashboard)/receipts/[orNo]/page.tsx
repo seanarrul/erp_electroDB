@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { z } from 'zod';
+import { notFound, redirect } from 'next/navigation';
+import { getCurrentUser } from '@/app/actions/auth';
+import { canAccess } from '@/lib/permissions';
 import { getOfficialReceipt } from '@/lib/data/payments';
 import { formatPHP, formatDate } from '@/lib/utils';
 import { PrintButton } from '@/components/sales/PrintButton';
@@ -23,7 +24,18 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const receipt = await getOfficialReceipt(orNo);
+  const [user, receipt] = await Promise.all([
+    getCurrentUser(),
+    getOfficialReceipt(orNo),
+  ]);
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  if (!canAccess(user.role, 'payments', user.rights || [])) {
+    redirect('/?denied=1');
+  }
 
   if (!receipt) {
     notFound();

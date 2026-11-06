@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/actions/auth';
+import { canAccess } from '@/lib/permissions';
 import { getSaleDetailData } from '@/lib/data/sales';
 import { formatPHP, formatDate } from '@/lib/utils';
 import { PrintButton } from '@/components/sales/PrintButton';
@@ -29,6 +30,14 @@ export default async function SaleDetailPage({ params }: PageProps) {
     getCurrentUser(),
     getSaleDetailData(transNo),
   ]);
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  if (!canAccess(user.role, 'sales', user.rights || [])) {
+    redirect('/?denied=1');
+  }
 
   if (!saleData) {
     notFound();

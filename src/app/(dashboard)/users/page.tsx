@@ -1,6 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/actions/auth';
+import { canAccess } from '@/lib/permissions';
 import { getAllUsers } from '@/lib/auth-db';
 import { UserManagementView } from '@/components/users/UserManagementView';
 
@@ -13,12 +14,9 @@ export default async function UsersPage() {
     redirect('/login');
   }
 
-  // Only Superadmin and Admin can access User Management (§1.2 & §3.8)
-  const isSuperadmin = user.role === 'Superadmin';
-  const isAdmin = user.role === 'Admin' || user.role === 'admin';
-
-  if (!isSuperadmin && !isAdmin) {
-    redirect('/');
+  // Route Guard: User Management access (Superadmin & Admin only - A5)
+  if (!canAccess(user.role, 'user-management', user.rights || [])) {
+    redirect('/?denied=1');
   }
 
   const users = getAllUsers(user.role);

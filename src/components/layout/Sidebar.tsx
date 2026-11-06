@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   ChevronRight,
@@ -14,6 +15,7 @@ import type { UserRole } from '@/lib/types';
 import { logoutAction } from '@/app/actions/auth';
 import { useSidebar } from '@/components/layout/SidebarContext';
 import { cn } from '@/lib/utils';
+import { canAccess, normalizeRole, type ModuleName } from '@/lib/permissions';
 
 interface SidebarProps {
   userRole?: UserRole;
@@ -29,20 +31,20 @@ export function Sidebar({
   const pathname = usePathname();
   const { isMobileOpen, closeMobileSidebar } = useSidebar();
 
-  const isSuperadmin = userRole === 'Superadmin';
-  const isAdmin = userRole === 'Admin' || userRole === 'admin' || isSuperadmin;
+  const normRole = normalizeRole(userRole);
+  const isSuperadmin = normRole === 'superadmin';
+  const isAdmin = normRole === 'admin' || isSuperadmin;
 
-  // Filter items by user rights when role is User (Figure 8 & §3.2)
+  // Single Source of Truth permission checker via canAccess()
   const isItemVisible = (href: string): boolean => {
-    if (isAdmin) return true;
     if (href === '/') return true;
-    if (href === '/customers') return userRights.some((r) => r.includes('customer'));
-    if (href === '/products') return userRights.some((r) => r.includes('product') || r.includes('price'));
-    if (href === '/employees') return userRights.some((r) => r.includes('job') || r.includes('department') || r.includes('employee'));
-    if (href === '/sales') return userRights.some((r) => r.includes('sale'));
-    if (href === '/payments') return userRights.some((r) => r.includes('sale'));
-    if (href === '/reports') return userRights.some((r) => r.startsWith('report_'));
-    if (href === '/users') return false; // Strictly Superadmin & Admin only
+    if (href === '/sales') return canAccess(userRole, 'sales', userRights);
+    if (href === '/customers') return canAccess(userRole, 'customer', userRights);
+    if (href === '/payments') return canAccess(userRole, 'payments', userRights);
+    if (href === '/products') return canAccess(userRole, 'products', userRights);
+    if (href === '/employees') return canAccess(userRole, 'human-resources', userRights);
+    if (href === '/reports') return canAccess(userRole, 'reports', userRights);
+    if (href === '/users') return canAccess(userRole, 'user-management', userRights);
     return false;
   };
 
@@ -176,8 +178,14 @@ export function Sidebar({
       {/* Bottom Profile matching JeptahzRepo */}
       <div className="pt-4 border-t border-border mt-auto flex items-center justify-between gap-2">
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-full ring-1 ring-border shrink-0 shadow-xs bg-[#041a24] dark:bg-white text-white dark:text-[#041a24] flex items-center justify-center font-mono font-bold text-[10px]">
-            {userName ? userName.slice(0, 2).toUpperCase() : 'JE'}
+          <div className="w-7 h-7 rounded-full ring-1 ring-border shrink-0 shadow-xs overflow-hidden bg-neutral-200">
+            <Image
+              src="/avatars/default-avatar.jpg"
+              alt={userName}
+              width={28}
+              height={28}
+              className="w-full h-full object-cover select-none pointer-events-none"
+            />
           </div>
           <div className="flex flex-col text-left min-w-0">
             <div className="flex items-center space-x-1">
@@ -188,6 +196,9 @@ export function Sidebar({
             </div>
             <span className="text-xs text-text-faint font-sans leading-tight truncate mt-0.5">
               @{userName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jeptahashleyildefonso'}
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text-muted mt-1 select-none leading-none">
+              {normRole.toUpperCase()}
             </span>
           </div>
         </div>

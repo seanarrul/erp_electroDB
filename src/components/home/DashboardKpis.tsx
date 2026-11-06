@@ -17,49 +17,50 @@ import {
 interface DashboardKpisProps {
   kpis: HomeKPIData;
   layout?: 'vertical' | 'grid';
+  isDisconnected?: boolean;
 }
 
 type AuditCardType = 'sales' | 'transactions' | 'payments' | 'employees' | null;
 
-export function DashboardKpis({ kpis, layout = 'grid' }: DashboardKpisProps) {
+export function DashboardKpis({ kpis, layout = 'grid', isDisconnected = false }: DashboardKpisProps) {
   const [activeAudit, setActiveAudit] = useState<AuditCardType>(null);
 
   const cards: KpiCardItem[] = [
     {
       id: 'sales',
       title: 'TOTAL SALES',
-      value: kpis.totalSalesFormatted,
-      subtext: `${kpis.totalTransactions} canonical transactions`,
+      value: isDisconnected ? '—' : kpis.totalSalesFormatted,
+      subtext: isDisconnected ? 'Database disconnected' : `${kpis.totalTransactions} canonical transactions`,
       icon: ShoppingBag,
-      onClick: () => setActiveAudit('sales'),
-      clickable: true,
+      onClick: isDisconnected ? undefined : () => setActiveAudit('sales'),
+      clickable: !isDisconnected,
     },
     {
       id: 'transactions',
       title: 'TOTAL TRANSACTIONS',
-      value: kpis.totalTransactions.toLocaleString(),
-      subtext: 'Across 82 customer accounts',
+      value: isDisconnected ? '—' : kpis.totalTransactions.toLocaleString(),
+      subtext: isDisconnected ? 'Database disconnected' : 'Across 82 customer accounts',
       icon: Calculator,
-      onClick: () => setActiveAudit('transactions'),
-      clickable: true,
+      onClick: isDisconnected ? undefined : () => setActiveAudit('transactions'),
+      clickable: !isDisconnected,
     },
     {
       id: 'payments',
       title: 'TOTAL PAYMENTS',
-      value: kpis.totalPaymentsFormatted,
-      subtext: '165 official receipts',
+      value: isDisconnected ? '—' : kpis.totalPaymentsFormatted,
+      subtext: isDisconnected ? 'Database disconnected' : '165 official receipts',
       icon: Receipt,
-      onClick: () => setActiveAudit('payments'),
-      clickable: true,
+      onClick: isDisconnected ? undefined : () => setActiveAudit('payments'),
+      clickable: !isDisconnected,
     },
     {
       id: 'employees',
       title: 'ACTIVE EMPLOYEES',
-      value: kpis.activeEmployees.toString(),
-      subtext: `${kpis.activeEmployees} active of 32 staff`,
+      value: isDisconnected ? '—' : kpis.activeEmployees.toString(),
+      subtext: isDisconnected ? 'Database disconnected' : `${kpis.activeEmployees} active of 32 staff`,
       icon: Users,
-      onClick: () => setActiveAudit('employees'),
-      clickable: true,
+      onClick: isDisconnected ? undefined : () => setActiveAudit('employees'),
+      clickable: !isDisconnected,
     },
   ];
 

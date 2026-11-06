@@ -1,6 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/actions/auth';
+import { canAccess } from '@/lib/permissions';
 import { getPaymentsLedger, getSalesForPayment, getNextORNumberPreview } from '@/lib/data/payments';
 import { PaymentsMainView } from '@/components/payments/PaymentsMainView';
 
@@ -11,6 +12,11 @@ export default async function PaymentsPage() {
 
   if (!user) {
     redirect('/login');
+  }
+
+  // Route Guard: Payments module access
+  if (!canAccess(user.role, 'payments', user.rights || [])) {
+    redirect('/?denied=1');
   }
 
   const [ledgerData, salesList, nextOrPreview] = await Promise.all([

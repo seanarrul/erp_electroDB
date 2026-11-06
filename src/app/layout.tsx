@@ -41,7 +41,7 @@ export const viewport: Viewport = {
   ],
 };
 
-const themeInitScript = `(function(){try{var s=localStorage.getItem("hope-theme");var d=s==="dark"||(s!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.dataset.theme=d?"dark":"light";r.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
+const themeInitScript = `(function(){try{var s=localStorage.getItem("hope-theme");var d=s==="dark"||(s!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.dataset.theme=d?"dark":"light";r.style.colorScheme=d?"dark":"light";r.classList.toggle("dark",d);}catch(e){}})();`;
 
 export default function RootLayout({
   children,

@@ -1,6 +1,8 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/app/actions/auth';
 import { getSalesPageData } from '@/lib/data/sales';
+import { canAccess } from '@/lib/permissions';
 import { SalesMainView } from '@/components/sales/SalesMainView';
 
 export const dynamic = 'force-dynamic';
@@ -10,13 +12,22 @@ interface PageProps {
 }
 
 export default async function SalesPage({ searchParams }: PageProps) {
-  const [user, data, params] = await Promise.all([
+  const [user, params] = await Promise.all([
     getCurrentUser(),
-    getSalesPageData(),
     searchParams,
   ]);
 
-  const userRole = user?.role || 'sales';
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Route Guard: Sales module access
+  if (!canAccess(user.role, 'sales', user.rights || [])) {
+    redirect('/?denied=1');
+  }
+
+  const data = await getSalesPageData();
+  const userRole = user?.role || 'user';
   const shouldOpenNewSale = params.action === 'new';
 
   return (

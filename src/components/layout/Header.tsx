@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Bell, ChevronDown, Menu, LogOut, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './SidebarContext';
 import { logoutAction } from '@/app/actions/auth';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 import type { UserRole } from '@/lib/types';
 
 interface HeaderProps {
@@ -106,8 +108,11 @@ export function Header({ userRole = 'Admin', userName = 'Administrator' }: Heade
             onClick={() => setIsMenuOpen((prev) => !prev)}
             aria-expanded={isMenuOpen}
             aria-haspopup="true"
-            className="flex items-center gap-1.5 pl-2 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
+            className="flex items-center gap-2 pl-2 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
           >
+            {/* Small Role Indicator Pill (Superadmin: Amber, Admin: Blue, User: Green) */}
+            <RoleBadge role={userRole} />
+
             <span className="font-editorial text-sm text-text group-hover:text-accent">
               {userName}
             </span>
@@ -123,15 +128,23 @@ export function Header({ userRole = 'Admin', userName = 'Administrator' }: Heade
             <div className="absolute right-0 mt-2 w-64 bg-surface-1 rounded-[4px] shadow-md border border-border py-2 z-50 animate-in fade-in-50 duration-150 font-sans text-xs">
               <div className="px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-primary-bg text-primary-fg flex items-center justify-center font-mono font-bold text-xs shrink-0 ring-1 ring-border">
-                    {userName.charAt(0).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full ring-1 ring-border shrink-0 overflow-hidden bg-neutral-200">
+                    <Image
+                      src="/avatars/default-avatar.jpg"
+                      alt={userName}
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover select-none pointer-events-none"
+                    />
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-xs text-text truncate">{userName}</p>
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] text-primary-fg bg-primary-bg px-1.5 py-0.5 rounded-[2px] mt-1">
-                      <ShieldCheck className="w-3 h-3" />
-                      {roleLabel}
-                    </span>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <RoleBadge role={userRole} />
+                      <span className="font-mono text-[10px] text-text-muted truncate">
+                        {roleLabel}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

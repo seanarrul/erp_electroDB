@@ -81,6 +81,7 @@ function applyTheme(pref: ThemePref) {
 
   root.dataset.theme = resolved;
   root.style.colorScheme = resolved;
+  root.classList.toggle('dark', resolved === 'dark');
 
   // Sync meta theme-color tag if present
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');

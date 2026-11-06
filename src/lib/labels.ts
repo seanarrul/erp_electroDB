@@ -92,7 +92,7 @@ export const LABELS = {
   // Page Titles and Subtitles
   pages: {
     home: {
-      title: 'Overview 3NF Data Managed',
+      title: 'Overview',
       subtitle: '',
     },
     sales: {
