@@ -104,14 +104,24 @@ export function SupabaseDataAuditCard({
 
   return (
     <article className="w-full rounded-2xl border border-gray-200/80 dark:border-border bg-white dark:bg-surface-1 p-5 sm:p-6 shadow-xs font-sans transition-colors duration-150">
-      {/* ── Top Header: Title & Connected Pill ── */}
+      {/* ── Top Header: Dynamic Non-Static Title & Connected Pill ── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Database Overview
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+            {isConnected ? (
+              <span className="text-gray-900 dark:text-white">
+                SUPABASE : Connected Successfully
+              </span>
+            ) : (
+              <span className="text-rose-600 dark:text-rose-400">
+                SUPABASE : Not Connected
+              </span>
+            )}
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Database structure and integrity
+            {isConnected
+              ? 'Database structure and integrity'
+              : 'Supabase instance is sleeping, paused, or unreachable'}
           </p>
         </div>
 
@@ -122,7 +132,7 @@ export function SupabaseDataAuditCard({
               : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400'
           }`}
         >
-          {isConnected ? 'Connected' : 'Offline'}
+          {isConnected ? 'Connected' : 'Not Connected'}
         </span>
       </div>
 
@@ -155,8 +165,14 @@ export function SupabaseDataAuditCard({
         {/* Integrity */}
         <div className="rounded-xl border border-gray-200/80 dark:border-border p-3.5 sm:p-4 bg-white dark:bg-surface-2/40">
           <div className="text-xs font-normal text-gray-500 dark:text-gray-400">Integrity</div>
-          <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-            Verified
+          <div
+            className={`text-xl sm:text-2xl font-bold mt-1 ${
+              isConnected
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-amber-600 dark:text-amber-400'
+            }`}
+          >
+            {isConnected ? 'Verified' : 'Unverified'}
           </div>
         </div>
       </div>
@@ -209,7 +225,9 @@ export function SupabaseDataAuditCard({
 
       {/* ── Bottom Summary Line ── */}
       <div className="pt-4 mt-1 border-t border-gray-100 dark:border-border/50 text-xs text-gray-500 dark:text-gray-400">
-        10 tables &middot; {calculatedTotalRows.toLocaleString()} records &middot; Database integrity verified
+        {isConnected
+          ? `10 tables · ${calculatedTotalRows.toLocaleString()} records · Database integrity verified`
+          : `10 tables · Instance Asleep or Offline · Reconnect Supabase in project settings`}
       </div>
     </article>
   );

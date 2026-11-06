@@ -63,7 +63,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           totalTables={data?.totalTables || 10}
           checkedAt={data?.checkedAt || 'Just now'}
           durationMs={summary.durationMs}
-          isConnected={summary.success}
+          isConnected={summary.isSupabaseConnected ?? false}
         />
       </section>
 

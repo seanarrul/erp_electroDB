@@ -93,6 +93,7 @@ export interface HomeSummaryData {
 
 export interface HomeSummaryResult {
   success: boolean;
+  isSupabaseConnected?: boolean;
   data?: HomeSummaryData;
   error?: string;
   durationMs: number;
@@ -265,20 +266,72 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
     ) {
       try {
         const supabase = await createClient();
-        const { data, error } = await supabase.rpc('get_home_summary');
 
-        if (!error && data && typeof data === 'object') {
+        // 1. Check with a 5-second timeout in case Supabase is sleeping/paused
+        const timeoutPromise = new Promise<{ data?: any; error?: any }>((_, reject) =>
+          setTimeout(() => reject(new Error('Supabase request timeout / sleeping')), 5000)
+        );
+
+        // Try get_home_summary RPC first
+        let rpcRes: any = null;
+        try {
+          const rpcPromise = supabase.rpc('get_home_summary');
+          rpcRes = await Promise.race([rpcPromise, timeoutPromise]);
+        } catch {
+          rpcRes = null;
+        }
+
+        if (rpcRes && !rpcRes.error && rpcRes.data && typeof rpcRes.data === 'object') {
           const durationMs = Math.round(performance.now() - startTime);
-          const counts = (data.counts || {}) as Record<string, number>;
+          const counts = (rpcRes.data.counts || {}) as Record<string, number>;
           const totalRows = Object.values(counts).reduce((acc, c) => acc + (Number(c) || 0), 0);
 
           return {
             success: true,
+            isSupabaseConnected: true,
             durationMs,
             data: {
-              checkedAt: data.checkedAt || getPhtFormattedTime(),
-              totalTables: data.totalTables || 10,
-              totalRelationships: data.totalRelationships || 9,
+              checkedAt: rpcRes.data.checkedAt || getPhtFormattedTime(),
+              totalTables: rpcRes.data.totalTables || 10,
+              totalRelationships: rpcRes.data.totalRelationships || 9,
+              totalRows: totalRows || 928,
+              counts,
+              kpis,
+              salesOverview,
+              recentTransactions,
+              topProducts,
+            },
+          };
+        }
+
+        // 2. Direct table live query across canonical tables
+        const tableNames = [
+          'department', 'job', 'employee', 'jobhistory', 'customer',
+          'product', 'pricehist', 'sales', 'salesdetail', 'payment'
+        ];
+
+        const queryPromise = Promise.all(
+          tableNames.map((t) => supabase.from(t).select('*', { count: 'exact', head: true }))
+        );
+
+        const countResults = (await Promise.race([queryPromise, timeoutPromise])) as any[];
+
+        if (Array.isArray(countResults) && countResults.every((r) => !r.error)) {
+          const durationMs = Math.round(performance.now() - startTime);
+          const counts: Record<string, number> = {};
+          tableNames.forEach((t, i) => {
+            counts[t.toUpperCase()] = countResults[i].count ?? FALLBACK_COUNTS[t.toUpperCase()] ?? 0;
+          });
+          const totalRows = Object.values(counts).reduce((acc, c) => acc + (Number(c) || 0), 0);
+
+          return {
+            success: true,
+            isSupabaseConnected: true,
+            durationMs,
+            data: {
+              checkedAt: getPhtFormattedTime(),
+              totalTables: 10,
+              totalRelationships: 9,
               totalRows: totalRows || 928,
               counts,
               kpis,
@@ -289,7 +342,7 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
           };
         }
       } catch {
-        // Fall back to SQLite local database
+        // Fall back to SQLite local database (Supabase offline or asleep)
       }
     }
 
@@ -550,6 +603,7 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
 
     return {
       success: true,
+      isSupabaseConnected: false,
       durationMs,
       data: {
         checkedAt: getPhtFormattedTime(),
@@ -567,6 +621,7 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
     const durationMs = Math.round(performance.now() - startTime);
     return {
       success: false,
+      isSupabaseConnected: false,
       durationMs,
       error: 'Database connection failed',
     };
