@@ -54,6 +54,14 @@
   --module-products: #BBF7D0;
   --module-customers: #FEF08A;
   --module-sales: #FECACA;
+
+  /* Navy Right-Rail Panels (Matches Global Footer #041a24) */
+  --panel-navy: #041a24;
+  --panel-navy-raised: #0b2b3b;
+  --panel-text: #F1F5F9;
+  --panel-text-muted: #8FA3B8;
+  --panel-border: rgba(255, 255, 255, 0.10);
+  --panel-accent: #38BDF8;
 }
 
 :root[data-theme="dark"] {
@@ -108,6 +116,14 @@
   --module-products: rgba(34, 197, 94, 0.25);
   --module-customers: rgba(234, 179, 8, 0.25);
   --module-sales: rgba(239, 68, 68, 0.25);
+
+  /* Navy Right-Rail Panels (Dark Mode) */
+  --panel-navy: #041a24;
+  --panel-navy-raised: #0b2b3b;
+  --panel-text: #F1F5F9;
+  --panel-text-muted: #8FA3B8;
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --panel-accent: #38BDF8;
 }
 
 /* ============================================================================

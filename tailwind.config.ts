@@ -37,6 +37,12 @@ const config: Config = {
         'border-strong': 'var(--border-strong)',
         'border-hover': 'var(--border-hover)',
         brand: '#041a24',
+        'panel-navy': 'var(--panel-navy)',
+        'panel-navy-raised': 'var(--panel-navy-raised)',
+        'panel-text': 'var(--panel-text)',
+        'panel-text-muted': 'var(--panel-text-muted)',
+        'panel-border': 'var(--panel-border)',
+        'panel-accent': 'var(--panel-accent)',
 
         emerald: {
           50: '#E8F3EE',
