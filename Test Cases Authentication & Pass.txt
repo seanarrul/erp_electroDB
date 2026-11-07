@@ -1,0 +1,47 @@
+# Test Cases: Authentication & Password Lifecycle
+
+AUTH-01: User Registration
+Feature: Registration
+Pre-conditions: Unregistered user
+Test Steps:
+1. Navigate to Sign Up page
+2. Submit valid registration details
+Expected Result: Account can be created successfully.
+
+AUTH-02: User Login
+Feature: Authentication
+Pre-conditions: Approved user account
+Test Steps:
+1. Enter valid credentials on Login page
+2. Click Login button
+Expected Result: User authenticates successfully and is redirected to the main dashboard or canvas.
+
+AUTH-03: User Logout
+Feature: Session Management
+Pre-conditions: Active user session
+Test Steps:
+1. Click Logout button
+Expected Result: Clears session token and redirects user back to the Login page.
+
+AUTH-04: Set Password
+Feature: Password Setup
+Test Steps:
+1. Open set-password link from email
+2. Enter new valid password and submit
+Expected Result: Password sets successfully and user can log in using the new password.
+
+AUTH-05: Login with Non-Existent Email
+Pre-conditions: Unregistered user
+Test Steps: 
+1. Go to Login page. 
+2. Enter an email that does not exist in the system and any password. 
+3. Click Login.
+Expected Result: Login fails with an appropriate invalid credentials error message.
+
+AUTH-06: Login with Incorrect Password
+Pre-conditions: Registered user
+Test Steps: 
+1. Go to Login page. 
+2. Enter a valid email with an incorrect password. 
+3. Click Login.
+Expected Result: Login fails with an appropriate invalid credentials error message.
