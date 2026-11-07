@@ -1,6 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
-import fs from 'node:fs';
+import { getHopeDb, type DatabaseSync } from '@/lib/hope-db';
 
 // ========================================================================
 // TYPES & CONTRACTS (Section 3.6 Sales: Master-Detail)
@@ -156,27 +154,8 @@ export interface SaleLookupData {
   }>;
 }
 
-function getHopeDbPath(): string {
-  if (process.env.VERCEL) {
-    const tmpPath = path.join('/tmp', 'hope.db');
-    if (!fs.existsSync(tmpPath)) {
-      const srcPath = path.join(process.cwd(), 'hope.db');
-      if (fs.existsSync(srcPath)) {
-        try {
-          fs.copyFileSync(srcPath, tmpPath);
-        } catch {
-          // fallback
-        }
-      }
-    }
-    return tmpPath;
-  }
-  return path.join(process.cwd(), 'hope.db');
-}
-
 function getSqliteDb(): DatabaseSync {
-  const dbPath = getHopeDbPath();
-  return new DatabaseSync(dbPath);
+  return getHopeDb();
 }
 
 /**

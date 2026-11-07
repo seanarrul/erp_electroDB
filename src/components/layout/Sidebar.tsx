@@ -10,6 +10,7 @@ import {
   Lock,
   PanelLeftClose,
   X,
+  Network,
 } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 import { logoutAction } from '@/app/actions/auth';
@@ -37,7 +38,7 @@ export function Sidebar({
 
   // Single Source of Truth permission checker via canAccess()
   const isItemVisible = (href: string): boolean => {
-    if (href === '/') return true;
+    if (href === '/' || href === '/data-model') return true;
     if (href === '/sales') return canAccess(userRole, 'sales', userRights);
     if (href === '/customers') return canAccess(userRole, 'customer', userRights);
     if (href === '/payments') return canAccess(userRole, 'payments', userRights);
@@ -53,6 +54,7 @@ export function Sidebar({
       section: 'OVERVIEW',
       items: [
         { href: '/', label: 'Home' },
+        { href: '/data-model', label: 'Data Model' },
       ],
     },
     {
@@ -155,7 +157,12 @@ export function Sidebar({
                           : 'text-text-muted hover:text-text hover:bg-surface-2/60 font-medium'
                       )}
                     >
-                      <span className="tracking-tight truncate">{item.label}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {item.href === '/data-model' && (
+                          <Network className="w-3.5 h-3.5 text-text-muted group-hover:text-text shrink-0 stroke-[1.5]" />
+                        )}
+                        <span className="tracking-tight truncate">{item.label}</span>
+                      </div>
                       {hasChevron && (
                         <ChevronRight
                           className={cn(

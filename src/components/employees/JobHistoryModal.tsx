@@ -171,7 +171,7 @@ export function JobHistoryModal({
                 onClick={() => setStatusFilter('active')}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                   statusFilter === 'active'
-                    ? 'bg-white dark:bg-slate-700 text-[#001A2B] dark:text-blue-300 font-bold shadow-xs'
+                    ? 'bg-white dark:bg-slate-700 text-[#041a24] dark:text-white font-bold shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >

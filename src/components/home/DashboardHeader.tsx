@@ -3,8 +3,10 @@
 import React from 'react';
 import { DbStatusPill } from './DbStatusPill';
 
+import type { DisplayDbStatus } from './DbStatusPill';
+
 interface DashboardHeaderProps {
-  onDbStatusChange?: (status: 'connected' | 'partial' | 'disconnected' | 'checking') => void;
+  onDbStatusChange?: (status: DisplayDbStatus) => void;
 }
 
 export function DashboardHeader({ onDbStatusChange }: DashboardHeaderProps) {

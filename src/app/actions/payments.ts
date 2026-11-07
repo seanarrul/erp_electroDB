@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
+import { getHopeDb } from '@/lib/hope-db';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from './auth';
 import { getSalesForPayment, getNextORNumberPreview } from '@/lib/data/payments';
@@ -84,9 +83,8 @@ export async function recordPaymentAction(input: RecordPaymentInput) {
       }
     }
 
-    // SQLite local dev fallback with matching transactional constraints
-    const dbPath = path.join(process.cwd(), 'hope.db');
-    const db = new DatabaseSync(dbPath);
+    // SQLite fallback with matching transactional constraints
+    const db = getHopeDb();
 
     db.exec('BEGIN IMMEDIATE');
 

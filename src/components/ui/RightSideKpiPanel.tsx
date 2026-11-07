@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { ExternalLink, Info } from 'lucide-react';
 
 export interface KpiCardItem {
@@ -22,7 +22,7 @@ export interface RightSideKpiPanelProps {
   layout?: 'vertical' | 'grid';
 }
 
-export function RightSideKpiPanel({
+export const RightSideKpiPanel = memo(function RightSideKpiPanel({
   title = 'Stats Bar',
   subtitle,
   cards,
@@ -133,4 +133,4 @@ export function RightSideKpiPanel({
       </div>
     </div>
   );
-}
+});

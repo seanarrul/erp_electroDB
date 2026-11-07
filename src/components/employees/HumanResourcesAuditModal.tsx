@@ -23,7 +23,7 @@ export function HumanResourcesAuditModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <div className="w-8 h-8 rounded-lg bg-[#041a24]/10 dark:bg-slate-800 flex items-center justify-center text-[#041a24] dark:text-slate-200">
               <History className="h-4 w-4" />
             </div>
             <div>
@@ -90,7 +90,7 @@ export function HumanResourcesAuditModal({
                                 : isDelete
                                 ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                                 : isRestore
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                                ? 'bg-[#041a24]/10 text-[#041a24] dark:bg-slate-800 dark:text-slate-200'
                                 : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
                             }`}
                           >

@@ -1,5 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
+import { getHopeDb } from '@/lib/hope-db';
 import { createClient } from '@/lib/supabase/server';
 import { formatPHP, formatDate } from '@/lib/utils';
 import { parseProductDescription } from '@/lib/products';
@@ -123,8 +122,7 @@ export async function globalSearch(query: string): Promise<GlobalSearchResult[]>
 }
 
 function getLocalSearchResults(query: string): GlobalSearchResult[] {
-  const dbPath = path.join(process.cwd(), 'hope.db');
-  const db = new DatabaseSync(dbPath);
+  const db = getHopeDb();
   const results: GlobalSearchResult[] = [];
   const likePattern = `%${query}%`;
 

@@ -234,7 +234,7 @@ export function PriceHistoryModal({
                 onClick={() => setStatusFilter('active')}
                 className={`px-3 py-1 rounded transition-all cursor-pointer ${
                   statusFilter === 'active'
-                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-semibold shadow-xs'
+                    ? 'bg-white dark:bg-slate-700 text-[#041a24] dark:text-white font-bold shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
@@ -284,9 +284,9 @@ export function PriceHistoryModal({
         {(isAddOpen || editingPrice) && (
           <form
             onSubmit={handleSavePrice}
-            className="p-3 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 space-y-3 text-xs"
+            className="p-3 rounded-lg border border-[#041a24]/15 dark:border-slate-800 bg-[#041a24]/5 dark:bg-slate-800/50 space-y-3 text-xs"
           >
-            <div className="font-semibold text-blue-900 dark:text-blue-300 flex items-center justify-between">
+            <div className="font-semibold text-[#041a24] dark:text-slate-200 flex items-center justify-between">
               <span>{editingPrice ? `Edit Price for ${editingPrice.effDate}` : 'Add New Price Record'}</span>
               <button
                 type="button"

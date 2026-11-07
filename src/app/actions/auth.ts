@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import type { UserRole, UserSession, UserAccount } from '@/lib/types';
 import {
@@ -22,7 +23,7 @@ import {
 /**
  * Retrieves the current session (from session cookie or Supabase Auth).
  */
-export async function getCurrentUser(): Promise<UserSession | null> {
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<UserSession | null> {
   const cookieStore = await cookies();
   const demoRole = cookieStore.get('hope_demo_role')?.value as UserRole | undefined;
   const demoEmail = cookieStore.get('hope_demo_email')?.value;
@@ -66,7 +67,7 @@ export async function getCurrentUser(): Promise<UserSession | null> {
   } catch {
     return null;
   }
-}
+});
 
 /**
  * Handles regular email/password login with secure bcrypt hash verification.

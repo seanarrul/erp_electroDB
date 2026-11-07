@@ -1,28 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
-import fs from 'node:fs';
-
-function getHopeDbPath(): string {
-  if (process.env.VERCEL) {
-    const tmpPath = path.join('/tmp', 'hope.db');
-    if (!fs.existsSync(tmpPath)) {
-      const srcPath = path.join(process.cwd(), 'hope.db');
-      if (fs.existsSync(srcPath)) {
-        try {
-          fs.copyFileSync(srcPath, tmpPath);
-        } catch {
-          // fallback
-        }
-      }
-    }
-    return tmpPath;
-  }
-  return path.join(process.cwd(), 'hope.db');
-}
+import { getHopeDb } from '@/lib/hope-db';
 
 function getDb(): DatabaseSync {
-  const dbPath = getHopeDbPath();
-  return new DatabaseSync(dbPath);
+  return getHopeDb();
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
