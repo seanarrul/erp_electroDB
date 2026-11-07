@@ -1,24 +1,30 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import type { DbHealthResult } from '@/lib/db-health';
 import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  HelpCircle,
   RefreshCw,
   Database,
   Info,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+export type DisplayDbStatus = 'connected' | 'partial' | 'disconnected' | 'unverified' | 'checking';
+
 interface DbStatusPillProps {
-  onStatusChange?: (status: 'connected' | 'partial' | 'disconnected' | 'checking') => void;
+  onStatusChange?: (status: DisplayDbStatus) => void;
 }
 
 export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
   const [health, setHealth] = useState<DbHealthResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [displayStatus, setDisplayStatus] = useState<DisplayDbStatus>('checking');
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -28,14 +34,43 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
     try {
       setLoading(true);
       const res = await fetch(`/api/health/db${forceFresh ? '?fresh=1' : ''}`);
-      if (!res.ok) {
-        throw new Error('Health check response error');
+
+      if (res.status === 401) {
+        const unverifiedFallback: DbHealthResult = {
+          connected: false,
+          status: 'disconnected',
+          engine: 'SQLite (hope.db)',
+          tablesExpected: 10,
+          tablesFound: 0,
+          latencyMs: 0,
+          checkedAt: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+            timeZone: 'Asia/Manila',
+          }),
+          tables: [],
+          reason: 'unauthorized',
+          message: 'Session authentication required to inspect database health.',
+        };
+        setHealth(unverifiedFallback);
+        setDisplayStatus('unverified');
+        onStatusChange?.('unverified');
+        return;
       }
+
+      if (!res.ok) {
+        throw new Error(`Health check HTTP error ${res.status}`);
+      }
+
       const data: DbHealthResult = await res.json();
       setHealth(data);
+      setDisplayStatus(data.status);
       onStatusChange?.(data.status);
     } catch {
-      const fallback: DbHealthResult = {
+      // Network error, 500, or check could not run -> Neutral unverified state
+      const networkFallback: DbHealthResult = {
         connected: false,
         status: 'disconnected',
         engine: 'SQLite (hope.db)',
@@ -47,12 +82,15 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
           minute: '2-digit',
           second: '2-digit',
           hour12: true,
+          timeZone: 'Asia/Manila',
         }),
         tables: [],
-        message: 'The server could not reach the database.',
+        reason: 'query_failed',
+        message: 'Could not verify database status at this time.',
       };
-      setHealth(fallback);
-      onStatusChange?.('disconnected');
+      setHealth(networkFallback);
+      setDisplayStatus('unverified');
+      onStatusChange?.('unverified');
     } finally {
       setLoading(false);
     }
@@ -112,9 +150,9 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
     };
   }, [isOpen]);
 
-  const currentStatus = loading && !health ? 'checking' : health?.status || 'disconnected';
+  const currentStatus: DisplayDbStatus = loading && !health ? 'checking' : displayStatus;
 
-  // State configurations: green (healthy), amber (partial), red (disconnected), gray (checking)
+  // State configurations: green (healthy), amber (partial), red (disconnected), neutral (unverified/checking)
   const statusConfig = {
     connected: {
       label: 'Database connected',
@@ -134,6 +172,12 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
       badgeClass:
         'border-rose-500/30 bg-rose-500/10 text-rose-800 dark:text-rose-300 hover:bg-rose-500/15',
     },
+    unverified: {
+      label: 'Could not verify',
+      dotClass: 'bg-neutral-400',
+      badgeClass:
+        'border-border bg-surface-2 text-text-muted hover:bg-surface-2/80',
+    },
     checking: {
       label: 'Checking...',
       dotClass: 'bg-neutral-400 animate-ping',
@@ -141,6 +185,26 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
         'border-border bg-surface-2 text-text-muted hover:bg-surface-2/80',
     },
   }[currentStatus];
+
+  // User-friendly plain language explanation based on safe reason code
+  function getReasonExplanation(): string {
+    if (!health?.reason) return health?.message || 'Database status is normal.';
+    switch (health.reason) {
+      case 'file_missing':
+        return 'The database file was not found on the server deployment.';
+      case 'open_failed':
+        return 'Could not open the SQLite database connection on the server.';
+      case 'timeout':
+        return 'The database verification query exceeded the allowed timeout threshold.';
+      case 'table_missing':
+        return 'One or more canonical ERP tables are missing from the database.';
+      case 'unauthorized':
+        return 'Session authentication is required to inspect live database status.';
+      case 'query_failed':
+      default:
+        return health.message || 'The server could not verify database status at this time.';
+    }
+  }
 
   return (
     <div className="relative inline-block select-none font-sans">
@@ -212,18 +276,23 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
               {currentStatus === 'disconnected' && (
                 <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
               )}
+              {currentStatus === 'unverified' && (
+                <HelpCircle className="w-4 h-4 text-neutral-500 shrink-0" />
+              )}
               <span className="font-semibold text-sm">
                 {currentStatus === 'connected'
                   ? 'Database fully connected'
                   : currentStatus === 'partial'
                   ? 'Partially connected (missing tables)'
+                  : currentStatus === 'unverified'
+                  ? 'Could not verify status'
                   : 'Data not connected'}
               </span>
             </div>
 
-            {currentStatus === 'disconnected' && (
+            {currentStatus !== 'connected' && (
               <p className="text-[11px] text-text-muted mt-1 leading-relaxed">
-                The server could not reach the database. Please verify local file permissions or connection availability.
+                {getReasonExplanation()}
               </p>
             )}
 
@@ -242,7 +311,7 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
                   Latency
                 </span>
                 <span className="font-semibold text-text">
-                  {health && currentStatus !== 'disconnected' ? `${health.latencyMs} ms` : '—'}
+                  {health && currentStatus === 'connected' ? `${health.latencyMs} ms` : '—'}
                 </span>
               </div>
               <div>
@@ -289,16 +358,28 @@ export function DbStatusPill({ onStatusChange }: DbStatusPillProps) {
                 ))
               ) : (
                 <div className="p-3 text-center text-text-muted text-xs">
-                  No table information available.
+                  {currentStatus === 'unverified'
+                    ? 'Log in to view live table records.'
+                    : 'No table information available.'}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Explanatory Footer Note */}
-          <div className="mt-3 pt-2.5 border-t border-border flex items-center gap-1.5 text-text-muted text-[10.5px]">
-            <Info className="w-3.5 h-3.5 text-text-faint shrink-0" />
-            <span>Figures on this page are computed from these live tables.</span>
+          {/* Explanatory Footer Note & Data Model Link */}
+          <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between gap-2 text-[10.5px]">
+            <div className="flex items-center gap-1.5 text-text-muted min-w-0">
+              <Info className="w-3.5 h-3.5 text-text-faint shrink-0" />
+              <span className="truncate">Live tables</span>
+            </div>
+            <Link
+              href="/data-model"
+              onClick={() => setIsOpen(false)}
+              className="font-mono text-[10.5px] font-semibold text-accent hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+            >
+              <span>View data model</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
         </div>
       )}

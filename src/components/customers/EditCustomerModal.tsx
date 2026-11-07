@@ -104,7 +104,7 @@ export function EditCustomerModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <Edit2 className="h-4 w-4 text-[#041a24] dark:text-slate-200" />
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Edit Customer
             </h3>
@@ -156,7 +156,7 @@ export function EditCustomerModal({
               maxLength={20}
               value={custName}
               onChange={(e) => setCustName(e.target.value)}
-              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/30 focus:outline-none transition-all"
             />
           </div>
 
@@ -176,7 +176,7 @@ export function EditCustomerModal({
               maxLength={50}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/30 focus:outline-none transition-all"
             />
           </div>
 
@@ -188,7 +188,7 @@ export function EditCustomerModal({
             <select
               value={payTerms}
               onChange={(e) => setPayTerms(e.target.value as any)}
-              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+              className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/30 focus:outline-none transition-all"
             >
               <option value="30D">Net 30 (30D)</option>
               <option value="45D">Net 45 (45D)</option>

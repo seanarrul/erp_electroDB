@@ -66,7 +66,7 @@ export function AddUserModal({
         {/* Header */}
         <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#001A2B] dark:text-blue-300 flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-[#041a24]/10 dark:bg-slate-800 text-[#041a24] dark:text-slate-200 flex items-center justify-center font-bold text-xs">
               <UserPlus className="w-4 h-4" />
             </div>
             <div>

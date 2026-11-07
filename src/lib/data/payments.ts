@@ -1,5 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
+import { getHopeDb } from '@/lib/hope-db';
 
 export interface PaymentLedgerItem {
   orNo: string;
@@ -76,8 +75,7 @@ export async function getPaymentsLedger(filter?: {
   period?: string;
   query?: string;
 }): Promise<PaymentsLedgerData> {
-  const dbPath = path.join(process.cwd(), 'hope.db');
-  const db = new DatabaseSync(dbPath);
+  const db = getHopeDb();
 
   const rawPayments = db.prepare(`
     SELECT 
@@ -209,8 +207,7 @@ export async function getPaymentsLedger(filter?: {
  * Fetch sales list for the Record Payment modal dropdown
  */
 export async function getSalesForPayment(preselectedTransNo?: number): Promise<SaleForPaymentOption[]> {
-  const dbPath = path.join(process.cwd(), 'hope.db');
-  const db = new DatabaseSync(dbPath);
+  const db = getHopeDb();
 
   const rawRows = db.prepare(`
     SELECT 
@@ -256,8 +253,7 @@ export async function getSalesForPayment(preselectedTransNo?: number): Promise<S
  * Get next OR number preview
  */
 export async function getNextORNumberPreview(): Promise<number> {
-  const dbPath = path.join(process.cwd(), 'hope.db');
-  const db = new DatabaseSync(dbPath);
+  const db = getHopeDb();
   const row = db.prepare('SELECT COALESCE(MAX(ORNo), 9000) + 1 AS nextOR FROM PAYMENT').get() as any;
   return Number(row?.nextOR || 9001);
 }
@@ -266,8 +262,7 @@ export async function getNextORNumberPreview(): Promise<number> {
  * Retrieve single official receipt document
  */
 export async function getOfficialReceipt(orNo: string | number): Promise<OfficialReceiptData | null> {
-  const dbPath = path.join(process.cwd(), 'hope.db');
-  const db = new DatabaseSync(dbPath);
+  const db = getHopeDb();
 
   const rawStr = String(orNo).trim();
   const formattedOrNo = rawStr.startsWith('OR')

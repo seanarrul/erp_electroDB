@@ -204,7 +204,7 @@ export function ProductsMainView({
           </button>
 
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-semibold uppercase rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-            <ShieldCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            <ShieldCheck className="h-3.5 w-3.5 text-[#041a24] dark:text-slate-300" />
             <span>{roleUpper}</span>
           </div>
         </div>
@@ -243,7 +243,7 @@ export function ProductsMainView({
                   }}
                   className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
                     statusFilter === 'active'
-                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-semibold shadow-xs'
+                      ? 'bg-white dark:bg-slate-700 text-[#041a24] dark:text-white font-bold shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
@@ -296,7 +296,7 @@ export function ProductsMainView({
                     setCurrentPage(1);
                   }}
                   placeholder="Search products..."
-                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 focus:outline-none transition-all"
+                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#041a24] focus:ring-1 focus:ring-[#041a24]/30 focus:outline-none transition-all"
                 />
               </div>
 
@@ -402,7 +402,7 @@ export function ProductsMainView({
                               <button
                                 type="button"
                                 onClick={() => setPricingProduct(prod)}
-                                className="px-2.5 py-1 text-xs rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shadow-2xs cursor-pointer font-medium"
+                                className="px-2.5 py-1 text-xs rounded border border-[#041a24]/20 dark:border-slate-700 bg-[#041a24]/5 dark:bg-slate-800 text-[#041a24] dark:text-slate-200 hover:bg-[#041a24]/10 dark:hover:bg-slate-750 transition-colors shadow-2xs cursor-pointer font-medium"
                               >
                                 Prices
                               </button>
@@ -461,7 +461,7 @@ export function ProductsMainView({
                     setPageSize(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#041a24]"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -725,7 +725,7 @@ export function ProductsMainView({
                             <span
                               className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
                                 a.action === 'ADD'
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                                  ? 'bg-[#041a24]/10 text-[#041a24] dark:bg-slate-800 dark:text-slate-200'
                                   : a.action === 'EDIT'
                                   ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
                                   : a.action === 'DELETE'

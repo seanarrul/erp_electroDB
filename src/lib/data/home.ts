@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
+import { getHopeDb } from '@/lib/hope-db';
 
 export interface SaleCalculationItem {
   transNo: string;
@@ -209,8 +208,7 @@ export async function getHomeSummary(forceFailure = false): Promise<HomeSummaryR
     // Query local database if available
     let counts = { ...FALLBACK_COUNTS };
     try {
-      const dbPath = path.join(process.cwd(), 'hope.db');
-      const db = new DatabaseSync(dbPath);
+      const db = getHopeDb();
       for (const table of Object.keys(FALLBACK_COUNTS)) {
         try {
           const row = db.prepare(`SELECT count(*) as cnt FROM "${table}"`).get() as { cnt: number };

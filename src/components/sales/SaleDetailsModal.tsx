@@ -170,7 +170,7 @@ export function SaleDetailsModal({
                 onClick={() => setStatusFilter('active')}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                   statusFilter === 'active'
-                    ? 'bg-white dark:bg-slate-700 text-[#001A2B] dark:text-blue-300 font-bold shadow-xs'
+                    ? 'bg-white dark:bg-slate-700 text-[#041a24] dark:text-white font-bold shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
@@ -339,7 +339,7 @@ export function SaleDetailsModal({
 
           <div className="font-mono text-base font-bold text-slate-900 dark:text-slate-100">
             Total:{' '}
-            <span className="text-[#001A2B] dark:text-blue-300">
+            <span className="text-[#041a24] dark:text-slate-100">
               {formatPHP(sale.isDeleted ? 0 : calculatedTotal)}
             </span>
           </div>

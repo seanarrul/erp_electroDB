@@ -6,6 +6,7 @@ import { DashboardHeader } from './DashboardHeader';
 import { DashboardKpis } from './DashboardKpis';
 import { QuickActions } from './QuickActions';
 import type { HomeKPIData } from '@/lib/data/home';
+import type { DisplayDbStatus } from './DbStatusPill';
 
 interface HomeMainViewProps {
   fullName: string;
@@ -22,7 +23,7 @@ export function HomeMainView({
   deniedNotice = false,
   kpis,
 }: HomeMainViewProps) {
-  const [dbStatus, setDbStatus] = useState<'connected' | 'partial' | 'disconnected' | 'checking'>('connected');
+  const [dbStatus, setDbStatus] = useState<DisplayDbStatus>('connected');
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -36,13 +37,12 @@ export function HomeMainView({
       {/* 2. Dashboard Header with Click-to-Verify Status Pill */}
       <DashboardHeader onDbStatusChange={setDbStatus} />
 
-      {/* 3. Live KPI Monitoring Cards (Shows '—' when DB is disconnected) */}
+      {/* 3. Live KPI Monitoring Cards */}
       {kpis && (
         <section aria-label="Key Performance Indicators" className="w-full">
           <DashboardKpis
             kpis={kpis}
             layout="grid"
-            isDisconnected={dbStatus === 'disconnected'}
           />
         </section>
       )}

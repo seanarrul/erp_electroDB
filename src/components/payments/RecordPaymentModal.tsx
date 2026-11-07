@@ -145,7 +145,7 @@ export function RecordPaymentModal({
 
           {/* Sale Summary Banner when selected */}
           {selectedSale && (
-            <div className="p-3.5 rounded-lg border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 text-xs space-y-1.5">
+            <div className="p-3.5 rounded-lg border border-[#041a24]/15 dark:border-slate-800 bg-[#041a24]/5 dark:bg-slate-800/50 text-xs space-y-1.5">
               <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
                 <span className="text-slate-500">Customer:</span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
@@ -168,7 +168,7 @@ export function RecordPaymentModal({
                   {formatPHP(selectedSale.alreadyPaid)}
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-1 border-t border-blue-200/60 dark:border-blue-900/60 font-semibold text-slate-900 dark:text-slate-100">
+              <div className="flex items-center justify-between pt-1 border-t border-[#041a24]/15 dark:border-slate-700 font-semibold text-slate-900 dark:text-slate-100">
                 <span>Outstanding Balance:</span>
                 <span className="font-mono text-rose-600 dark:text-rose-400">
                   {formatPHP(selectedSale.balance)}

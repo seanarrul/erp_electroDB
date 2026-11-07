@@ -1,5 +1,12 @@
 import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
+import {
+  getHopeDb,
+  ensureHopeDb,
+  CANONICAL_ERD_TABLES,
+  type DbHealthReason,
+} from './hope-db';
+
+export { CANONICAL_ERD_TABLES };
 
 export interface TableHealth {
   name: string;
@@ -16,41 +23,22 @@ export interface DbHealthResult {
   latencyMs: number;
   checkedAt: string;
   tables: TableHealth[];
+  reason?: DbHealthReason;
   message?: string;
 }
 
-export const CANONICAL_ERD_TABLES = [
-  'CUSTOMER',
-  'PRODUCT',
-  'PRICEHIST',
-  'EMPLOYEE',
-  'JOB',
-  'DEPARTMENT',
-  'JOBHISTORY',
-  'SALES',
-  'SALESDETAIL',
-  'PAYMENT',
-];
-
-// In-memory 10-second server cache to prevent hammering the database on rapid clicks
+// In-memory cache to prevent database hammering (10s on success, max 2s on failure)
 let cachedHealth: { result: DbHealthResult; expiresAt: number } | null = null;
-
-function getDbPath(): string {
-  if (process.env.VERCEL) {
-    return path.join('/tmp', 'hope.db');
-  }
-  return path.join(process.cwd(), 'hope.db');
-}
 
 /**
  * Reuses the canonical SQLite instance used by business data layers.
  */
 export function getBusinessDb(): DatabaseSync {
-  return new DatabaseSync(getDbPath());
+  return getHopeDb();
 }
 
 /**
- * Performs a real, timed verification against hope.db without exposing internal paths or SQL details.
+ * Performs timed verification against hope.db without exposing internal paths or SQL details.
  */
 export async function checkDatabaseHealth(forceFresh = false): Promise<DbHealthResult> {
   const now = Date.now();
@@ -68,22 +56,28 @@ export async function checkDatabaseHealth(forceFresh = false): Promise<DbHealthR
   });
 
   try {
-    // 3-second timeout wrapper
+    // 1. Ensure database is prepared (with 8s timeout for cold-start copy)
+    const initTimeoutPromise = new Promise<string>((_, reject) =>
+      setTimeout(() => reject(Object.assign(new Error('Cold start initialization timeout'), { code: 'timeout' })), 8000)
+    );
+    await Promise.race([ensureHopeDb(), initTimeoutPromise]);
+
+    // 2. Perform health queries (with 3s query timeout)
     const checkPromise = new Promise<DbHealthResult>((resolve, reject) => {
       try {
-        const db = getBusinessDb();
+        const db = getHopeDb();
 
-        // 1. SELECT 1 & latency test
+        // Ping test
         db.prepare('SELECT 1 as ping').get();
         const latencyMs = Math.max(1, Math.round(performance.now() - startTime));
 
-        // 2. Discover existing tables
+        // Discover existing tables
         const masterTables = db
           .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
           .all() as Array<{ name: string }>;
         const existingTableNames = new Set(masterTables.map((t) => t.name.toUpperCase()));
 
-        // 3. Inspect each canonical table and live row count
+        // Inspect each canonical table
         const tables: TableHealth[] = [];
         let tablesFound = 0;
 
@@ -94,7 +88,7 @@ export async function checkDatabaseHealth(forceFresh = false): Promise<DbHealthR
             tablesFound++;
             try {
               const countRow = db
-                .prepare(`SELECT COUNT(*) as count FROM ${tableName}`)
+                .prepare(`SELECT COUNT(*) as count FROM "${tableName}"`)
                 .get() as { count: number };
               rows = countRow?.count ?? 0;
             } catch {
@@ -117,6 +111,17 @@ export async function checkDatabaseHealth(forceFresh = false): Promise<DbHealthR
           ? 'partial'
           : 'disconnected';
 
+        let reason: DbHealthReason | undefined = undefined;
+        let message = 'Database integrity verified';
+
+        if (status === 'disconnected') {
+          reason = 'table_missing';
+          message = 'Database contains no tables';
+        } else if (status === 'partial') {
+          reason = 'table_missing';
+          message = `Missing ${CANONICAL_ERD_TABLES.length - tablesFound} table(s)`;
+        }
+
         resolve({
           connected: status !== 'disconnected',
           status,
@@ -126,26 +131,44 @@ export async function checkDatabaseHealth(forceFresh = false): Promise<DbHealthR
           latencyMs,
           checkedAt: checkedAtTime,
           tables,
+          reason,
+          message,
         });
       } catch (err) {
         reject(err);
       }
     });
 
-    const timeoutPromise = new Promise<DbHealthResult>((_, reject) =>
-      setTimeout(() => reject(new Error('Health check timeout')), 3000)
+    const queryTimeoutPromise = new Promise<DbHealthResult>((_, reject) =>
+      setTimeout(() => reject(Object.assign(new Error('Health query timeout'), { code: 'timeout' })), 3000)
     );
 
-    const result = await Promise.race([checkPromise, timeoutPromise]);
+    const result = await Promise.race([checkPromise, queryTimeoutPromise]);
 
     cachedHealth = {
       result,
-      expiresAt: now + 10_000, // 10 seconds cache
+      expiresAt: now + (result.connected ? 10_000 : 2_000),
     };
 
     return result;
-  } catch {
-    // Return sanitized disconnected state with zero leaked paths or raw errors
+  } catch (err: any) {
+    const rawCode = err?.code;
+    let reason: DbHealthReason = 'query_failed';
+    let message = 'The server could not reach or query the database.';
+
+    if (rawCode === 'file_missing') {
+      reason = 'file_missing';
+      message = 'Database file missing';
+    } else if (rawCode === 'open_failed') {
+      reason = 'open_failed';
+      message = 'Could not open database file';
+    } else if (rawCode === 'timeout' || String(err?.message || '').toLowerCase().includes('timeout')) {
+      reason = 'timeout';
+      message = 'Database check timed out';
+    }
+
+    console.error(`[db-health] Health check failed (${reason}):`, err?.message || err);
+
     const disconnectedResult: DbHealthResult = {
       connected: false,
       status: 'disconnected',
@@ -159,7 +182,14 @@ export async function checkDatabaseHealth(forceFresh = false): Promise<DbHealthR
         exists: false,
         rows: 0,
       })),
-      message: 'The server could not reach or query the database.',
+      reason,
+      message,
+    };
+
+    // Cache failure for at most 2 seconds
+    cachedHealth = {
+      result: disconnectedResult,
+      expiresAt: now + 2_000,
     };
 
     return disconnectedResult;

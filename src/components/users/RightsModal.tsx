@@ -224,7 +224,7 @@ export function RightsModal({ user, isOpen, onClose, onSuccess }: RightsModalPro
                     <button
                       type="button"
                       onClick={() => handleSelectAllModule(mod.key)}
-                      className="px-2 py-0.5 rounded text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer transition-colors"
+                      className="px-2 py-0.5 rounded text-[11px] font-semibold text-[#041a24] dark:text-slate-200 hover:bg-[#041a24]/5 dark:hover:bg-slate-800 cursor-pointer transition-colors"
                     >
                       All
                     </button>

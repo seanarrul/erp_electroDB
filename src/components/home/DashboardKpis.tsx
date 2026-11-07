@@ -17,50 +17,54 @@ import {
 interface DashboardKpisProps {
   kpis: HomeKPIData;
   layout?: 'vertical' | 'grid';
-  isDisconnected?: boolean;
 }
 
 type AuditCardType = 'sales' | 'transactions' | 'payments' | 'employees' | null;
 
-export function DashboardKpis({ kpis, layout = 'grid', isDisconnected = false }: DashboardKpisProps) {
+export function DashboardKpis({ kpis, layout = 'grid' }: DashboardKpisProps) {
   const [activeAudit, setActiveAudit] = useState<AuditCardType>(null);
+
+  const hasSales = typeof kpis?.totalSales === 'number' && !isNaN(kpis.totalSales);
+  const hasTransactions = typeof kpis?.totalTransactions === 'number';
+  const hasPayments = typeof kpis?.totalPayments === 'number' && !isNaN(kpis.totalPayments);
+  const hasEmployees = typeof kpis?.activeEmployees === 'number';
 
   const cards: KpiCardItem[] = [
     {
       id: 'sales',
       title: 'TOTAL SALES',
-      value: isDisconnected ? '—' : kpis.totalSalesFormatted,
-      subtext: isDisconnected ? 'Database disconnected' : `${kpis.totalTransactions} canonical transactions`,
+      value: hasSales ? kpis.totalSalesFormatted : '—',
+      subtext: hasSales ? `${kpis.totalTransactions} canonical transactions` : 'No data available',
       icon: ShoppingBag,
-      onClick: isDisconnected ? undefined : () => setActiveAudit('sales'),
-      clickable: !isDisconnected,
+      onClick: hasSales ? () => setActiveAudit('sales') : undefined,
+      clickable: hasSales,
     },
     {
       id: 'transactions',
       title: 'TOTAL TRANSACTIONS',
-      value: isDisconnected ? '—' : kpis.totalTransactions.toLocaleString(),
-      subtext: isDisconnected ? 'Database disconnected' : 'Across 82 customer accounts',
+      value: hasTransactions ? kpis.totalTransactions.toLocaleString() : '—',
+      subtext: hasTransactions ? 'Across 82 customer accounts' : 'No data available',
       icon: Calculator,
-      onClick: isDisconnected ? undefined : () => setActiveAudit('transactions'),
-      clickable: !isDisconnected,
+      onClick: hasTransactions ? () => setActiveAudit('transactions') : undefined,
+      clickable: hasTransactions,
     },
     {
       id: 'payments',
       title: 'TOTAL PAYMENTS',
-      value: isDisconnected ? '—' : kpis.totalPaymentsFormatted,
-      subtext: isDisconnected ? 'Database disconnected' : '165 official receipts',
+      value: hasPayments ? kpis.totalPaymentsFormatted : '—',
+      subtext: hasPayments ? '165 official receipts' : 'No data available',
       icon: Receipt,
-      onClick: isDisconnected ? undefined : () => setActiveAudit('payments'),
-      clickable: !isDisconnected,
+      onClick: hasPayments ? () => setActiveAudit('payments') : undefined,
+      clickable: hasPayments,
     },
     {
       id: 'employees',
       title: 'ACTIVE EMPLOYEES',
-      value: isDisconnected ? '—' : kpis.activeEmployees.toString(),
-      subtext: isDisconnected ? 'Database disconnected' : `${kpis.activeEmployees} active of 32 staff`,
+      value: hasEmployees ? kpis.activeEmployees.toString() : '—',
+      subtext: hasEmployees ? `${kpis.activeEmployees} active of 32 staff` : 'No data available',
       icon: Users,
-      onClick: isDisconnected ? undefined : () => setActiveAudit('employees'),
-      clickable: !isDisconnected,
+      onClick: hasEmployees ? () => setActiveAudit('employees') : undefined,
+      clickable: hasEmployees,
     },
   ];
 

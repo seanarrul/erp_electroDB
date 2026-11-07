@@ -42,7 +42,7 @@ export function RoleBadge({ role, variant = 'pill', className }: RoleBadgeProps)
     superadmin:
       'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30 dark:border-amber-400/40',
     admin:
-      'bg-sky-500/10 text-sky-800 dark:text-sky-300 border-sky-500/30 dark:border-sky-400/40',
+      'bg-[#041a24]/10 text-[#041a24] dark:text-slate-200 border-[#041a24]/20 dark:border-slate-700',
     user:
       'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30 dark:border-emerald-400/40',
   };

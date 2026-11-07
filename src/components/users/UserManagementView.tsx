@@ -59,7 +59,7 @@ export function UserManagementView({ initialUsers, currentUserRole }: UserManage
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border bg-[#041a24]/10 text-[#041a24] border-[#041a24]/20 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
             {currentUserRole.toUpperCase()}
           </span>
         </div>
@@ -132,7 +132,7 @@ export function UserManagementView({ initialUsers, currentUserRole }: UserManage
                             u.role === 'Superadmin'
                               ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300'
                               : u.role === 'Admin'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                              ? 'bg-[#041a24]/10 text-[#041a24] dark:bg-slate-800 dark:text-slate-200'
                               : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
                           }`}
                         >

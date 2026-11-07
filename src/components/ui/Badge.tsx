@@ -11,7 +11,7 @@ export function Badge({ className, variant = 'default', children, ...props }: Ba
     success: 'bg-[#041a24] dark:bg-emerald-950/50 text-white dark:text-emerald-400 border-transparent dark:border-emerald-500/30',
     warning: 'bg-[#FEF08A]/80 dark:bg-amber-950/50 text-[#713F12] dark:text-amber-400 border-yellow-400/50 dark:border-amber-500/30',
     danger:  'bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-400 border-red-200 dark:border-red-500/30',
-    info:    'bg-[#BFDBFE]/70 dark:bg-blue-950/50 text-[#1E3A8A] dark:text-blue-400 border-blue-200 dark:border-blue-500/30',
+    info:    'bg-[#041a24]/10 dark:bg-slate-800 text-[#041a24] dark:text-slate-200 border-[#041a24]/20 dark:border-slate-700',
     outline: 'bg-white dark:bg-surface-2 text-[#041a24] dark:text-text border-black/15 dark:border-border',
   };
 

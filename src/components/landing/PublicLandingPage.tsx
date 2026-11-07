@@ -97,7 +97,7 @@ export function PublicLandingPage() {
             </div>
 
             <div className="p-4 rounded border border-black/5 dark:border-white/5 bg-[#F8FAFC] dark:bg-white/5 flex items-start gap-3">
-              <div className="p-2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+              <div className="p-2 rounded bg-[#041a24]/10 text-[#041a24] dark:bg-white/10 dark:text-slate-200 shrink-0">
                 <Package className="w-5 h-5" />
               </div>
               <div>
