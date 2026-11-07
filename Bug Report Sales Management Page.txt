@@ -1,0 +1,23 @@
+title: "Bug Report: Sales Management Pagination Resets to Page 1"
+
+##Bug Report:## Sales Table Pagination Next Button (`>`) Resets to Page 1
+
+
+### Summary
+On the **Sales Management** table, clicking the Next pagination button ( > ) to view records 11–20 (Page 2 of 13) fails to update the table view. Instead of advancing to Page 2, the control immediately resets/reverts back to Page 1 (1 / 13).
+
+
+### Steps to Reproduce
+1. Open the **Sales Management** dashboard.
+2. Locate the pagination controls at the bottom right of the sales records table (showing `Showing 1-10 of 124` and page count `1 / 13`).
+3. Click the right arrow / Next page button (`>`).
+
+
+### Expected Result
+- The pagination indicator updates from `1 / 13` to `2 / 13`.
+- The table status updates to `Showing 11-20 of 124`.
+- The table list refreshes to display transactions starting from `TR000114` downwards.
+
+
+This pagination bug is isolated to the **Sales Management** page. The Next button (`>`) was tested and works fine across all other entity modules, including **Customer**, **Payments**, **Products**, and **Human Resources**.
+
