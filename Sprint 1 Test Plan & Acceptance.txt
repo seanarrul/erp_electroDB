@@ -1,0 +1,26 @@
+title: "Sprint 1 Test Plan & Acceptance Criteria"
+author: "Arielle Kane L. Echague"
+
+# Sprint 1 Test Plan & Acceptance Criteria
+
+## Test Objectives
+Verify that user authentication, user management workflows and administrative safeguards function securely across **Superadmin**, **Admin**, and **User** roles without unauthorized access or privilege escalation.
+
+-----
+
+## Acceptance Criteria
+
+### Authentication & Account Lifecycle:
+- Users can register, log in, log out, set passwords, and request password resets securely.
+- Expired or reused tokens are strictly rejected by the server.
+
+### User Management Operations:
+- Authorized admins can add, edit, block/unblock, approve users, and promote users to Admin status.
+
+### Scope & Safety Isolation Guards:
+- Standard Admins **cannot** view, edit, demote, or delete Superadmin accounts within User Management.
+- The system strictly blocks blocking, demoting, or deleting the **last remaining active Superadmin**.
+- Superadmin permission assignments take effect immediately without requiring secondary Admin approval.
+
+### Permission Enforcement:
+- UI menus, action buttons, and server API endpoints strictly enforce role-based rights across all roles.
