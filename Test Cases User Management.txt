@@ -1,0 +1,41 @@
+# Test Cases: User Management & Safety Guards
+
+-----
+
+UM-01: Add User
+Executed By: Admin or Superadmin
+Test Steps: Fill all required user fields and click Save.
+Expected Result: User record is added to the user list with the specified details.
+
+UM-02: Edit User
+Executed By: Admin or Superadmin
+Test Steps: Modify existing user profile details or roles and click Save.
+Expected Result: User record updates cleanly without any data loss.
+
+UM-03: Block & Unblock User
+Executed By: Admin or Superadmin
+Test Steps:
+1. Toggle user account state to "Blocked"
+2. Attempt to log in using the blocked user account
+3. Toggle account state back to "Unblock"
+Expected Result: Blocked user cannot log in and receives an error message. Unblocked user successfully resumes normal login access.
+
+UM-04: Approve User
+Executed By: Admin or Superadmin
+Test Steps: Locate a user with "Pending" status and click Approve.
+Expected Result: Status updates to "Active" and the user is now allowed to log in.
+
+UM-05: Designate Admin
+Executed By: Superadmin only
+Test Steps: Promote a standard User to an Admin role.
+Expected Result: User role updates to Admin immediately and user gains Admin rights.
+
+UM-06: Admin Cannot See or Edit Superadmin
+Executed By: Admin
+Test Steps: Log in as a standard Admin and view the User Management list.
+Expected Result: Superadmin rows are hidden or edit/delete controls are completely disabled for Admin users.
+
+UM-07: Last-Superadmin Guard
+Executed By: Superadmin
+Test Steps: Attempt to delete, block, or demote the only remaining active Superadmin account.
+Expected Result: Action is strictly blocked by the system with an error: "Cannot modify or remove the last Superadmin".
