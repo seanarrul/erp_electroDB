@@ -80,8 +80,10 @@ The sidebar displays each section label with a secondary descriptive caption:
 
 ## ⚡ 3. How to Run Locally
 
+> **Student setup (no Docker):** See [the student setup guide](docs/STUDENT-SETUP.md) for complete local instructions.
+
 ### Prerequisites
-- Node.js 20+ installed
+- Node.js 22.5.0 or newer installed
 
 ### Quick Start
 ```bash
