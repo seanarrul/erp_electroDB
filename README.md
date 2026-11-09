@@ -1,27 +1,28 @@
 # HOPE Group4 Sales and Payments Monitoring System
 
-> **Subject:** Information Management (2nd Year Computer Science Capstone)  
-> **Corporate Branding:** HOPE Group4 — Enterprise Database & Information Management  
+> **Subject:** Information Management  
+> **Corporate Branding:** HOPE Group4 — ERP
 > **Schema Rule:** Strictly 10 Tables (Hope ERD Faithful • Zero Extra Tables • Standard Audit Trail)  
-> **Canonical Dataset Rule:** 100% Faithful to Jeremias C. Esperanza (NEU CCS) `HopeDB_audit.sql.txt` (928 canonical records: 32 Employees, 8 Departments, 14 Jobs, 54 JobHistories, 82 Customers, 57 Products, 79 PriceHistories, 124 Sales, 313 SalesDetails, 165 Payments). This is THE ONLY authoritative data used by the system (all legacy/alternative datasets removed).  
+> **Canonical Dataset Rule:** 100% Faithful to Jeremias C. Esperanza (NEU CCS) `HopeDB_audit.sql.txt`
 > **Full-Stack Architecture:** Next.js 15 (App Router, Server Actions, TypeScript), Tailwind CSS  
-> **Production Target:** Vercel
 
 ---
 
-## 📌 1. Project Concept & Architecture
+SCRUM MASTER - SEAN ARRUL
+TESTER - ARRIEL ECHAGUE
+UI-UX DESIGNER - CASING JAY CHRISTIAN
+DATABASE - VEIL DELA CRUZ
+DEV - JEPTAH ILDEFONSO
+
+
+ 1. Project Concept & Architecture
 
 The **HOPE Group4 Sales and Payments Monitoring System** is an enterprise sales monitoring and payment tracking platform built strictly on the canonical 10-table **Hope ERD**. It provides staff daily tools to record sales transactions, inspect line items (product, quantity, computed amounts), record customer payments with auto-numbered Official Receipts (OR), monitor customer profiles, and track PC hardware price histories.
 
-### The Four Core Tabs
 
-The application is structured into four primary operational tabs (plus Home):
-1. **Employees:** Workforce records, historical job assignments, and department assignments.
-2. **Products & Pricing:** Product specifications, current unit prices, and historical price adjustments.
-3. **Customers & Payments:** Master-detail customer directory, payment records (OR #, payment date, sale #, amount), and payment recording.
-4. **Sales:** Invoiced sales transactions and sales details (transaction number, product code, quantity, computed amount).
 
-### Strictly 10-Table Relational Schema
+
+Strictly 10-Table Relational Schema
 
 ```
 EMPLOYEE (empNo PK) ──< has >── JOBHISTORY (empNo, jobCode, effDate PK) >── DEPARTMENT (deptCode PK)
