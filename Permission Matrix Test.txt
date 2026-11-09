@@ -1,0 +1,95 @@
+Title: Permission matrix tests
+
+SUMMARY OF CHANGES
+
+This PR introduces automated end-to-end integration tests covering the complete Role-Based Access Control (RBAC) matrix across three primary user roles: Superadmin, Admin, and User.
+
+
+
+The test suite validates access enforcement at three critical layers:
+
+1. Navigation and UI: Menu items are correctly rendered or hidden based on granted permissions.
+
+2. Client Interactions: Interactive UI elements (buttons, forms, action triggers) are selectively enabled, disabled, or hidden.
+
+3. API and Backend Enforcement: Server endpoints return appropriate HTTP status codes (403 Forbidden or 401 Unauthorized) when unauthorized requests bypass client-side checks.
+
+
+
+All tests utilize pre-seeded, registered, and pre-approved test credentials to prevent dynamic onboarding side-effects during execution.
+
+
+
+
+
+PERMISSION MATRIX COVERAGE SUMMARY
+
+* System Settings (Read/Write)
+
+  - Superadmin: Allowed
+
+  - Admin: Denied
+
+  - User: Denied
+
+  - Coverage: UI Menu, Save Action, API Endpoint
+
+
+
+* User Management (Create/Delete)
+
+  - Superadmin: Allowed
+
+  - Admin: Denied
+
+  - User: Denied
+
+  - Coverage: UI Action, Server Route (/api/users)
+
+
+
+* Organization Management
+
+  - Superadmin: Allowed
+
+  - Admin: Allowed
+
+  - User: Denied
+
+  - Coverage: Admin Dashboard, Org API
+
+
+
+* View Resource Catalog
+
+  - Superadmin: Allowed
+
+  - Admin: Allowed
+
+  - User: Allowed
+
+  - Coverage: Navigation, Feed API
+
+
+
+* Create/Edit Own Resources
+
+  - Superadmin: Allowed
+
+  - Admin: Allowed
+
+  - User: Allowed
+
+  - Coverage: Form Submission, CRUD API
+
+
+
+* Delete Any Resource
+
+  - Superadmin: Allowed
+
+  - Admin: Allowed
+
+  - User: Denied
+
+  - Coverage: Action Button, Server Route (DELETE /api/resource/:id)
