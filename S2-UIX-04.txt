@@ -1,1 +1,0 @@
-﻿Task ID: S2-UIX-04 - Empty error and confirm-delete states
