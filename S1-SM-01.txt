@@ -1,1 +1,0 @@
-﻿Task ID: S1-SM-01 - Repo setup: branch protection PR and issue templates
