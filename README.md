@@ -1,4 +1,4 @@
-# HOPE Group4 Sales and Payments Monitoring System
+# HOPE Group4 Sales,Employee and Payments Monitoring System
 
 > **Subject:** Information Management  
 > **Corporate Branding:** HOPE Group4 — ERP
@@ -8,11 +8,15 @@
 
 ---
 
-SCRUM MASTER - SEAN ARRUL
-TESTER - ARRIEL ECHAGUE
-UI-UX DESIGNER - CASING JAY CHRISTIAN
-DATABASE - VEIL DELA CRUZ
-DEV - JEPTAH ILDEFONSO
+SCRUM MASTER - SEAN ARRUL,
+
+TESTER - ARRIEL ECHAGUE,
+
+UI-UX DESIGNER - CASING JAY CHRISTIAN,
+
+DATABASE - VEIL DELA CRUZ,
+
+DEV - JEPTAH ILDEFONSO,
 
 
  1. Project Concept & Architecture
