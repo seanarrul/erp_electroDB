@@ -1,0 +1,36 @@
+Test Cases: Soft Delete, Restore, and Active Child Guards 
+
+
+
+DEL-01: Soft Delete Record
+Feature: Soft Delete
+Pre-conditions: A customer or product exists with no active linked child records
+Test Steps:
+1. Click Delete on the standalone customer or product
+2. Confirm the deletion prompt
+3. Check the main active list and the Archived/Deleted view
+Expected Result: Record is removed from the main active list but remains preserved in the Deleted/Archived records view rather than permanently erased.
+
+DEL-02: Restore Soft-Deleted Record
+Feature: Record Restoration
+Pre-conditions: A soft-deleted customer or product exists in the Archived/Deleted view
+Test Steps:
+1. Navigate to the Archived/Deleted records view
+2. Locate the deleted record and click Restore
+3. Return to the main active list
+Expected Result: Record is removed from the Archived/Deleted view and returns to the active list with all original details and history intact.
+
+DEL-03: Delete Blocked by Active Children
+Feature: Referential Integrity Guard
+Pre-conditions: A parent record (such as a Customer or Product) is linked to active child records (such as active orders, transactions, or line items)
+Test Steps:
+1. Attempt to delete the parent record
+2. Observe the system response
+Expected Result: System strictly blocks the deletion and displays a clear error message stating the record cannot be deleted while active child records exist.
+
+DEL-04: Allow Delete After Child Records Are Closed or Removed
+Feature: Referential Integrity Release
+Pre-conditions: Parent record previously blocked from deletion now has all linked child records completed, closed, or deleted
+Test Steps:
+1. Attempt to delete the parent record again
+Expected Result: Soft deletion succeeds without error now that no active child dependencies remain.
