@@ -1,0 +1,30 @@
+# Regression Test Suite: Sprint 1 Core Features 
+
+
+Purpose: Confirm that new Sprint 2 features (Customer Module, Product and Price History, Soft Delete/Restore, and Granular Permissions) have not broken existing Sprint 1 functionality.
+
+REG-S1-01: User Registration and Login Flow
+- Test Steps: Register a new test account, log in with valid credentials, and verify redirection to the main dashboard.
+- Expected Result: Registration creates the account directly without pending approval blocks, and login succeeds cleanly.
+
+REG-S1-02: Logout and Session Termination
+- Test Steps: Click Logout from an active session and attempt to navigate back to a protected page.
+- Expected Result: Session clears immediately and protected routes redirect back to the login screen.
+
+REG-S1-03: User Management Lifecycle (Add, Edit, Block/Unblock)
+- Test Steps: Log in as Admin or Superadmin, create a user, edit their details, block the account, verify login is blocked, then unblock the account.
+- Expected Result: All user lifecycle actions work without errors or database conflicts.
+
+REG-S1-04: Superadmin Role Designation and Independent Authority
+- Test Steps: Log in as Superadmin, designate a standard User as Admin, and modify user permissions.
+- Expected Result: Role promotion and permission assignments take effect immediately without requiring secondary Admin approval.
+
+REG-S1-05: Admin Visibility and Last-Superadmin Guards
+- Test Steps:
+  1. Log in as a standard Admin and verify Superadmin accounts cannot be viewed or edited.
+  2. Log in as the sole active Superadmin and attempt to delete, block, or demote that account.
+- Expected Result: Standard Admins cannot see or modify Superadmins, and the last-superadmin guard strictly blocks self-removal or demotion.
+
+REG-S1-06: Sprint 1 RBAC Enforcement
+- Test Steps: Log in as a standard User and check navigation menus, action buttons, and restricted API endpoints from Sprint 1.
+- Expected Result: Unauthorized menus and buttons remain hidden
