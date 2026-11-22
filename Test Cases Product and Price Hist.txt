@@ -1,0 +1,44 @@
+# Test Cases: Product and Price History 
+
+
+PROD-01: Add New Product with Initial Price
+Feature: Create Product
+Pre-conditions: User is logged in with product add and price rights
+Test Steps:
+1. Navigate to the Products module and click Add Product
+2. Enter product details (Product Name, Category, Initial Price)
+3. Click Save
+Expected Result: Product is created with the specified initial price, and an initial entry is logged in its price history.
+
+PROD-02: Edit Product Details 
+Feature: Update Product
+Pre-conditions: An active product exists
+Test Steps:
+1. Open an existing product for editing
+2. Update the product name or description without changing the price
+3. Click Save
+Expected Result: Product details update successfully, and no duplicate price history entry is created.
+
+PROD-03: Update Product Price and Record History
+Feature: Price History Logging
+Pre-conditions: An active product exists with an initial price
+Test Steps:
+1. Open the product and update its price to a new value
+2. Save the changes
+3. Open the product Price History view
+Expected Result: The current price updates to the new value, and the Price History log displays the previous price, new price, date/time of change, and the user who made the update.
+
+PROD-04: Price History Chronological Order
+Feature: Price History Audit Trail
+Pre-conditions: A product has had multiple price updates
+Test Steps:
+1. View the Price History section of the product
+Expected Result: All historical price changes are listed in clear chronological order without overwriting past entries.
+
+PROD-05: Invalid Price Input Validation
+Feature: Price Validation
+Pre-conditions: Add or Edit Product form is open
+Test Steps:
+1. Enter a negative number or non-numeric characters in the price field
+2. Click Save
+Expected Result: System blocks saving and displays an error indicating the price must be a valid positive number.
