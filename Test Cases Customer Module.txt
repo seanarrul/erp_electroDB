@@ -1,0 +1,43 @@
+Test Cases: Customer Module 
+
+CUST-01: View Customer List
+Feature: Customer Directory
+Pre-conditions: User is logged in with customer view rights
+Test Steps:
+1. Navigate to the Customer module from the main menu
+2. Observe the customer table or list loading
+Expected Result: Active customer records load accurately with visible details such as name, contact information, and status.
+
+CUST-02: Add New Customer 
+Feature: Create Customer
+Pre-conditions: User is logged in with customer add rights
+Test Steps:
+1. Click the Add Customer button
+2. Fill in all required fields (Name, Email, Phone, Address) with valid data
+3. Click Save
+Expected Result: New customer record is created and immediately appears in the customer list.
+
+CUST-03: Add New Customer 
+Feature: Form Validation
+Pre-conditions: Add Customer form is open
+Test Steps:
+1. Leave required fields blank or enter an invalid email format
+2. Click Save
+Expected Result: Form submission is blocked and clear validation error messages highlight the missing or invalid fields.
+
+CUST-04: Edit Customer Details
+Feature: Update Customer
+Pre-conditions: At least one active customer exists
+Test Steps:
+1. Select an existing customer and click Edit
+2. Modify the contact details or address
+3. Click Save
+Expected Result: Customer information updates cleanly without losing existing data.
+
+CUST-05: Search and Filter Customers
+Feature: Customer Search
+Pre-conditions: Multiple customer records exist in the system
+Test Steps:
+1. Enter a customer name or email in the search bar
+2. Observe the filtered results
+Expected Result: Only matching customer records are displayed in real time.
